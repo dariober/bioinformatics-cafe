@@ -1,4 +1,4 @@
-#!/usr/bin/python   
+#!/usr/local/bin/python   
 
 """
 
@@ -71,6 +71,7 @@ EXAMPLES:
 
 TODO:
     - QC specific for PE reads.
+    - Change try/except for NM tag to using AlignedRead.tags
 
 """, formatter_class= argparse.RawTextHelpFormatter)
 
@@ -95,6 +96,30 @@ parser.add_argument('--nograph', # nargs='?', default=sys.stdout,
                     help="""Do not produce R graphics
                     
                     """)
+
+parser.add_argument('-l', '--limit',
+                    type= int,
+		    default= 0,
+                    help= """Maximum number of lines to read from each input file.
+0 (default) means no limit.
+                    
+                    """)
+
+parser.add_argument('-s', '--sampling',
+                    type= int,
+		    default= 100,
+                    help= """For collecting quantile and length statistics: Store 
+MAPQ score and read length every this many reads. Default: 100
+		    
+                    """)
+
+parser.add_argument('-H', '--noheader',
+                    action= 'store_true',
+                    help= """Do not output the header row of column names. (Useful to
+		    append results to previous report)
+		    
+                    """)
+
 args = parser.parse_args()
 outfilename = args.output.name
 
@@ -239,20 +264,17 @@ def lists2rdf(lists):
     bamqc= bamqc[0:-2] + ')'
     return(bamqc)
 
-def meanstdv(x):
+def stdev(xlist):
     """
-    Return mean and sd of a list.
-    See http://www.physics.rutgers.edu/~masud/computing/WPark_recipes_in_python.html
+    Return sd of a list or None if xlist is of length 1
     """
-    from math import sqrt
-    n, mean, std = len(x), 0, 0
-    for a in x:
-        mean = mean + a
-        mean = mean / float(n)
-        for a in x:
-            std = std + (a - mean)**2
-            std = sqrt(std / float(n-1))
-    return(mean, std) 
+    import math
+    if len(xlist) == 1:
+	return(None)
+    mu= float(sum(xlist)) / len(xlist)
+    ssq= sum([(x - mu)**2 for x in xlist])
+    std = math.sqrt(ssq / float(len(xlist)-1))
+    return(std) 
 
 # -----------------------------------------------------------------------------
 # Code for quantile found at http://adorio-research.org/wordpress/?p=125
@@ -329,7 +351,10 @@ for n in LIMITS_NM[0:-1]:
     nm_bins.append((n, n))
 nm_bins.append((LIMITS_NM[-1], 10000))
 
-bamqc_stats= [colnames] ## List (of lists) to hold output
+if args.noheader is True:
+    bamqc_stats= [] ## List (of lists) to hold output
+else:
+    bamqc_stats= [colnames] ## List (of lists) to hold output
 
 #args.output.write('\t'.join(colnames)+ '\n')
 
@@ -353,7 +378,7 @@ for bam in args.input:
             fstats.nreads_mapq_255 = fstats.nreads_mapq_255 + 1 
         else:
             fstats.mapq[AlignedRead.mapq]= fstats.mapq.get(AlignedRead.mapq, 0) + 1
-        if n % 100 == 0:
+        if n % args.sampling == 0:
             if AlignedRead.rlen != 0:
                 length_sample.append(AlignedRead.rlen)
             if AlignedRead.mapq != 255:
@@ -363,14 +388,14 @@ for bam in args.input:
         except:
             fstats.nreads_nm_na= fstats.nreads_nm_na + 1
         n += 1
-#        if n >= 10000:
-#            break
+        if args.limit > 0 and n >= args.limit:
+            break
     fstats.mapq= [ x[1] for x in cumdist(fstats.mapq, LIMITS_MAPQ) ]
     fstats.nreads_nm= [ x[1] for x in hist(fstats.nreads_nm, nm_bins) ]
     fstats.perc_aln= round((float(fstats.nreads_aln) / fstats.nreads_tot )* 100, 2)
     fstats.mapq_quantiles= [ quantile(mapq_sample, q) for q in QUANTILES ]
     fstats.median_length= round(quantile(length_sample, 0.5), 2)
-    fstats.len_sd= round(meanstdv(length_sample)[1], 2)
+    fstats.len_sd= round(stdev(length_sample), 2)
     bamfile.close()
     bamqc_stats.append(write_stats(fstats, header))
 
@@ -405,7 +430,7 @@ rgraph= """
 library("RColorBrewer")
 
 ## Uncomment to read from bamqc.py output
-## bamqc<- read.table(file= '...', sep= '\t', header= TRUE)
+## bamqc<- read.table(file= '%(bamqc_outfile)s', sep= '\t', header= TRUE)
 
 ## Uncomment not to read string from bamqc.py
 %(bamqc)s
@@ -416,35 +441,41 @@ print(bamqc)
 indx<- grep('^mapq_quant\\\.', names(bamqc), perl= TRUE)
 bx<- t(bamqc[,indx])
 indx.nm<- grep('^nm\\\.', names(bamqc), perl= TRUE)
-nm<- t(bamqc[,rev(indx.nm)]) / 1000
+nm<- t(bamqc[,rev(indx.nm)]) / 1000000
 print(nm)
 
-WIDTH= 480
+WIDTH= 7## 480
 HEIGHT= (WIDTH/15) * nrow(bamqc)
 MTEXTCEX= 0.8
 
-png('%(pngfile)s', width= WIDTH, height= HEIGHT)
 
-par(mfrow= c(1,3), oma= c(2, 10, 5, 1), mar= c(1,0.5,1,0.5), mgp= c(2.5, 0.5, 0), las= 1)
+## png('bamqc.txt.png', width= WIDTH, height= HEIGHT)
+bitmap('bamqc.txt.png', res= 512, pointsize= 6, width= WIDTH, height= HEIGHT) ## , units= 'mm', width= WIDTH /50, height= HEIGHT/50
+# png('%(pngfile)s', width= WIDTH, height= HEIGHT)
+maxstr<- max(sapply(bamqc$filename, nchar))
+par(mfrow= c(1,3), oma= c(2, maxstr*0.5, 5, 1), mar= c(1,0.5,1,0.5), mgp= c(2.5, 0.5, 0), las= 1)
 
-barplot(t(bamqc[,c("n", "aln", "mapq.15", "mapq.20", "mapq.30")])/1000, horiz= TRUE,
+barplot(t(bamqc[,c("n", "aln", "mapq.15", "mapq.20", "mapq.30")])/1000000, horiz= TRUE,
     names.arg= bamqc$filename, beside= TRUE, space=c(-1, 0.5), col= brewer.pal(5, "OrRd"))
 axis(side= 3)
-mtext(text= 'No. of reads (x1000)\n(all, aligned, mapq 15, 20, 30)', side= 3, line= 2, cex= MTEXTCEX)
+mtext(text= 'No. of reads (millions)
+(all, aligned, mapq 15, 20, 30)', side= 3, line= 2.5, cex= MTEXTCEX)
 grid(ny= NA)
 ## legend('topleft', legend= c('Tot.', 'Aln.', 'Aln. map <= 15', '<= 20', '<= 30'), horiz= FALSE, inset= c(0, -0.03), bty= 'n', col= col, xpd= NA, pch= 19)
 boxplot(bx, yaxt= 'n', horizontal= TRUE, boxvex= 0.2, names= FALSE, ylim= c(0, ifelse(max(bx) > 40, max(bx), 40)))
 grid(ny= NA)
 axis(side= 3)
-mtext(text= 'Quantiles of mapq scores\n(.05, .25, 0.5, .75, .95)', side= 3, line= 2, cex= MTEXTCEX)
+mtext(text= 'Quantiles of mapq scores
+(.05, .25, 0.5, .75, .95)', side= 3, line= 2.5, cex= MTEXTCEX)
 
 barplot(nm, horiz= TRUE, beside= TRUE, space=c(-0.5, 0.5), col= brewer.pal(7, "OrRd"))
 grid(ny= NA)
 axis(side= 3)
-mtext(text= 'No. reads (x1000)\nedit distance: 0, 1 to 5, 6+', side= 3, line= 2, cex= MTEXTCEX)
+mtext(text= 'No. reads (millions)
+edit distance: 0, 1 to 5, 6+', side= 3, line= 2.5, cex= MTEXTCEX)
 dev.off()
 
-""" %{'bamqc': lists2rdf(bamqc_stats), 'pngfile': outfilename + '.png'}
+""" %{'bamqc_outfile':outfilename, 'bamqc': lists2rdf(bamqc_stats), 'pngfile': outfilename + '.png'}
 
 tmpfile= outfilename + '.R'
 tmp_fh= open(tmpfile, 'w')
