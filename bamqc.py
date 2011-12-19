@@ -363,8 +363,8 @@ for bam in args.input:
         except:
             fstats.nreads_nm_na= fstats.nreads_nm_na + 1
         n += 1
-        if n >= 10000:
-            break
+#        if n >= 10000:
+#            break
     fstats.mapq= [ x[1] for x in cumdist(fstats.mapq, LIMITS_MAPQ) ]
     fstats.nreads_nm= [ x[1] for x in hist(fstats.nreads_nm, nm_bins) ]
     fstats.perc_aln= round((float(fstats.nreads_aln) / fstats.nreads_tot )* 100, 2)
@@ -423,7 +423,7 @@ WIDTH= 480
 HEIGHT= (WIDTH/15) * nrow(bamqc)
 MTEXTCEX= 0.8
 
-png('%(pngfile)s', width= WIDTH, height= HEIGHT, res= 128)
+png('%(pngfile)s', width= WIDTH, height= HEIGHT)
 
 par(mfrow= c(1,3), oma= c(2, 10, 5, 1), mar= c(1,0.5,1,0.5), mgp= c(2.5, 0.5, 0), las= 1)
 
