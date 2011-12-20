@@ -72,6 +72,7 @@ EXAMPLES:
 TODO:
     - QC specific for PE reads.
     - Change try/except for NM tag to using AlignedRead.tags
+    - Incorporate nm.na into the other nm.s
 
 """, formatter_class= argparse.RawTextHelpFormatter)
 
@@ -140,7 +141,7 @@ colnames=  ['filename', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
            ['mapq.'+str(x) for x in LIMITS_MAPQ] + \
            ['mapq_255'] + \
            ['nm.'+str(x) for x in LIMITS_NM] + \
-           ['nm_na'] + \
+           ['nm.na'] + \
            ['mapq_quant.'+str(x) for x in QUANTILES]
 
 class File_Stats:
@@ -441,7 +442,8 @@ print(bamqc)
 indx<- grep('^mapq_quant\\\.', names(bamqc), perl= TRUE)
 bx<- t(bamqc[,indx])
 indx.nm<- grep('^nm\\\.', names(bamqc), perl= TRUE)
-nm<- t(bamqc[,rev(indx.nm)]) / 1000000
+nm<- bamqc[, indx.nm] / 1000000
+nm<- t(cbind(nm[, c('nm.0', 'nm.1', 'nm.2')], "nm.3+"= rowSums(nm[, c('nm.3', 'nm.4', 'nm.5', 'nm.6')]), nm.na= nm[, 'nm.na']))
 print(nm)
 
 WIDTH= 6.5
@@ -459,7 +461,7 @@ bcol<- c('dodgerblue', brewer.pal(5, "OrRd")[2:5])
 mapq<- t(bamqc[, c("n", "aln", "mapq.15", "mapq.20", "mapq.30")])/1000000
 barplot(mapq, horiz= TRUE, border= 'transparent',
     names.arg= bamqc$filename, beside= TRUE, space=c(-1, 0.5), col= bcol)
-legend('topleft', inset= c(-0.45, -0.55*4/nrow(bamqc)), legend= c('Unmapped', 'Aligned', 'mapq 15', 'mapq 20', 'mapq 30'), box.lwd= 0.2, col= bcol, cex= 0.8, xpd= NA, pch= 15, pt.cex= 1.5)
+legend('topleft', inset= c(-0.45, -0.65*4/nrow(bamqc)), legend= c('Unmapped', 'Aligned', 'mapq 15', 'mapq 20', 'mapq 30'), box.lwd= 0.2, col= bcol, cex= 0.8, xpd= NA, pch= 15, pt.cex= 1.5)
 axis(side= 3)
 mtext(text= 'No. of reads (millions)', font= 2, side= 3, line= 3.5, cex= MTEXTCEX)
 grid(ny= NA)
@@ -470,9 +472,9 @@ grid(ny= NA)
 axis(side= 1); axis(side= 3)
 mtext(text= 'Quantiles of mapq scores', side= 3, font= 2, line= 3.5, cex= MTEXTCEX)
 
-bcol2<- brewer.pal(7, "Dark2")
-barplot(nm[nrow(nm):1, ], horiz= TRUE, beside= FALSE, space=c(0.5), col= bcol2, border= 'transparent')
-legend('topleft', inset= c(-0, -0.45*4/nrow(bamqc)), cex= 0.8, legend= c('0', '1', '2', '3', '4', '5', '6+'), pt.cex= 1.5, bty= 'o', box.lwd= 0.2, horiz= TRUE, col= bcol2, text.col= 'grey5', pch= 15, xpd= NA)
+bcol2<- brewer.pal(5, "Dark2")
+barplot(nm, horiz= TRUE, beside= FALSE, space=c(0.5), col= bcol2, border= 'transparent')
+legend('topleft', inset= c(-0, -0.45*4/nrow(bamqc)), cex= 0.8, legend= c('0', '1', '2', '3+', 'NA'), pt.cex= 1.5, bty= 'o', box.lwd= 0.2, horiz= TRUE, col= bcol2, text.col= 'grey5', pch= 15, xpd= NA)
 grid(ny= NA)
 axis(side= 3)
 mtext(text= 'Reads (millions) with edit distance (NM):', side= 3, font= 2, line= 3.75, cex= MTEXTCEX)
