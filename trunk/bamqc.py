@@ -445,35 +445,38 @@ nm<- t(bamqc[,rev(indx.nm)]) / 1000000
 print(nm)
 
 WIDTH= 6.5
-HEIGHT= (WIDTH/15) * nrow(bamqc)
+HEIGHT= (WIDTH/30) * nrow(bamqc)
 MTEXTCEX= 0.8
 
 
-bitmap('bamqc.txt.png', res= 512, pointsize= 9, width= WIDTH, height= HEIGHT) ##
-## png('bamqc.txt.png', width= WIDTH, height= HEIGHT)
-## png('%(pngfile)s', width= WIDTH, height= HEIGHT)
+bitmap('%(pngfile)s', res= 512, pointsize= 9, width= WIDTH, height= HEIGHT) ##
+## bitmap('bamqc2.txt.png', res= 512, pointsize= 9, width= WIDTH, height= HEIGHT) ##
 
 maxstr<- max(sapply(bamqc$filename, nchar))
 par(mfrow= c(1,3), oma= c(2, ifelse(maxstr*0.5 < 6, 6, maxstr*0.5), 5, 2), mar= c(1,1.5,1,0.5), mgp= c(2.5, 0.5, 0), las= 1, col.lab= 'grey5', col.axis= 'grey5', col= 'grey25', fg= 'grey15')
 
-barplot(t(bamqc[,c("n", "aln", "mapq.15", "mapq.20", "mapq.30")])/1000000, horiz= TRUE, border= 'transparent',
-    names.arg= bamqc$filename, beside= TRUE, space=c(-1, 0.5), col= brewer.pal(5, "OrRd"))
-legend('topleft', inset= c(-0.36, -0.35*4/nrow(bamqc)), legend= c('All', 'Aligned', 'mapq 15', 'mapq 20', 'mapq 30'), box.lwd= 0.2, col= brewer.pal(5, "OrRd"), cex= 0.8, xpd= NA, pch= 15, pt.cex= 1.5)
+bcol<- c('dodgerblue', brewer.pal(5, "OrRd")[2:5])
+mapq<- t(bamqc[, c("n", "aln", "mapq.15", "mapq.20", "mapq.30")])/1000000
+barplot(mapq, horiz= TRUE, border= 'transparent',
+    names.arg= bamqc$filename, beside= TRUE, space=c(-1, 0.5), col= bcol)
+legend('topleft', inset= c(-0.45, -0.55*4/nrow(bamqc)), legend= c('Unmapped', 'Aligned', 'mapq 15', 'mapq 20', 'mapq 30'), box.lwd= 0.2, col= bcol, cex= 0.8, xpd= NA, pch= 15, pt.cex= 1.5)
 axis(side= 3)
 mtext(text= 'No. of reads (millions)', font= 2, side= 3, line= 3.5, cex= MTEXTCEX)
 grid(ny= NA)
 
-boxplot(bx, yaxt= 'n', horizontal= TRUE, boxvex= 0.2, names= FALSE, ylim= c(0, ifelse(max(bx) > 40, max(bx), 40)), col= brewer.pal(7, 'Greens')[3], border= brewer.pal(7, 'Greens')[7])
+boxplot(bx, yaxt= 'n', horizontal= TRUE, names= FALSE, ylim= c(0, ifelse(max(bx) > 40, max(bx), 40)), col= brewer.pal(7, 'Greens')[3], border= brewer.pal(7, 'Greens')[7])
 box(col= 'white')
 grid(ny= NA)
 axis(side= 1); axis(side= 3)
 mtext(text= 'Quantiles of mapq scores', side= 3, font= 2, line= 3.5, cex= MTEXTCEX)
 
-barplot(nm, horiz= TRUE, beside= TRUE, space=c(0, 0.5), col= rev(brewer.pal(7, "Dark2")), border= 'transparent')
-legend('topleft', inset= c(-0, -0.24*4/nrow(bamqc)), cex= 0.8, legend= c('NM:0', '1', '2', '3', '4', '5', '6+'), pt.cex= 1.5, bty= 'n', horiz= TRUE, col= brewer.pal(7, "Dark2"), text.col= 'grey5', pch= 15, xpd= NA)
+bcol2<- brewer.pal(7, "Dark2")
+barplot(nm[nrow(nm):1, ], horiz= TRUE, beside= FALSE, space=c(0.5), col= bcol2, border= 'transparent')
+legend('topleft', inset= c(-0, -0.45*4/nrow(bamqc)), cex= 0.8, legend= c('0', '1', '2', '3', '4', '5', '6+'), pt.cex= 1.5, bty= 'o', box.lwd= 0.2, horiz= TRUE, col= bcol2, text.col= 'grey5', pch= 15, xpd= NA)
 grid(ny= NA)
 axis(side= 3)
-mtext(text= 'Reads (millions) with edit distance:', side= 3, font= 2, line= 3.75, cex= MTEXTCEX)
+mtext(text= 'Reads (millions) with edit distance (NM):', side= 3, font= 2, line= 3.75, cex= MTEXTCEX)
+
 dev.off()
 
 """ %{'bamqc_outfile':outfilename, 'bamqc': lists2rdf(bamqc_stats), 'pngfile': outfilename + '.png'}
