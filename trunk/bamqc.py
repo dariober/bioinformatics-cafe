@@ -1,15 +1,5 @@
 #!/usr/local/bin/python   
 
-"""
-
-Rcode to produce boxplot of mapq scores from bamqc output
---------------------------------------------------------------------------------
-indx<- grep('mapq_quant.', names(bamqc_out))
-bx<- t(bamqc_out[,indx])
-bxp(list(stats= bx, n= NA, conf= NA, group= NA, names= NA))
-
-"""
-
 import pysam
 import sys
 import os
@@ -70,6 +60,8 @@ EXAMPLES:
     ls *.bam | bamqc.py -i -
 
 TODO:
+    - Problems writing *.R file when -o contains dir e.g. bamqc.py -i myfile.bam -o mydir/bamqc.txt
+    - The automatic sizing of the R graph needs editing!! 
     - QC specific for PE reads.
     - Change try/except for NM tag to using AlignedRead.tags
     - Incorporate nm.na into the other nm.s
@@ -271,7 +263,7 @@ def stdev(xlist):
     """
     import math
     if len(xlist) == 1:
-	return(None)
+        return(None)
     mu= float(sum(xlist)) / len(xlist)
     ssq= sum([(x - mu)**2 for x in xlist])
     std = math.sqrt(ssq / float(len(xlist)-1))
@@ -308,7 +300,7 @@ def quantile(x, q,  qtype = 7, issorted = False):
 	"""
 	if not issorted:
 		y = sorted(x)
-	else:
+  else:
 		y = x
 	if not (1 <= qtype <= 9):
 	   return None  # error!
