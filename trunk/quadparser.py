@@ -55,9 +55,6 @@ TODO
 
     - Better handling of forward and reverse matches (i.e. other than complementing
       the forward regex?).
-    - Add support for protein search in reverse (currently --regex is translated
-      using the nucleotide dictionary so the protein reverse match should be
-      provided separately to the --regexrev/-R arg.)
     - Read sequence from stdin ('less myseq.fa | quadparser.py -f - ...').
     """, formatter_class= argparse.RawTextHelpFormatter)
 
@@ -91,6 +88,14 @@ sequences. Use '-' to get the name of the file from stdin
                                    
                    ''',
                    required= True)
+
+parser.add_argument('--noreverse',
+                   action= 'store_true',
+                   help='''Do not search the reverse (-) strand. I.e. do not use
+the complemented regex (or --regexrev/-R). Use this flag to search protein
+sequences.
+                                   
+                   ''')
 
 args = parser.parse_args()
 
@@ -166,9 +171,10 @@ while True:
     for m in re.finditer(psq_re_f, ref_seq):
         quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_for'
         gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '+', m.group(0)])
-    for m in re.finditer(psq_re_r, ref_seq):
-        quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_rev'
-        gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '-', m.group(0)])
+    if args.noreverse is False:
+        for m in re.finditer(psq_re_r, ref_seq):
+            quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_rev'
+            gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '-', m.group(0)])
     chr= re.sub('^>', '', line)
     ref_seq= []
     line= (ref_seq_fh.readline()).strip()
