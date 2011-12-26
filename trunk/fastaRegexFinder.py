@@ -12,12 +12,13 @@ DESCRIPTION
     Search for matches to a regex in a fasta file and return a bed file with the
     coordinates of the match and the matched sequence itself. 
     
-    With defaults, quadparser.py searches for putative quadruplexes on forward
+    With defaults, fastaRegexFinder.py searches for putative quadruplexes on forward
     and reverse strand using the quadruplex rule described at
     http://en.wikipedia.org/wiki/G-quadruplex#Quadruplex_prediction_techniques.
     
-    The defualt regex is '([gG]{3}\w{1,7}){3,}[gG]{3}' and its complement
-    produce the same output as in http://www.quadruplex.org/?view=quadbaseDownload
+    The defualt regex is '([gG]{3}\w{1,7}){3,}[gG]{3}' and along with its
+    complement they produce the same output as in
+    http://www.quadruplex.org/?view=quadbaseDownload
     
     Output bed file has columns:
     1. Name of fasta sequence (e.g. chromosome)
@@ -36,26 +37,25 @@ EXAMPLE:
     echo '>mychr' > /tmp/mychr.fa
     echo 'ACTGnACTGnACTGnTGAC' >> /tmp/mychr.fa
     
-    quadparser.py -f /tmp/mychr.fa -r 'ACTG'
+    fastaRegexFinder.py -f /tmp/mychr.fa -r 'ACTG'
         mychr	0	4	mychr_0_4_for	4	+	ACTG
         mychr	5	9	mychr_5_9_for	4	+	ACTG
         mychr	10	14	mychr_10_14_for	4	+	ACTG
         mychr	15	19	mychr_15_19_rev	4	-	TGAC
 
     
-    ls /tmp/mychr.fa | quadparser.py -f - -r 'A\w\wGn'
+    less /tmp/mychr.fa | fastaRegexFinder.py -f - -r 'A\w\wGn'
         mychr	0	5	mychr_0_5_for	5	+	ACTGn
         mychr	5	10	mychr_5_10_for	5	+	ACTGn
         mychr	10	15	mychr_10_15_for	5	+	ACTGn
 
 DOWNLOAD
-    quadparser.py is hosted at http://code.google.com/p/bioinformatics-misc/
+    fastaRegexFinder.py is hosted at http://code.google.com/p/bioinformatics-misc/
 
 TODO
 
     - Better handling of forward and reverse matches (i.e. other than complementing
       the forward regex?).
-    - Read sequence from stdin ('less myseq.fa | quadparser.py -f - ...').
     """, formatter_class= argparse.RawTextHelpFormatter)
 
 
@@ -109,13 +109,7 @@ if args.regexrev is None:
     regexrev= args.regex.translate(transtab)
 else:
     regexrev= args.regex
-    
-if args.fasta == '-':
-    args.fasta= sys.stdin.readlines()
-    if len(args.fasta) > 1:
-        sys.exit('\nquadpareser.py: Only one input file at a time can be processed:\n--fasta/-f: %s\n' %(args.fasta))
-    args.fasta= args.fasta[0].strip()
-    
+
 " ------------------------------[  Functions ]--------------------------------- "
 
 """                               LIST SORTER
@@ -135,17 +129,6 @@ def sort_table(table, cols):
         table = sorted(table, key=operator.itemgetter(col))
     return(table)
 
-#if __name__ == '__main__':
-#    mytable = (
-#        ('Joe', 'Clark', '1989'),
-#        ('Charlie', 'Babbitt', '1988'),
-#        ('Frank', 'Abagnale', '2002'),
-#        ('Bill', 'Clark', '2009'),
-#        ('Alan', 'Clark', '1804'),
-#        )
-#    for row in sort_table(mytable, (1,0)):
-#        print(row)
-
 """                           END of SORTER
 -----------------------------------------------------------------------------
 """
@@ -154,7 +137,10 @@ def sort_table(table, cols):
 psq_re_f= re.compile(args.regex)
 psq_re_r= re.compile(regexrev)
 
-ref_seq_fh= open(args.fasta)
+if args.fasta != '-':
+    ref_seq_fh= open(args.fasta)
+else:
+    ref_seq_fh= sys.stdin    
 
 ref_seq=[]
 line= (ref_seq_fh.readline()).strip()
