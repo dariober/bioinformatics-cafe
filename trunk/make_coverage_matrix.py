@@ -40,6 +40,7 @@ def get_pathbed(beddir):
     >>> ['solexa_pipeline/myfile1.bed', 'solexa_pipeline/myfile2.bed', ...]
     """
     allfiles= os.listdir(beddir)
+    allfiles.sort()
     bedfiles= []
     for f in allfiles:
         if re.search(args.extension, f):
