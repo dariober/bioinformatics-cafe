@@ -170,7 +170,7 @@ exceeds the number of available seqs.)
 
 parser.add_argument('--memeopt',
                     type= str,
-                    default= '-dna -mod anr -nmotifs 5 -minw 15 -maxw 50 -time 7200 -revcomp',
+                    default= '-dna -mod zoops -nmotifs 5 -minw 6 -maxw 50 -revcomp',
                     help="""Option passed to meme main program as string.
 Do not include the option -o/-oc (output dir) as this is automatically created.
 
@@ -180,7 +180,7 @@ NB: meme default is to use
     * -mod zoop as default from web based meme
     * -nmotifs 3
                     
-Default: "-dna -mod anr -nmotifs 5 -minw 15 -maxw 50 -time 7200 -revcomp"
+Default: "-dna -mod zoops -nmotifs 5 -minw 6 -maxw 50 -revcomp"
 """)
 
 parser.add_argument('-m', '--memedb',
