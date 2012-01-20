@@ -185,9 +185,9 @@ Default: "-dna -mod zoops -nmotifs 5 -minw 6 -maxw 50 -revcomp"
 
 parser.add_argument('-m', '--memedb',
                     type= str,
-                    default= '/home/berald01/applications/meme/db/motif_databases/JASPAR_CORE_2009.meme',
+                    default= '~/applications/meme/db/motif_databases/JASPAR_CORE_2009.meme',
                     help="""Database of motifs to pass to the meme suite.
-Default is JASPAR_CORE_2009 
+Default is JASPAR_CORE_2009.
                     """)
 
 parser.add_argument('-p', '--scp',
@@ -298,22 +298,27 @@ if args.mask:
 else:
     input_fasta= peak_fasta
 
-## Maximum no. seq to analyze
-tot_fasta= count_fasta_seq(input_fasta)
-if args.subsample < tot_fasta:
-    no_subsample= args.subsample
-else:
-    no_subsample= tot_fasta
-
-print('\nSampling %s out of %s sequences' %(no_subsample, tot_fasta))
 
 cmd= """
 fasta-center -len 200 < %(input_fasta)s > %(output_dir)s/seqs-centered;
 echo No. sequences in %(output_dir)s/seqs-centered: `grep '>' %(output_dir)s/seqs-centered | wc -l`;
 fasta-dinucleotide-shuffle -f %(output_dir)s/seqs-centered -t -dinuc > %(output_dir)s/seqs-shuffled;
 cat %(output_dir)s/seqs-centered %(output_dir)s/seqs-shuffled > %(output_dir)s/seqs-centered_w_bg;
+""" %{'input_fasta': input_fasta, 'output_dir': meme_output_dir}
+print(cmd)
+p= subprocess.Popen(cmd, shell= True)
+p.wait()
+
+## Maximum no. seq to analyze
+tot_fasta= count_fasta_seq(os.path.join(meme_output_dir, 'seqs-centered'))
+if args.subsample < tot_fasta:
+    no_subsample= args.subsample
+else:
+    no_subsample= tot_fasta
+
+cmd= """
 fasta-subsample %(output_dir)s/seqs-centered %(no_subsample)s -rest %(output_dir)s/seqs-discarded > %(output_dir)s/seqs-sampled;
-""" %{'input_fasta': input_fasta, 'output_dir': meme_output_dir, 'no_subsample': no_subsample}
+""" %{'output_dir': meme_output_dir, 'no_subsample': no_subsample}
 print(cmd)
 p= subprocess.Popen(cmd, shell= True)
 p.wait()
