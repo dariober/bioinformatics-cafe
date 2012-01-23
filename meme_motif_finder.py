@@ -15,24 +15,27 @@ DESCRIPTION:
     (or any file with genomic regions) and run meme for motif enrichment analysis.
     Input bed can be pre-processed to filter and select regions.
 
-    This program is an interface to the programs (in order of execution):
+    meme_motif_finder.py is an interface to the programs (in order of execution):
     
-        awk  :         Filter input bed file
-        sort :         Sort the filtered bed file
-        head :         Use top n regions
-        extend_bed :   Extends bed coordinates (internal function)
-        FastaFromBed : Extract sequences corresponding to selected regions
-        RepeatMasker : Pass sequence to it
-        meme suite :   Find motifs
-        tar/scp :      Tar and ship results to remote host
-    
+  option        prog            Example/default         Description
+--------------------------------------------------------------------------------
+  --awk         awk             '$14 < 5'               Filter rows/peaks in input using awk
+  --sort        sort            '-k 12,12nr -k 5,5nr'   Rank rows/peaks according to this cols
+  --npeaks      head            100                     Get the top n rows/peaks
+  --extendby    -               100                     Extend peak coordinates by this many bps
+  --refgenome   FastaFromBed    hsa.fa                  Create fasta file from this ref. file using FastaFromBed
+  --mask        RepeatMasker                            Mask repeats using RepeatFinder
+  --maskoptions                '-species human'
+  --memechip    meme-chip                               Run mem-chip suite
+  --scp         tar/scp        '143.65.172.17:~/mydir'  tar & scp results to this host.
+  
     Make sure the input file is in bed format (or convert it to bed using the
     --awk arg.)
 
-    The output is sent to dir 'meme' created (if it doesn't exist) in the
-    current dir, subdir input. E.g. if input bed is myfile.bed the output will
-    be in ./meme/myfile This dir will be deleted at start of the run if it
-    already exists.
+    The output is sent to dir 'meme' which is created (if it doesn't exist) in the
+    current dir, subdir input.
+    E.g. if input bed is myfile.bed the output will be in ./meme/myfile
+    This dir will be deleted at start of the run if it already exists.
 
     The order of the options below reflects the order of the input/output
     processing.
@@ -72,14 +75,12 @@ MEMO:
 
 REQUIREMENTS:
 
-    - bash tools awk and sort
+    - bash progs awk, sort, head, scp, tar
     - bedtools' FastaFromBed
     - RepeatMasker suite (required if you want to mask repeats)
     - Meme suite
 
 TODO:
-    - Add options for the auxilary programs of the meme suite (tomtom, dreme etc.).
-      Currently only the meme and fasta-subsample programs take options
     - Parameter strings starting with '-' are mis-interpreted.
       E.g. --maskoptions "-species human" has to be written " -species human"
       because "-s..." is taken as the argument -s (I think...)
@@ -87,6 +88,7 @@ TODO:
           meme/myinput/[subdirs]
       Instead it should give:
           myinput/[subdirs]
+    - Switches to exclude awk, sort, head steps.
       
 """, formatter_class= argparse.RawTextHelpFormatter)
 
@@ -159,36 +161,25 @@ Defualt is no options (''). Consider in particular the '-species' option
 hyphen, start with a whitespace (bug to be fixed).
                     """)
 
-parser.add_argument('-S', '--subsample',
-                    type= int,
-                    default= 600,
-                    help="""Option passed to meme/fasta-subsample: Number of
-sequences random sample from the input fasta. The sampled sequences will be
-passed to the motif enrichment steps. Default 600 (reduced if this number
-exceeds the number of available seqs.)
-                    """)
-
-parser.add_argument('--memeopt',
+parser.add_argument('-m', '--memechip',
                     type= str,
-                    default= '-dna -mod zoops -nmotifs 5 -minw 6 -maxw 50 -revcomp',
-                    help="""Option passed to meme main program as string.
-Do not include the option -o/-oc (output dir) as this is automatically created.
+                    default= " -db ~/applications/meme/db/motif_databases/JASPAR_CORE_2009.meme -run-ama -run-mast -meme-mod zoops",
+                    help="""String of options passed to meme-chip. Do not include
+here the -oc/-o (output dir) as this is assigned by previous steps.
 
-NB: meme default is to use
-    * protein alphabet (use -dna for dna)
-    * -minw, -maxw     min and max width of the motif: 8, 50
-    * -mod zoop as default from web based meme
-    * -nmotifs 3
-                    
-Default: "-dna -mod zoops -nmotifs 5 -minw 6 -maxw 50 -revcomp"
-""")
+Useful options to keep in mind:
 
-parser.add_argument('-m', '--memedb',
-                    type= str,
-                    default= '~/applications/meme/db/motif_databases/JASPAR_CORE_2009.meme',
-                    help="""Database of motifs to pass to the meme suite.
-Default is JASPAR_CORE_2009.
-                    """)
+    -nmeme     : limit of sequences to pass to MEME (default 600).
+    -db        : Database to search for known motifs (target database for use by
+                 TOMTOM and AME, if not present then TOMTOM and AME are not run)
+    -ccut      : Maximum size of a sequence before it is cut down 
+                 to a centered section; a value of 0 indicates the
+                 sequences should not be cut down; default: 100
+    -meme-mod  : [oops|zoops|anr] Sites used in a single sequence (one only,
+                 zero or one, any number)
+    -meme-minw : Min and max motif width
+    -meme-maxw 
+                 """)
 
 parser.add_argument('-p', '--scp',
                     type= str,
@@ -298,38 +289,9 @@ if args.mask:
 else:
     input_fasta= peak_fasta
 
-
 cmd= """
-fasta-center -len 200 < %(input_fasta)s > %(output_dir)s/seqs-centered;
-echo No. sequences in %(output_dir)s/seqs-centered: `grep '>' %(output_dir)s/seqs-centered | wc -l`;
-fasta-dinucleotide-shuffle -f %(output_dir)s/seqs-centered -t -dinuc > %(output_dir)s/seqs-shuffled;
-cat %(output_dir)s/seqs-centered %(output_dir)s/seqs-shuffled > %(output_dir)s/seqs-centered_w_bg;
-""" %{'input_fasta': input_fasta, 'output_dir': meme_output_dir}
-print(cmd)
-p= subprocess.Popen(cmd, shell= True)
-p.wait()
-
-## Maximum no. seq to analyze
-tot_fasta= count_fasta_seq(os.path.join(meme_output_dir, 'seqs-centered'))
-if args.subsample < tot_fasta:
-    no_subsample= args.subsample
-else:
-    no_subsample= tot_fasta
-
-cmd= """
-fasta-subsample %(output_dir)s/seqs-centered %(no_subsample)s -rest %(output_dir)s/seqs-discarded > %(output_dir)s/seqs-sampled;
-""" %{'output_dir': meme_output_dir, 'no_subsample': no_subsample}
-print(cmd)
-p= subprocess.Popen(cmd, shell= True)
-p.wait()
-
-cmd= """
-meme %(output_dir)s/seqs-sampled -oc %(output_dir)s/meme_out %(meme_opt)s; ## default -minw 6 -maxw 30
-tomtom -verbosity 1 -oc %(output_dir)s/meme_tomtom_out -min-overlap 5 -dist pearson -evalue -thresh 0.1 -no-ssc %(output_dir)s/meme_out/meme.txt %(meme_db)s;
-dreme2 -v 1 -oc %(output_dir)s/dreme_out -p %(output_dir)s/seqs-centered -n %(output_dir)s/seqs-shuffled -png;
-tomtom -verbosity 1 -oc %(output_dir)s/dreme_tomtom_out -min-overlap 5 -dist pearson -evalue -thresh 0.1 -no-ssc %(output_dir)s/dreme_out/dreme.txt %(meme_db)s;
-ame --verbose 1 --oc %(output_dir)s/ame_out --fix-partition 800 --bgformat 0 %(output_dir)s/seqs-centered_w_bg %(meme_db)s;
-""" %{'input_fasta': input_fasta, 'output_dir': meme_output_dir, 'meme_db': args.memedb, 'meme_opt': args.memeopt}
+meme-chip %(memechip)s -oc %(meme_output_dir)s %(input_fasta)s
+""" %{'memechip':args.memechip, 'meme_output_dir': meme_output_dir, 'input_fasta': input_fasta}
 print(cmd)
 p= subprocess.Popen(cmd, shell= True)
 p.wait()
