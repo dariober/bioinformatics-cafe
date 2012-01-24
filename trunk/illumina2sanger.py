@@ -44,9 +44,9 @@ infastq_file= sys.argv[1]
 
 delete_unzipped= False
 if infastq_file.endswith('.gz'):
-    p= subprocess.Popen('gunzip -c %s' %(sys.argv[1]), shell= True)
-    p.wait()
     fastq_file= infastq_file[:-3]
+    p= subprocess.Popen('gunzip -c %s > %s' %(sys.argv[1], fastq_file), shell= True)
+    p.wait()
     delete_unzipped= True
 else:
     fastq_file= sys.argv[1]
