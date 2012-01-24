@@ -41,10 +41,13 @@ def illumina2sanger(base):
     return(chr(ord(base) - 31))
 
 infastq_file= sys.argv[1]
+
+delete_unzipped= False
 if infastq_file.endswith('.gz'):
-    p= subprocess.Popen('gunzip %s' %(sys.argv[1]), shell= True)
+    p= subprocess.Popen('gunzip -c %s' %(sys.argv[1]), shell= True)
     p.wait()
     fastq_file= infastq_file[:-3]
+    delete_unzipped= True
 else:
     fastq_file= sys.argv[1]
     
@@ -65,8 +68,11 @@ while True:
     print(qual_sanger)
 fastq.close()
 
-if sys.argv[1].endswith('.gz'):
-    p= subprocess.Popen('gzip %s' %(fastq_file), shell= True)
-    p.wait()
+if delete_unzipped is True:
+    os.remove(fastq_file)
+
+#if sys.argv[1].endswith('.gz'):
+#    p= subprocess.Popen('gzip %s' %(fastq_file), shell= True)
+#    p.wait()
 
 sys.exit()
