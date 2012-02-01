@@ -71,6 +71,15 @@ parser.add_argument('--skip',
 writing out (e.g. use --skip 1 to skip the header). 
                 """)
 
+parser.add_argument('--fill',
+                    type= str,
+                    default= None,
+                    required= False,
+                    help="""If the concatenated bed files have different number of fields,
+fill short rows with this string (e.g. --fill NA). Note: The file name will remain
+the last column. Default is None meaning don't fill up rows 
+                """)
+
 #parser.add_argument('-H', '--header',
 #                    type= str,
 #                    required= False,
@@ -91,6 +100,8 @@ if args.output in args.input:
 
 fout= open(args.output, 'w')
 
+ncols= 0 ## Keep track of the number of columns in eah line in order to fill in short rows
+concbed= []
 for f in args.input:
     print('Concatenating: %s' %(f))
     n= 0
@@ -106,7 +117,24 @@ for f in args.input:
             n += 1
             continue
         line= line.rstrip('\n\r')
-        line= line + '\t' + file_id
-        fout.write(line + '\n')
+        line= line.split('\t')
+        if len(line) > ncols:
+            ncols= len(line)
+        line.append(file_id)
+        concbed.append(line)
     fin.close()
+
+ncols= ncols + 1 ## +1 because file name has been appended to each row
+
+if args.fill is not None:
+    " Memo: concbed is a list of list. Each inner list a bed row "
+    for i in range(0, len(concbed)):
+        line= concbed[i]
+        if len(line) < ncols: 
+            fill= [args.fill] * (ncols - len(line))
+            line= line[:-1] + fill + [line[-1]]
+            concbed[i]= line
+
+for line in concbed:
+    fout.write('\t'.join(line) + '\n')
 fout.close()
