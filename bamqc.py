@@ -113,6 +113,12 @@ append results to previous report)
 		    
                     """)
 
+parser.add_argument('--onlyheader',
+                    action= 'store_true',
+                    help= """Only output the header line and exit.
+		    
+                    """)
+
 args = parser.parse_args()
 outfilename = args.output.name
 
@@ -127,6 +133,11 @@ if args.input == ['-']:
 
 ## Order in which the attributes in class File_Stats should be retured:
 header=  ['filename', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles']
+
+if args.onlyheader:
+    args.output.write('\t'.join(header) + '\n')
+    args.output.close()
+    sys.exit()
 
 ## Column names to output (must reflect the order in 'header' above)
 colnames=  ['filename', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
