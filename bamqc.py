@@ -134,11 +134,6 @@ if args.input == ['-']:
 ## Order in which the attributes in class File_Stats should be retured:
 header=  ['filename', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles']
 
-if args.onlyheader:
-    args.output.write('\t'.join(header) + '\n')
-    args.output.close()
-    sys.exit()
-
 ## Column names to output (must reflect the order in 'header' above)
 colnames=  ['filename', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
            ['mapq.'+str(x) for x in LIMITS_MAPQ] + \
@@ -146,6 +141,11 @@ colnames=  ['filename', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
            ['nm.'+str(x) for x in LIMITS_NM] + \
            ['nm.na'] + \
            ['mapq_quant.'+str(x) for x in QUANTILES]
+
+if args.onlyheader:
+    args.output.write('\t'.join(colnames) + '\n')
+    args.output.close()
+    sys.exit()
 
 class File_Stats:
     def __init__(self):
