@@ -4,6 +4,7 @@
 import os
 import argparse
 import sys
+import re
 
 parser = argparse.ArgumentParser(description= """
 
@@ -50,9 +51,13 @@ parser.add_argument('-o', '--output',
 
 parser.add_argument('-s', '--strip',
                     type= str,
+                    nargs= '+',
                     required= False,
-                    help="""String to strip from the input file name. The
-resulting name will be used as identifier of the source file. Defualt is not
+                    help="""List of regexs to strip from the input file name. Each of these
+regexs will be removed. E.g.
+-s \.merged\.bed$ \.bed$
+will strip both .bed and .merged.bed. Note: Order matters put less specific regex first (that is .merged.bed bofore .bed)
+The resulting name will be used as identifier of the source file. Default is not
 to strip anything.
                 """)
 
@@ -103,13 +108,15 @@ fout= open(args.output, 'w')
 ncols= 0 ## Keep track of the number of columns in eah line in order to fill in short rows
 concbed= []
 for f in args.input:
-    print('Concatenating: %s' %(f))
     n= 0
     file_id= f
     if args.dir is False:
         file_id= os.path.split(f)[1]
     if args.strip:
-        file_id= file_id.replace(args.strip, '')
+        for r in args.strip:
+            file_id= re.sub(r, '', file_id)
+    print('Concatenating: %s; File ID: %s' %(f, file_id))
+
     fin= open(f)
         
     for line in fin:
