@@ -10,6 +10,9 @@ if len(sys.argv) != 2:
 Return the sum of the regions spanned in a bed file after having merged the
 overlapping features.
 
+Output is (tab separated):
+<input filename> <sum of regions> <number of features after merging>
+
 Use - to read file from stdin
 
 USAGE
@@ -55,8 +58,9 @@ for line in merged:
     line= line.rstrip('\n\r').split('\t')
     sumbed += int(line[2]) - int(line[1])
     n += 1
-print('Size spanned (bp):                %s' %(sumbed))
-print('Number of features after merging: %s' %(n))
+print('\t'.join([fin, str(sumbed), str(n)]))
+#print('Size spanned (bp):                %s' %(sumbed))
+#print('Number of features after merging: %s' %(n))
 
 os.remove(ftmp)
 try:
