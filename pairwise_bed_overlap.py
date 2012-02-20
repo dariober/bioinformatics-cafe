@@ -7,8 +7,16 @@ import subprocess
 if len(sys.argv) < 2:
     sys.exit("""
 Given a list of bed files, calculates the pairwise overlap.
-Column 4 in output answers the question: How many bases in file a are not covered by file b?
-Column 5in output answers the question: What percentage of file a is covered by file b?
+
+Columns:
+    1. File A
+    2. Bases spanned by A
+    3. File B
+    4. Bases spanned by B
+    5. No. bases in A covered by B (intersection)
+    6. Percentage of A covered by B (i.e. col-5 / col-2) 
+    7. No. bases in A not covered by B (subtraction)
+    8. Percentage of A not covered by B (i.e. col-7 / col-2)
 
 USAGE
     pairwise_bed_overlap.py file1.bed file2.bed file3.bed ...
@@ -16,20 +24,12 @@ USAGE
     ## Get all bed files in current dir
     pairwise_bed_overlap.py `ls *.bed`
 
-OUTPUT
-    To stdout tab-separated (note that also each file with itself is returned):
-file1  <bases in 1>  file1 <bases in 1>      <"bases in 1" minus "bases in 1">   <% file 1 covered by file 1>
-file1  <bases in 1>  file2 <bases in 2>      <"bases in 1" minus "bases in 2">   <% file 1 covered by file 2>
-file1  <bases in 1>  file3 <bases in 3>      <"bases in 1" minus "bases in 3">   <% file 1 covered by file 3>
-...
-fileN  <bases in N>  fileN-1 <bases in N-1>  <"bases in N" minus "bases in N-1"> <% file N covered by file N-1>
-
 REQUIREMENTS:
 
 sumbed.py on path (svn bioinformatics-misc)
 bedtools subtractBed
 
-It is assumed taht sumbed.py returns a string tab separated as: <filenaname> <span> <...other fileds ignored>
+It is assumed that sumbed.py returns a string tab separated as: <filenaname> <span> <...other fileds ignored>
 
 """)
 
@@ -77,9 +77,11 @@ for fa in files:
         pair.fileb= fb
         pair.filea_span= filespans[fa]
         pair.fileb_span= filespans[fb]
-        pair.diff= diff
-        perc_cov= round(100*((filespans[fa] - diff) / float(filespans[fa])), 2)
-        line= ([pair.filea, pair.filea_span, pair.fileb, pair.fileb_span, pair.diff, perc_cov])
+        pair.diff= diff              ## Number of bases of file a NOT covered by b
+        inters= filespans[fa] - diff ## Number of bases of file a ALSO covered by b
+        perc_cov= round(100*(inters / float(filespans[fa])), 2)        
+        perc_unc= round(100*(diff / float(filespans[fa])), 2)
+        line= ([pair.filea, pair.filea_span, pair.fileb, pair.fileb_span, inters, perc_cov, diff, perc_unc])
         line= [str(x) for x in line]
         print('\t'.join(line))
 sys.exit()
