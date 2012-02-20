@@ -67,11 +67,10 @@ for fa in files:
             p.wait()
             sumout= p.stdout.read().rstrip('\n\r')
             diff= int(sumout.split('\t')[1])
-            cmd= 'intersectBed -a %s -b %s | sumbed.py -' %(fa, fb)
-            p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE)
-            p.wait()
-            sumout= p.stdout.read().rstrip('\n\r')
-            inters= int(sumout.split('\t')[1])
+#            cmd= 'intersectBed -a %s -b %s | sumbed.py -' %(fa, fb)
+#            p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE)
+#            p.wait()
+#            sumout= p.stdout.read().rstrip('\n\r')
             
         pair= pairwise()
         pair.filea= fa
@@ -80,7 +79,7 @@ for fa in files:
         pair.fileb_span= filespans[fb]
         pair.diff= diff
         perc_cov= round(100*((filespans[fa] - diff) / float(filespans[fa])), 2)
-        line= ([pair.filea, pair.filea_span, pair.fileb, pair.fileb_span, pair.diff, perc_cov, inters])
+        line= ([pair.filea, pair.filea_span, pair.fileb, pair.fileb_span, pair.diff, perc_cov])
         line= [str(x) for x in line]
         print('\t'.join(line))
 sys.exit()
