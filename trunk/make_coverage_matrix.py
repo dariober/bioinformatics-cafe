@@ -91,6 +91,7 @@ while True:
             line= line.strip().split('\t')
             rowheaders= [line[int(x)] for x in args.rowheaders]
             line= [rowheaders] + [line[args.index]]
+            print(line)
             line= '\t'.join(line)
             matline.append(line)
         else:
