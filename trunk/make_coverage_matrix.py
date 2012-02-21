@@ -27,6 +27,12 @@ parser.add_argument('--subregex', '-s',           ## Argument name, long and sho
                     type= str,
                     default= None,
                     help= 'Pass this regex to re.sub() to remove it from the file name')  ## Help for this args
+parser.add_argument('--rowheaders', '-r',
+                    required= False,
+                    type= int,
+                    nargs='+'
+                    default= 3,
+                    help= 'One or more column indexes to use as row headers. Default is 3 (4th column of bed file that is feature name)')  ## Help for this args
 
 args = parser.parse_args()
 
@@ -81,8 +87,9 @@ while True:
             if line == '':
                 done= 1
                 break
-            line= line.split('\t')
-            line= [line[3]] + [line[args.index]]
+            line= line.strip().split('\t')
+            rowheaders= [line[int(x)] for x in args.rowheaders]
+            line= [rowheaders + [line[args.index]]
             line= '\t'.join(line)
             matline.append(line)
         else:
@@ -91,7 +98,7 @@ while True:
             if line == '':
                 done= 1
                 break
-            line= line.split('\t')
+            line= line.strip().split('\t')
             line= line[args.index]
             matline.append(line)
     matline= '\t'.join(matline)
