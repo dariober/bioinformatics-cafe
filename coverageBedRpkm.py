@@ -45,6 +45,8 @@ def get_rpkm(readcount, mappedreads, regionlength):
     """
     Calculate rpkm as in http://www.clcbio.com/manual/genomics/Definition_RPKM.html
     """
+    if regionlength == 0:
+        return(0)
     rpkm= float(mappedreads) / ((readcount/1000000.0) * (regionlength/1000.0))
     return(rpkm)
 
