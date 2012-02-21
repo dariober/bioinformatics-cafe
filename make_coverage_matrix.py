@@ -90,8 +90,7 @@ while True:
                 break
             line= line.strip().split('\t')
             rowheaders= [line[int(x)] for x in args.rowheaders]
-            line= [rowheaders] + [line[args.index]]
-            print(line)
+            line= rowheaders + [line[args.index]]
             line= '\t'.join(line)
             matline.append(line)
         else:
