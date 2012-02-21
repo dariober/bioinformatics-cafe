@@ -73,7 +73,7 @@ if args.subregex is not None:
     filenames_header= [re.sub(args.subregex, '', x) for x in filenames]
 else:
     filenames_header= filenames
-preheader= ['peak_id_' + str(i) for i in range(1, len(args.rowheaders)+1)]
+preheader= ['col_id_' + str(i) for i in range(1, len(args.rowheaders)+1)]
 header_row= preheader + filenames_header
 header_row= '\t'.join(header_row)
 print(header_row)
