@@ -29,7 +29,7 @@ parser.add_argument('--subregex', '-s',           ## Argument name, long and sho
                     help= 'Pass this regex to re.sub() to remove it from the file name')  ## Help for this args
 parser.add_argument('--rowheaders', '-r',
                     required= False,
-                    type= int,
+                    type= list,
                     nargs='+',
                     default= [3],
                     help= 'One or more column indexes to use as row headers. Default is 3 (4th column of bed file that is feature name)')  ## Help for this args
