@@ -31,7 +31,7 @@ parser.add_argument('--rowheaders', '-r',
                     required= False,
                     type= int,
                     nargs='+',
-                    default= 3,
+                    default= [3],
                     help= 'One or more column indexes to use as row headers. Default is 3 (4th column of bed file that is feature name)')  ## Help for this args
 
 args = parser.parse_args()
