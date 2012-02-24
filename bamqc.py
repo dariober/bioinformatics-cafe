@@ -5,6 +5,7 @@ import sys
 import os
 import argparse
 import subprocess
+import hashlib
 
 bamfiles= sys.argv[1:]
 
@@ -64,7 +65,7 @@ TODO:
     - The automatic sizing of the R graph needs editing!! 
     - QC specific for PE reads.
     - Change try/except for NM tag to using AlignedRead.tags
-    - Incorporate nm.na into the other nm.s
+    - --onlyheader requires -i (e.g. bamqc --onlyheader -i nonsense)
 
 """, formatter_class= argparse.RawTextHelpFormatter)
 
@@ -132,10 +133,10 @@ if args.input == ['-']:
 # ------------------------------------------------------------------------------
 
 ## Order in which the attributes in class File_Stats should be retured:
-header=  ['filename', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles']
+header=  ['filename', 'md5sum', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles']
 
 ## Column names to output (must reflect the order in 'header' above)
-colnames=  ['filename', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
+colnames=  ['filename', 'md5sum', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
            ['mapq.'+str(x) for x in LIMITS_MAPQ] + \
            ['mapq_255'] + \
            ['nm.'+str(x) for x in LIMITS_NM] + \
@@ -151,6 +152,7 @@ class File_Stats:
     def __init__(self):
         """ Attributes here will be columns in output table """
         self.filename= ''
+	self.md5sum= ''
         self.median_length= 'NA'
         self.len_sd= 'NA'
         self.nreads_tot= 0
@@ -162,6 +164,30 @@ class File_Stats:
         self.nreads_nm_na= 0
         self.mapq= {}
         self.mapq_quantiles= []
+
+def sumfile(fobj):
+    '''Returns an md5 hash for an object with read() method.'''
+    m = hashlib.md5()
+    while True:
+        d = fobj.read(8096)
+        if not d:
+            break
+        m.update(d)
+    return m.hexdigest()
+
+
+def md5sum(fname):
+    '''Returns an md5 hash for file fname, or stdin if fname is "-".'''
+    if fname == '-':
+        ret = sumfile(sys.stdin)
+    else:
+        try:
+            f = open(fname, 'rb')
+        except:
+            return 'Failed to open file %s' %fname
+        ret = sumfile(f)
+        f.close()
+    return ret
 
 def cumdist(mapq_dict, limits= [0, 5, 10, 15, 20, 25, 30, 35, 40]):
     """
@@ -369,6 +395,7 @@ for bam in args.input:
     mapq_sample= [] ## Accumulator for sample of mapq scores.
     length_sample= []
     fstats.filename= os.path.split(bam)[1]
+    fstats.md5sum= md5sum(bam)
     bamfile = pysam.Samfile( bam, "rb" )
     n= 0
     for AlignedRead in bamfile:
