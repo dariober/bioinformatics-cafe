@@ -1,7 +1,7 @@
 #!/home/berald01/.local/bin/python
 
 """
-Snippet to launch a number of shell subprocess using a limited number
+Snippet to launch a number of shell subprocesses using a limited number
 if cores.
 """
 
@@ -9,7 +9,7 @@ import subprocess
 import os
 import time
 
-NCORES= 6
+NCORES= 6 ## Max number of cores to use 
 
 bams= [x for x in sorted(os.listdir(os.getcwd())) if x.endswith('.bam')]
 
@@ -18,10 +18,7 @@ running_procs= 0
 n= 0
 for bam in bams:
     n += 1
-    if n == 1:
-        cmd= 'bamqc.py -i %s --noheader --nograph > bamqc.tsv' %(bam)
-    else:
-        cmd= 'bamqc.py -i %s --noheader --nograph >> bamqc.tsv' %(bam)
+    cmd= 'bamqc.py -i %s --noheader --nograph >> bamqc.tsv' %(bam)
     print('%s. %s' %(n, cmd))
     p= subprocess.Popen(cmd, shell= True)
     procs.append(p)
