@@ -1,6 +1,7 @@
 #!/usr/local/bin/python
 
 import sys
+import psycopg2
 
 if len(sys.argv) == 1:
     sys.exit("""
@@ -10,9 +11,11 @@ DESCRIPTION
     
     See http://code.google.com/p/postgresql-setup-cruk/source/browse/trunk/fastqc.sql
     for table definition.
+    
+    <connection string>: 'dbname= "sblab" user="me" password="pwd"' 
 
 USAGE
-    fastqc_to_pgtable.py <fastqc_data.txt> > <output file>
+    fastqc_to_pgtable.py <fastqc_data.txt> <connection string> > <output file>
     
     ## Process all fastqc_data.txt files in all subdirs in current dir:
     for fastqc in `ls .`
@@ -82,13 +85,16 @@ def list_to_pgcolumns(lst):
         if type(x) == list:
             try:
                 x= [int(z) for z in x]
-                pgrow.append('{' + str(x).strip('[]') + '}')
+                # pgrow.append('{' + str(x).strip('[]') + '}')
+                pgrow.append(x)
             except ValueError:
                 try:
                     x= [float(z) for z in x]
-                    pgrow.append('{' + str(x).strip('[]') + '}')
+                    pgrow.append(x)
+                    # pgrow.append('{' + str(x).strip('[]') + '}')
                 except:
-                    pgrow.append('{' + str(x).strip('[]') + '}')
+                    pgrow.append(x)
+                    # pgrow.append('{' + str(x).strip('[]') + '}')
         else:
             pgrow.append(x)
     return(pgrow)
@@ -132,7 +138,19 @@ for s, e in zip(mod_start[1:], mod_end[1:]):
         row[2][9]= '10' ## Replace 10++ with 10
     row= list_to_pgcolumns(row) 
     fastqc_line= fastqc_line + row
-print('\t'.join(fastqc_line))
+
+# ---------------------[ Send to postres ]--------------------------------------
+conn= psycopg2.connect(sys.argv[2])
+cur= conn.cursor()
+## Memo: get columns with query like this:
+## select * from information_schema.columns where table_name = 'fastqc' order by ordinal_position;
+cur.execute("CREATE TEMP TABLE fastqc_tmp AS (SELECT * FROM fastqc WHERE 1=2)") ## Where to put results
+cur.execute("INSERT INTO fastqc_tmp VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", fastqc_line)
+cur.execute("INSERT INTO fastqc SELECT DISTINCT * FROM fastqc_tmp EXCEPT SELECT * FROM fastqc") ## Import only rows not already present 
+cur.execute("DROP TABLE fastqc_tmp")
+cur.close()
+conn.commit()
+conn.close()
 sys.exit()
 
 
