@@ -1,9 +1,10 @@
 #!/usr/local/bin/python
 
+import os
 import sys
 import psycopg2
 
-if len(sys.argv) == 1:
+if len(sys.argv) != 3:
     sys.exit("""
 DESCRIPTION
     Convert the FastQC report (file: fastqc_data.txt) to a single line with columns
@@ -104,7 +105,27 @@ def list_to_pgcolumns(lst):
         else:
             pgrow.append(x)
     return(pgrow)
-   
+
+def sumfile(fobj):
+    '''Returns an md5 hash for an object with read() method.'''
+    m = hashlib.md5()
+    while True:
+        d = fobj.read(8096)
+        if not d:
+            break
+        m.update(d)
+    return(m.hexdigest())
+
+def md5sum(fname):
+    '''Returns an md5 hash for file fname, or stdin if fname is "-".'''
+    if fname == '-':
+        ret = sumfile(sys.stdin)
+    else:
+        f = open(fname, 'rb')
+        ret = sumfile(f)
+        f.close()
+    return(ret)
+ 
 " ---------------------------------------------------------------------------- "
 
 fq= open(sys.argv[1]).readlines()
@@ -130,7 +151,10 @@ for i in range(0, len(fq)):
 ## Process First module:
 module= fq[mod_start[0]:mod_end[0]]
 for line in module[2:]:
-    fastqc_line.append(line.split('\t')[1])
+    line= line.split('\t')
+    if line[0] == 'Filename':
+        filename= line[1]
+    fastqc_line.append(line[1])
 
 ## Start processing modules. First one (Basic statitics) is apart:
 for s, e in zip(mod_start[1:], mod_end[1:]):
@@ -145,13 +169,19 @@ for s, e in zip(mod_start[1:], mod_end[1:]):
     row= list_to_pgcolumns(row) 
     fastqc_line= fastqc_line + row
 
+## Get md5sum of file, assuming it can be found in the dir one level up of fastqc_data.txt
+try:
+    fastqc_line.append(md5sum(os.path.join('../', filename)))
+except IOError:
+    fastqc_line.append(None)
+
 # ---------------------[ Send to postres ]--------------------------------------
 conn= psycopg2.connect(sys.argv[2])
 cur= conn.cursor()
 ## Memo: get columns with query like this:
 ## select * from information_schema.columns where table_name = 'fastqc' order by ordinal_position;
 cur.execute("CREATE TEMP TABLE fastqc_tmp AS (SELECT * FROM fastqc WHERE 1=2)") ## Where to put results
-cur.execute("INSERT INTO fastqc_tmp VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", fastqc_line)
+cur.execute("INSERT INTO fastqc_tmp VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", fastqc_line)
 cur.execute("INSERT INTO fastqc SELECT DISTINCT * FROM fastqc_tmp EXCEPT SELECT * FROM fastqc") ## Import only rows not already present 
 cur.execute("DROP TABLE fastqc_tmp")
 cur.close()
