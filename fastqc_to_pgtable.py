@@ -4,11 +4,12 @@ import sys
 
 if len(sys.argv) == 1:
     sys.exit("""
-Convert the FastQC report (file: fastqc_data.txt) to a single line with columns
-tab-separated. The output is for importing to postgres.
-
-See http://code.google.com/p/postgresql-setup-cruk/source/browse/trunk/fastqc.sql
-for table definition.
+DESCRIPTION
+    Convert the FastQC report (file: fastqc_data.txt) to a single line with columns
+    tab-separated. The output is for importing to postgres.
+    
+    See http://code.google.com/p/postgresql-setup-cruk/source/browse/trunk/fastqc.sql
+    for table definition.
 
 USAGE
     fastqc_to_pgtable.py <fastqc_data.txt> > <output file>
@@ -20,37 +21,6 @@ USAGE
     done
 
 """)
-
-"""
-##FastQC	0.10.0
->>Basic Statistics	pass
-#Measure	Value	
-Filename	ds001_sample1.bam	
-File type	Conventional base calls	
-Encoding	Sanger / Illumina 1.9	
-Total Sequences	999556	
-Filtered Sequences	0	
-Sequence length	36	
-%GC	42	
->>END_MODULE
->>Per base sequence quality	pass
-#Base	Mean	Median	Lower Quartile	Upper Quartile	10th Percentile	90th Percentile
-1	36.34938412655219	38.0	35.0	39.0	31.0	40.0
-2	35.648754046796775	38.0	35.0	39.0	28.0	40.0
-3	35.502683191336956	38.0	34.0	39.0	28.0	40.0
-...
->>END_MODULE
->>Per sequence quality scores	pass
-#Quality	Count
-2	3636.0
-3	203.0
-...
->>END_MODULE
->>Per base sequence content	warn
-#Base	G	A	T	C
-1	13.47777203256334	29.391581791144084	31.86158976763948	25.269056408653096
-...
-"""
 
 def parse_module(fastqc_module):
     """
