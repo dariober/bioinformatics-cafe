@@ -4,8 +4,21 @@ import sys
 
 if len(sys.argv) == 1:
     sys.exit("""
-Convert FastQC report (fastqc_data.txt) to table format for importing to
-postgres.
+Convert the FastQC report (file: fastqc_data.txt) to a single line with columns
+tab-separated. The output is for importing to postgres.
+
+See http://code.google.com/p/postgresql-setup-cruk/source/browse/trunk/fastqc.sql
+for table definition.
+
+USAGE
+    fastqc_to_pgtable.py <fastqc_data.txt> > <output file>
+    
+    ## Process all fastqc_data.txt files in all subdirs in current dir:
+    for fastqc in `ls .`
+    do
+    fastqc_to_pgtable.py $fastqc/fastqc_data.txt >> /tmp/fastqc_pgtable.tsv
+    done
+
 """)
 
 """
