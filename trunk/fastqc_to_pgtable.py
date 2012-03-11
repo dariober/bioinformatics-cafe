@@ -7,20 +7,26 @@ if len(sys.argv) == 1:
     sys.exit("""
 DESCRIPTION
     Convert the FastQC report (file: fastqc_data.txt) to a single line with columns
-    tab-separated. The output is for importing to postgres.
+    tab-separated. The output is uploaded to the postgres database given in the
+    connection string. 
     
     See http://code.google.com/p/postgresql-setup-cruk/source/browse/trunk/fastqc.sql
-    for table definition.
-    
+    for the table definition. 
+
+ARGUMENTS
+    <fastqc> : File fastqc_data.txt produced by FastQC
     <connection string>: 'dbname= "sblab" user="me" password="pwd"' 
 
 USAGE
-    fastqc_to_pgtable.py <fastqc_data.txt> <connection string> > <output file>
+    fastqc_to_pgtable.py <fastqc_data.txt> <connection string>
+
+EXAMPLE
+    fastqc_to_pgtable.py fastqc/fastqc_data.txt 'dbname="sblab" user="me" pwd="pwd"'
     
     ## Process all fastqc_data.txt files in all subdirs in current dir:
     for fastqc in `ls .`
     do
-    fastqc_to_pgtable.py $fastqc/fastqc_data.txt >> /tmp/fastqc_pgtable.tsv
+    fastqc_to_pgtable.py $fastqc/fastqc_data.txt 'dbname="sblab" user="me" pwd="pwd"'
     done
 
 """)
