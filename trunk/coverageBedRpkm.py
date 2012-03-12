@@ -45,8 +45,6 @@ def get_rpkm(readcount, mappedreads, regionlength):
     """
     Calculate rpkm as in http://www.clcbio.com/manual/genomics/Definition_RPKM.html
     """
-    if regionlength == 0:
-        return(0)
     rpkm= float(mappedreads) / ((readcount/1000000.0) * (regionlength/1000.0))
     return(rpkm)
 
@@ -65,19 +63,16 @@ except ValueError:
 
 if a is None and abam is None:
     sys.exit('%s: I cannot find the -abam or -a argumnet in the string %s' %(sys.argv[0], sys.argv[1]))
-if a is not None and abam is not None:
+elif a is not None and abam is not None:
     sys.exit('%s: Both the -abam or -a argumnets found in string %s' %(sys.argv[0], sys.argv[1]))
-
-""" These runs of samtools get the library size. Uncomment them if you want to use
-lib size in the rpkm calculation instead of the total number of reads in target features """
-#if abam is not None:
-#    p= subprocess.Popen('samtools view -c %s' %(abam), shell= True, stdout=subprocess.PIPE)
-#    readcount= int((p.communicate()[0]).strip())
-#elif a is not None:
-#    p= subprocess.Popen("""wc %s | awk {'print $1'}""" %(a), shell= True, stdout=subprocess.PIPE)
-#    readcount= int((p.communicate()[0]).strip())
-#else:
-#    sys.exit('%s: Unexpected conditions' %(sys.argv[0]))
+elif abam is not None:
+    p= subprocess.Popen('samtools view -c %s' %(abam), shell= True, stdout=subprocess.PIPE)
+    readcount= int((p.communicate()[0]).strip())
+elif a is not None:
+    p= subprocess.Popen("""wc %s | awk {'print $1'}""" %(a), shell= True, stdout=subprocess.PIPE)
+    readcount= int((p.communicate()[0]).strip())
+else:
+    sys.exit('%s: Unexpected conditions' %(sys.argv[0]))
 
 ## Execute coverageBed
 cmd= 'coverageBed ' + sys.argv[1]
@@ -85,19 +80,8 @@ p= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE)
 coverage= p.communicate()[0]
 coverage= coverage.split('\n')
 
-## Get sum of column -4 from coverageBed
-""" Uncomment this block if using nunber of reads in library as denominator """
-readcount= 0
 for line in coverage:
-    if line == '':          ## This if is needed to remove blank lines from p.communicate() 
-        continue
-    line= line.rstrip('\n\r')
-    line= line.split('\t')
-    readcount += int(line[READCOL])
-    
-## Produce output lines
-for line in coverage:
-    if line == '':        ## This if is needed to remove blank lines from p.communicate()
+    if line == '':
         continue
     line= line.rstrip('\n\r')
     line= line.split('\t')
