@@ -3,20 +3,19 @@
 docstring= """
 SYNOPSIS
 
-    illumina2sanger.py <illumina-fastq> > <sanger-fastq>
+    illumina2sanger.py <illumina-fastq or stdin> > <sanger-fastq>
 
 DESCRIPTION
 
     Convert Illumina >1.3 and <1.9 encoding to Sanger.
     Throw an exception if characters less than ascii 64 (@) or above 126 (~) are found.
+    Use - to read input file from stream
     
-    If input file is gzip'd it will be decompressed and recompressed.
-
 EXAMPLES
 
     illumina2sanger.py illumina.fq > sanger.fq
-    illumina2sanger.py illumina.fq.gz > sanger.fq           <<< Input zipped, output unzipped
-    illumina2sanger.py illumina.fq.gz | gzip > sanger.fq.gz <<< Input and output zipped
+    gunzip -c illumina.fq.gz | illumina2sanger.py - > sanger.fq           <<< Input zipped, output unzipped
+    gunzip -c | illumina2sanger.py - | gzip > sanger.fq.gz <<< Input and output zipped
 
 MEMO from Wikipedia:
 
@@ -32,6 +31,7 @@ MEMO from Wikipedia:
 import sys
 import subprocess
 import os
+import gzip
 
 if len(sys.argv) != 2 or sys.argv[1] == '-h' or sys.argv[1] == '--help':
     print(docstring)
@@ -40,9 +40,10 @@ if len(sys.argv) != 2 or sys.argv[1] == '-h' or sys.argv[1] == '--help':
 def illumina2sanger(base):
     return(chr(ord(base) - 31))
 
-infastq_file= sys.argv[1]
+fastq_file= sys.argv[1]
 
 delete_unzipped= False
+"""
 if infastq_file.endswith('.gz'):
     fastq_file= infastq_file[:-3]
     p= subprocess.Popen('gunzip -c %s > %s' %(sys.argv[1], fastq_file), shell= True)
@@ -50,8 +51,12 @@ if infastq_file.endswith('.gz'):
     delete_unzipped= True
 else:
     fastq_file= sys.argv[1]
-    
-fastq= open(fastq_file)
+"""
+
+if fastq_file == '-':
+    fastq= sys.stdin
+else:
+    fastq= open(fastq_file)
 
 while True:
     qname= fastq.readline().rstrip('\n\r')
@@ -68,8 +73,8 @@ while True:
     print(qual_sanger)
 fastq.close()
 
-if delete_unzipped is True:
-    os.remove(fastq_file)
+#if delete_unzipped is True:
+#    os.remove(fastq_file)
 
 #if sys.argv[1].endswith('.gz'):
 #    p= subprocess.Popen('gzip %s' %(fastq_file), shell= True)

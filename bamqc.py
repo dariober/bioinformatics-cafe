@@ -1,4 +1,4 @@
-#!/usr/local/bin/python   
+#!/home/berald01/.local/bin/python
 
 import pysam
 import sys
