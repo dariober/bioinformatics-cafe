@@ -17,7 +17,7 @@ DESCRIPTION
 ARGUMENTS
     <fastqc> : File fastqc_data.txt produced by FastQC
     <connection string>: 'dbname= "sblab" user="me" password="pwd"' 
-
+    TODO: <suppl file>: A file tab separated with additional data to put in the columns after the fastqc columns (e.g. md5sum column)
 USAGE
     fastqc_to_pgtable.py <fastqc_data.txt> <connection string>
 
