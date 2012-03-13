@@ -39,12 +39,21 @@ def md5sum(fname):
         f.close()
     return(ret)
 
-filestats= {'filename': os.path.split(sys.argv[1])[1],
-            'path':     os.path.abspath(os.path.split(sys.argv[1])[0]),
-            'md5sum':   md5sum(sys.argv[1]),
-            'hostname': socket.gethostname(),
-            'ctime':    datetime.datetime.fromtimestamp(os.path.getctime(sys.argv[1])),
-            'mtime':    datetime.datetime.fromtimestamp(os.path.getmtime(sys.argv[1]))}
+filename= os.path.split(sys.argv[1])[1]
+path= os.path.abspath(os.path.split(sys.argv[1])[0])
+md5sum= md5sum(sys.argv[1])
+hostname= socket.gethostname()
+ctime= datetime.datetime.fromtimestamp(os.path.getctime(sys.argv[1]))
+mtime= datetime.datetime.fromtimestamp(os.path.getmtime(sys.argv[1]))
+
+
+
+filestats= {'filename': filename,
+            'path':     path,
+            'md5sum':   md5sum,
+            'hostname': hostname,
+            'ctime':    ctime,
+            'mtime':    mtime}
 
 print(filestats)
 sys.exit()
