@@ -5,6 +5,13 @@ Execute bamqc.py on all the bam files under BAMQCDIR (searched recursivley)
 Output files sent to BAMDIR.
 
 bamqc.py is executed on lustre using bsub.
+
+USAGE with no args:
+bamqc_batch_lustre.py 
+
+TODO:
+Finer regulation of how dirs are scanned. Allow for exclude dirs and multiple dirs. 
+
 """
 
 import subprocess
