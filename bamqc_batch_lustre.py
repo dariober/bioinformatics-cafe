@@ -32,6 +32,6 @@ for bam in bamfiles:
 
 cmd= """bsub -R "rusage[mem=1024]" -w jobbamqc_* "
 cat %(bamqcdir)s/*.bamqc.tsv > %(cat_bamqc)s;
-scp $(cat_bamqc)s %(localdir)s"
+scp %(cat_bamqc)s %(localdir)s"
 """ %{'bamqcdir':BAMQCDIR.rstrip('/'), 'cat_bamqc': os.path.join(BAMQCDIR, 'bamqc.tsv'), 'localdir':LOCALHOST}
 p= subprocess.Popen(cmd, shell= True)
