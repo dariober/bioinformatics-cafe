@@ -22,6 +22,7 @@ if not os.path.exists(BAMQCDIR):
 
 for bam in bamfiles:
     bamqc_out= os.path.join(BAMQCDIR, os.path.splitext(os.path.split(bam)[1])[0] + '.bamqc.tsv')
-    cmd= 'bsub "bamqc.py --nograph --noheader -i %s -o %s"' %(bam, bamqc_out) # -R "rusage[MEM=1024]"
+    bamqc_log= os.path.join(BAMQCDIR, os.path.splitext(os.path.split(bam)[1])[0] + '.bamqc.log')
+    cmd= 'bsub -o %s "bamqc.py --nograph --noheader -i %s -o %s"' %(bamqc_log, bam, bamqc_out) # -R "rusage[MEM=1024]"
     print(cmd)
     p= subprocess.Popen(cmd, shell= True)
