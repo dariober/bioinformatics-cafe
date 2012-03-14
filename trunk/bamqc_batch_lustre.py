@@ -10,7 +10,7 @@ bamqc.py is executed on lustre using bsub.
 import subprocess
 import os
 
-BAMQCDIR= '/home/berald01/bamqc' ## dir where output files will be
+BAMQCDIR= '/lustre/sblab/berald01/bamqc' ## dir where output files will be
 BAMDIR= '/lustre/sblab/berald01' ## Top dir where to serach for bams
 
 p= subprocess.Popen('find %s' %(BAMDIR), shell= True, stdout=subprocess.PIPE)
@@ -22,6 +22,6 @@ if not os.path.exists(BAMQCDIR):
 
 for bam in bamfiles:
     bamqc_out= os.path.join(BAMQCDIR, os.path.splitext(os.path.split(bam)[1])[0] + '.bamqc.tsv')
-    cmd= 'bsub -R "rusage[MEM=1024]" "bamqc.py --nograph --noheader -i %s -o %s"' %(bam, bamqc_out)
+    cmd= 'bsub "bamqc.py --nograph --noheader -i %s -o %s"' %(bam, bamqc_out) # -R "rusage[MEM=1024]"
     print(cmd)
     p= subprocess.Popen(cmd, shell= True)
