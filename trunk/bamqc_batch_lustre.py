@@ -26,7 +26,7 @@ for bam in bamfiles:
     bamqc_log= os.path.join(BAMQCDIR, os.path.splitext(os.path.split(bam)[1])[0] + '.bamqc.log')
     jobname= 'jobbamqc_' + bam
     # cmd= 'bsub -R "rusage[mem=1024]" -J %s -o %s "bamqc.py --nograph --noheader -i %s -o %s"' %(jobmame, bamqc_log, bam, bamqc_out)
-    cmd= 'bsub -R "rusage[mem=1024]" -J %s -o %s "ls"'
+    cmd= 'bsub -R "rusage[mem=1024]" -J %s "ls"' %(jobname)
     print(cmd)
     p= subprocess.Popen(cmd, shell= True)
 
