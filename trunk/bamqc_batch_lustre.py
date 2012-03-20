@@ -20,7 +20,7 @@ import sys
 
 BAMQCDIR= '/lustre/sblab/berald01/bamqc' ## dir where output files will be
 BAMDIR= '/lustre/sblab/berald01' ## Top dir where to serach for bams
-LOCALHOST= '143.65.172.155' ## Where the output of bamqc will be scp'd
+LOCALHOST= '10.20.13.11' ## Where the output of bamqc will be scp'd
 LOCALDIR= '/tmp/'
 UPLOAD_SCRIPT= '/Users/berald01/svn_checkout/postgresql-setup-cruk/upload_bamqc_script.sql' ## This script will be run by psql to upload the concatenated outputs.
 
