@@ -18,7 +18,7 @@ import subprocess
 import os
 import sys
 
-BAMQCDIR= '/lustre/sblab/berald01/bamqc' ## dir where output files will be
+BAMQCDIR= '/lustre/sblab/berald01/bamqc' ## dir where output files will be. NB: Content of this dir will be erased at the beginning of each execution of bamqc_batch_lustre.py
 BAMDIR= '/lustre/sblab/berald01' ## Top dir where to serach for bams
 LOCALHOST= '10.20.13.11' ## Where the output of bamqc will be scp'd
 LOCALDIR= '/tmp/'
@@ -30,6 +30,9 @@ allfiles= allfiles.split('\n')
 bamfiles= sorted([x for x in allfiles if x.endswith('.bam')])
 if not os.path.exists(BAMQCDIR):
     os.makedirs(BAMQCDIR)
+for f in os.listdir(BAMQCDIR):
+    if f.endswith('.bamqc.tsv'):
+        os.remove(os.path.join(BAMQCDIR, f))
 
 for i in range(0, len(bamfiles)):
     (bampath, bam)= os.path.split(bamfiles[i])
