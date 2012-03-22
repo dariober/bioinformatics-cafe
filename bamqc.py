@@ -6,6 +6,7 @@ import os
 import argparse
 import subprocess
 import hashlib
+import socket
 
 bamfiles= sys.argv[1:]
 
@@ -133,10 +134,10 @@ if args.input == ['-']:
 # ------------------------------------------------------------------------------
 
 ## Order in which the attributes in class File_Stats should be retured:
-header=  ['filename', 'md5sum', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles']
+header=  ['filename', 'fullname', 'md5sum', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles']
 
 ## Column names to output (must reflect the order in 'header' above)
-colnames=  ['filename', 'md5sum', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
+colnames=  ['filename', 'fullname', 'md5sum', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
            ['mapq.'+str(x) for x in LIMITS_MAPQ] + \
            ['mapq_255'] + \
            ['nm.'+str(x) for x in LIMITS_NM] + \
@@ -152,7 +153,8 @@ class File_Stats:
     def __init__(self):
         """ Attributes here will be columns in output table """
         self.filename= ''
-	self.md5sum= ''
+        self.fullname= ''
+        self.md5sum= ''
         self.median_length= 'NA'
         self.len_sd= 'NA'
         self.nreads_tot= 0
@@ -395,6 +397,7 @@ for bam in args.input:
     mapq_sample= [] ## Accumulator for sample of mapq scores.
     length_sample= []
     fstats.filename= os.path.split(bam)[1]
+    fstats.fullname= socket.gethostname() + ':' + os.path.abspath(bam)
     fstats.md5sum= md5sum(bam)
     bamfile = pysam.Samfile( bam, "rb" )
     n= 0
