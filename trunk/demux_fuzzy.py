@@ -109,7 +109,14 @@ def read_samplesheet(sample_sheet):
             filename= line[1]
         else:
             filename= line[1] + '.gz'
-        code_dict[line[0]]= [
+        if len(line[0]) == 7:
+            index_seq= line[0][0:6]
+        elif len(line[0]) == 6:
+            index_seq= line[0]
+        else:
+            sys.exit('Unexpected barcode: %s' %(line[0]))
+
+        code_dict[index_seq]= [
                   filename,                  ## Output file name
                   gzip.open(filename, 'wb'),  ## Output file handle
                   0                             ## Counter for number of reads in this file
@@ -138,7 +145,7 @@ while True:
     n += 1
     if n % 1000000 == 0:
         print(n)
-    bcode= fqline[0][-9:-2]
+    bcode= fqline[0][-9:-3]
     if bcode in code_dict:
         ## Test for perfect match
         code_dict[bcode][1].write('\n'.join(fqline) + '\n')
