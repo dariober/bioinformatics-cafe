@@ -10,13 +10,23 @@ if len(sys.argv) != 2:
     sys.exit("""
     Get file stats for the file passed as first positional argument.
     Returns a string to stdout formatted like a dict:
+
+    USAGE:
+        get_file_stats.py myfile.txt
     
-    "{'filename': os.path.split(sys.argv[1])[1],
-      'path':     os.path.split(sys.argv[1])[0],
-      'md5sum':   md5sum(sys.argv[1]),
-      'hostname': socket.gethostname(),
-      'ctime':    datetime.datetime.fromtimestamp(os.path.getctime('file1.fq')),
-      'mtime':    os.path.getmtime('file1.fq')}"
+    OUTPUT:
+    
+        Printed on a single line:
+        "{'filename': os.path.split(sys.argv[1])[1],
+          'path':     os.path.split(sys.argv[1])[0],
+          'md5sum':   md5sum(sys.argv[1]),
+          'hostname': socket.gethostname(),
+          'ctime':    datetime.datetime.fromtimestamp(os.path.getctime()),
+          'mtime':    os.path.getmtime(),
+          'fsize':     os.path.getsize()}"
+
+    IMPORTANT: If for any reasons any of the file stats fail (e.g. the file doesn't
+    exist), get_file_stats.py exits and prints nothing, no error is returned
          """)
 
 def sumfile(fobj):
@@ -39,21 +49,24 @@ def md5sum(fname):
         f.close()
     return(ret)
 
-filename= os.path.split(sys.argv[1])[1]
-path= os.path.abspath(os.path.split(sys.argv[1])[0])
-md5sum= md5sum(sys.argv[1])
-hostname= socket.gethostname()
-ctime= datetime.datetime.fromtimestamp(os.path.getctime(sys.argv[1]))
-mtime= datetime.datetime.fromtimestamp(os.path.getmtime(sys.argv[1]))
-
-
+try:
+    filename= os.path.split(sys.argv[1])[1]
+    path= os.path.abspath(os.path.split(sys.argv[1])[0])
+    md5sum= md5sum(sys.argv[1])
+    hostname= socket.gethostname()
+    ctime= datetime.datetime.fromtimestamp(os.path.getctime(sys.argv[1]))
+    mtime= datetime.datetime.fromtimestamp(os.path.getmtime(sys.argv[1]))
+    fsize= os.path.getsize(sys.argv[1])
+except:
+    sys.exit()    
 
 filestats= {'filename': filename,
             'path':     path,
             'md5sum':   md5sum,
             'hostname': hostname,
             'ctime':    ctime,
-            'mtime':    mtime}
+            'mtime':    mtime,
+            'fsize':    fsize}
 
 print(filestats)
 sys.exit()
