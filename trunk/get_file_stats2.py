@@ -48,6 +48,13 @@ parser.add_argument('--md5sum',
                    help='''Compute md5sum in addition to the other stats.
                    ''')
 
+parser.add_argument('--datetime',
+                   action= 'store_true',
+                   help='''Don't format dates as isoformat, leave them as python
+code like datetime.datetime.fromtimestamp(os.path.getctime()).
+                   ''')
+
+
 args = parser.parse_args()
 
 # -----------------------------[ Functions ]-----------------------------------
@@ -81,8 +88,12 @@ try:
     else:
         md5sum= ''
     hostname= socket.gethostname()
-    ctime= datetime.datetime.fromtimestamp(os.path.getctime(args.infile)).isoformat()
-    mtime= datetime.datetime.fromtimestamp(os.path.getmtime(args.infile)).isoformat()
+    if args.datetime:
+        ctime= datetime.datetime.fromtimestamp(os.path.getctime(args.infile))
+        mtime= datetime.datetime.fromtimestamp(os.path.getmtime(args.infile))
+    else:
+        ctime= datetime.datetime.fromtimestamp(os.path.getctime(args.infile))
+        mtime= datetime.datetime.fromtimestamp(os.path.getmtime(args.infile))        
     fsize= os.path.getsize(args.infile)
 except:
     sys.exit()    
