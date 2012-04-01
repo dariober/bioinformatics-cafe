@@ -92,8 +92,8 @@ try:
         ctime= datetime.datetime.fromtimestamp(os.path.getctime(args.infile))
         mtime= datetime.datetime.fromtimestamp(os.path.getmtime(args.infile))
     else:
-        ctime= datetime.datetime.fromtimestamp(os.path.getctime(args.infile))
-        mtime= datetime.datetime.fromtimestamp(os.path.getmtime(args.infile))        
+        ctime= datetime.datetime.fromtimestamp(os.path.getctime(args.infile)).isoformat()
+        mtime= datetime.datetime.fromtimestamp(os.path.getmtime(args.infile)).isoformat()        
     fsize= os.path.getsize(args.infile)
 except:
     sys.exit()    
