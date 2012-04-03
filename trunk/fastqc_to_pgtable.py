@@ -21,8 +21,6 @@ EXAMPLE
     done
 
 TODO:
-    - Create a template fastqc_line (which holds the output of fastqc) to assign
-      correct default values to each item.
     - Read zip files
 
 """, formatter_class= argparse.RawTextHelpFormatter)
@@ -95,7 +93,7 @@ def parse_module(fastqc_module):
     if len(fastqc_module) == 1 and module_name == '>>Overrepresented sequences':
         return(row_list + [[]]*4)
     if len(fastqc_module) == 1 and module_name == '>>Kmer Content':
-        return(row_list + ['']*5)
+        return(row_list + [[]]*5)
     # Table is not the secod row:
     if module_name == '>>Sequence Duplication Levels':
         tot_dupl= fastqc_module[1].split('\t')[1]
