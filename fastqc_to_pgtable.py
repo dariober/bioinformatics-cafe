@@ -1,37 +1,73 @@
-#!/usr/local/bin/python
+#!/usr/bin/python
 
 import os
 import sys
 import psycopg2
+import argparse
 
-if len(sys.argv) != 3:
-    sys.exit("""
+parser = argparse.ArgumentParser(description= """
 DESCRIPTION
     Convert the FastQC report (file: fastqc_data.txt) to a single line with columns
     tab-separated. The output is uploaded to the postgres database given in the
     connection string. 
-    
-    See http://code.google.com/p/postgresql-setup-cruk/source/browse/trunk/fastqc.sql
-    for the table definition. 
-
-ARGUMENTS
-    <fastqc> : File fastqc_data.txt produced by FastQC
-    <connection string>: 'dbname= "sblab" user="me" password="pwd"' 
-    TODO: <suppl file>: A file tab separated with additional data to put in the columns after the fastqc columns (e.g. md5sum column)
-USAGE
-    fastqc_to_pgtable.py <fastqc_data.txt> <connection string>
-
+        
 EXAMPLE
-    fastqc_to_pgtable.py fastqc/fastqc_data.txt 'dbname="sblab" user="me" pwd="pwd"'
+    fastqc_to_pgtable.py -i fastqc/fastqc_data.txt
     
     ## Process all fastqc_data.txt files in all subdirs in current dir:
     for fastqc in `ls .`
     do
-    fastqc_to_pgtable.py $fastqc/fastqc_data.txt 'dbname="sblab" user="me" pwd="pwd"'
+    fastqc_to_pgtable.py -i $fastqc/fastqc_data.txt
     done
 
-""")
+TODO:
+    - Create a template fastqc_line (which holds the output of fastqc) to assign
+      correct default values to each item.
+    - Read zip files
 
+""", formatter_class= argparse.RawTextHelpFormatter)
+
+parser.add_argument('--infile', '-i',
+                   required= True,
+                   help='''Fastqc output file containing the file stats as text.
+Typically this is fastqc_data.txt
+                   ''')
+
+parser.add_argument('--md5sum',
+                   required= False,
+                   default= None,
+                   help='''Optional md5sum of the fastq/bam file passed to fastqc
+default is None
+                   ''')
+
+parser.add_argument('--fsize',
+                   required= False,
+                   default= None,
+                   type= int,
+                   help='''Optional file size (as int) of the fastq/bam file passed to fastqc
+default is None
+                   ''')
+
+parser.add_argument('--mtime',
+                   required= False,
+                   default= None,
+                   help='''Optional modification time of the fastq/bam file passed to fastqc
+default is None. Typically this is returned by os.path.getmtime().
+                   ''')
+
+args = parser.parse_args()
+
+# -----------------------------------------------------------------------------
+def get_psycopgpass():
+    """
+    Read file ~/.psycopgpass to get the connection string to pass to
+    psycopg2.connect()
+    """
+    conn= open(os.path.join(os.getenv("HOME"), '.psycopgpass'))
+    conn= conn.readlines()
+    conn_args= [x.strip() for x in conn if x.strip() != '' and x.strip().startswith('#') is False][0]
+    return(conn_args)
+    
 def parse_module(fastqc_module):
     """
     Parse a fastqc module from the table format to a line format (list).
@@ -128,7 +164,7 @@ def md5sum(fname):
  
 " ---------------------------------------------------------------------------- "
 
-fq= open(sys.argv[1]).readlines()
+fq= open(args.infile).readlines()
 fq= [x.strip() for x in fq]
 
 fastqc_line= [] ## The entire report will be in this list. Each item is a column in the database table 
@@ -169,19 +205,18 @@ for s, e in zip(mod_start[1:], mod_end[1:]):
     row= list_to_pgcolumns(row) 
     fastqc_line= fastqc_line + row
 
-## Get md5sum of file, assuming it can be found in the dir one level up of fastqc_data.txt
-try:
-    fastqc_line.append(md5sum(os.path.join('../', filename)))
-except IOError:
-    fastqc_line.append(None)
+## Get md5sum, fsize and mtime of fastq/bam file
+fastqc_line.append(args.md5sum)
+fastqc_line.append(args.fsize)
+fastqc_line.append(args.mtime)
 
 # ---------------------[ Send to postres ]--------------------------------------
-conn= psycopg2.connect(sys.argv[2])
+conn= psycopg2.connect(get_psycopgpass())
 cur= conn.cursor()
 ## Memo: get columns with query like this:
 ## select * from information_schema.columns where table_name = 'fastqc' order by ordinal_position;
 cur.execute("CREATE TEMP TABLE fastqc_tmp AS (SELECT * FROM fastqc WHERE 1=2)") ## Where to put results
-cur.execute("INSERT INTO fastqc_tmp VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", fastqc_line)
+cur.execute("INSERT INTO fastqc_tmp VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", fastqc_line)
 cur.execute("INSERT INTO fastqc SELECT DISTINCT * FROM fastqc_tmp EXCEPT SELECT * FROM fastqc") ## Import only rows not already present 
 cur.execute("DROP TABLE fastqc_tmp")
 cur.close()
