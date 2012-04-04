@@ -1,27 +1,33 @@
 #!/home/berald01/.local/bin/python
 
-"""
-Execute bamqc.py on all the bam files under BAMQCDIR (searched recursivley)
-Output files sent to BAMDIR.
-
-bamqc.py is executed on lustre using bsub.
-
-USAGE with no args:
-bamqc_batch_lustre.py 
-
-TODO:
-Finer regulation of how dirs are scanned. Allow for exclude dirs and multiple dirs. 
-
-"""
 
 import subprocess
 import os
 import sys
 
+if len(sys.argv) != 2:
+    sys.exit(
+    """
+DESCRIPTION
+    Execute bamqc.py on all the bam files under <BAMDIR> (searched recursivley)
+    Output files sent to BAMQCDIR.
+
+    bamqc.py is executed on lustre using bsub.
+    
+USAGE
+    bamqc_batch_lustre.py <BAMDIR>
+    
+EXAMPLES
+    bamqc_batch_lustre.py /lustre/sblab/berald01/repository
+
+TODO
+    Finer regulation of how dirs are scanned. Allow for exclude dirs and multiple dirs. 
+    """)
+
 BAMQCDIR= '/lustre/sblab/berald01/bamqc' ## dir where output files will be. NB: Content of this dir will be erased at the beginning of each execution of bamqc_batch_lustre.py
-BAMDIR= '/lustre/sblab/berald01' ## Top dir where to serach for bams
+BAMDIR= sys.argv[1] ## Top dir where to serach for bams.
 LOCALHOST= '10.20.13.11' ## Where the output of bamqc will be scp'd
-LOCALDIR= '/tmp/'
+LOCALDIR= '/tmp/' ## 
 UPLOAD_SCRIPT= '/Users/berald01/svn_checkout/postgresql-setup-cruk/upload_bamqc_script.sql' ## This script will be run by psql to upload the concatenated outputs.
 
 p= subprocess.Popen('find %s' %(BAMDIR), shell= True, stdout=subprocess.PIPE)
