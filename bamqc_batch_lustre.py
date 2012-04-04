@@ -10,7 +10,8 @@ if len(sys.argv) != 2:
     """
 DESCRIPTION
     Execute bamqc.py on all the bam files under <BAMDIR> (searched recursivley)
-    Output files sent to BAMQCDIR.
+    Output files written to BAMQCDIR on lustre, scp'd to LOCALHOST:LOCALDIR and
+    uploaded to postgres
 
     bamqc.py is executed on lustre using bsub.
     
@@ -18,6 +19,7 @@ USAGE
     bamqc_batch_lustre.py <BAMDIR>
     
 EXAMPLES
+    ## Execute on local machine (e.g. mac office):
     bamqc_batch_lustre.py /lustre/sblab/berald01/repository
 
 TODO
