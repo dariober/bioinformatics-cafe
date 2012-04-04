@@ -19,7 +19,7 @@ USAGE
     bamqc_batch_lustre.py <BAMDIR>
     
 EXAMPLES
-    ## Execute on local machine (e.g. mac office):
+    ## Execute on lustre (e.g. mac office):
     bamqc_batch_lustre.py /lustre/sblab/berald01/repository
 
 TODO
