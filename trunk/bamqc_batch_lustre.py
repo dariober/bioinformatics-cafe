@@ -49,7 +49,7 @@ for i in range(0, len(bamfiles)):
     bamqc_out= os.path.join(BAMQCDIR, os.path.splitext(bam)[0] + suffix + '.bamqc.tsv')
     bamqc_log= os.path.join(BAMQCDIR, os.path.splitext(bam)[0] + suffix + '.bamqc.log')
     jobname= 'jobbamqc_' + bam
-    cmd= 'bsub -R "rusage[mem=1024]" -J %s -o %s "bamqc.py --nograph --noheader -i %s -o %s"' %(jobname, bamqc_log, os.path.join(bampath, bam), bamqc_out)
+    cmd= 'bsub -R "rusage[mem=1024]" -J %s -o %s "bamqc.py --nograph --noheader -i %s -o %s" &> /dev/null' %(jobname, bamqc_log, os.path.join(bampath, bam), bamqc_out)
     p= subprocess.Popen(cmd, shell= True)
 
 cmd= """bsub -o scp.log -R "rusage[mem=1024]" -w 'ended("jobbamqc_*")' '
