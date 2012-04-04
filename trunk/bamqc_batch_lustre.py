@@ -53,9 +53,9 @@ for i in range(0, len(bamfiles)):
     p= subprocess.Popen(cmd, shell= True)
 
 cmd= """bsub -o scp.log -R "rusage[mem=1024]" -w 'ended("jobbamqc_*")' '
-cat %(bamqcdir)s/*.bamqc.tsv > %(cat_bamqc)s;
-scp %(cat_bamqc)s %(localhost)s:%(localdir)s;
-ssh %(localhost)s "source ~/.bash_profile; psql -d sblab -U dberaldi -w < %(upload_script)s"
-'
+    cat %(bamqcdir)s/*.bamqc.tsv > %(cat_bamqc)s;
+    scp %(cat_bamqc)s %(localhost)s:%(localdir)s;
+    ssh %(localhost)s "source ~/.bash_profile; psql -d sblab -U dberaldi -w < %(upload_script)s"
+    ' &> /dev/null
 """ %{'bamqcdir':BAMQCDIR.rstrip('/'), 'cat_bamqc': os.path.join(BAMQCDIR, 'bamqc.tsv'), 'localhost':LOCALHOST, 'localdir': LOCALDIR, 'bamqc_local': os.path.join(LOCALDIR, 'bamqc.tsv'), 'upload_script': UPLOAD_SCRIPT}
 p= subprocess.Popen(cmd, shell= True)
