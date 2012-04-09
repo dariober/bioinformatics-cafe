@@ -9,16 +9,24 @@ parser = argparse.ArgumentParser(description= """
 DESCRIPTION
     Convert the FastQC report (file: fastqc_data.txt) to a single line with columns
     tab-separated. The output is uploaded to the postgres database given in the
-    connection string. 
+    connection string. The input is the directory produced by fastqc which must
+    contain the file fastqc_data.txt with the actual stats.
         
 EXAMPLE
-    fastqc_to_pgtable.py -i fastqc/fastqc_data.txt
+    fastqc_to_pgtable.py -i fastqc/
     
     ## Process all fastqc_data.txt files in all subdirs in current dir:
     for fastqc in `ls .`
     do
-    fastqc_to_pgtable.py -i $fastqc/fastqc_data.txt
+    fastqc_to_pgtable.py -i $fastqc/
     done
+
+DEPENDS-ON:
+    - Table schema fastqc
+    - File ~/.psycopgapss for connection to sblab.
+    
+DEPENDS-ON-ME:
+    update_fastqc.py
 
 TODO:
     - Read zip files
@@ -27,8 +35,7 @@ TODO:
 
 parser.add_argument('--infile', '-i',
                    required= True,
-                   help='''Fastqc output file containing the file stats as text.
-Typically this is fastqc_data.txt
+                   help='''Fastqc *directory* where to look for file fastqc_data.txt.
                    ''')
 
 parser.add_argument('--md5sum',
@@ -51,6 +58,23 @@ parser.add_argument('--mtime',
                    default= None,
                    help='''Optional modification time of the fastq/bam file passed to fastqc
 default is None. Typically this is returned by os.path.getmtime().
+                   ''')
+
+parser.add_argument('--djangolink',
+                   required= False,
+                   default= 'uploads/fastqc',
+                   help='''Upload directory where django will look for the file to fastqc_report.html and
+the associated files produced by fastqc. The string "--djangolink/--infile/fastqc_report.html"
+will be the value in column fastqc_file.
+Default is 'uploads/fastqc'. For example, if infile is directory 'db001_fastqc',
+fastqc_to_pgtable.py will upload: "uploads/fastqc/db001_fastqc/fastqc_report.html"
+                   ''')
+
+parser.add_argument('--nocommit',
+                   action= 'store_true',
+                   help='''Do not commit changes to database. Use this option
+to test whether the data can be uploaded. The data that would be uploaded is printed
+to stdout.
                    ''')
 
 args = parser.parse_args()
@@ -139,30 +163,10 @@ def list_to_pgcolumns(lst):
         else:
             pgrow.append(x)
     return(pgrow)
-
-def sumfile(fobj):
-    '''Returns an md5 hash for an object with read() method.'''
-    m = hashlib.md5()
-    while True:
-        d = fobj.read(8096)
-        if not d:
-            break
-        m.update(d)
-    return(m.hexdigest())
-
-def md5sum(fname):
-    '''Returns an md5 hash for file fname, or stdin if fname is "-".'''
-    if fname == '-':
-        ret = sumfile(sys.stdin)
-    else:
-        f = open(fname, 'rb')
-        ret = sumfile(f)
-        f.close()
-    return(ret)
  
 " ---------------------------------------------------------------------------- "
 
-fq= open(args.infile).readlines()
+fq= open(os.path.join(args.infile, 'fastqc_data.txt')).readlines()
 fq= [x.strip() for x in fq]
 
 fastqc_line= [] ## The entire report will be in this list. Each item is a column in the database table 
@@ -207,6 +211,7 @@ for s, e in zip(mod_start[1:], mod_end[1:]):
 fastqc_line.append(args.md5sum)
 fastqc_line.append(args.fsize)
 fastqc_line.append(args.mtime)
+fastqc_line.append(os.path.join(args.djangolink, args.infile, 'fastqc_report.html'))
 
 # ---------------------[ Send to postres ]--------------------------------------
 conn= psycopg2.connect(get_psycopgpass())
@@ -214,11 +219,14 @@ cur= conn.cursor()
 ## Memo: get columns with query like this:
 ## select * from information_schema.columns where table_name = 'fastqc' order by ordinal_position;
 cur.execute("CREATE TEMP TABLE fastqc_tmp AS (SELECT * FROM fastqc WHERE 1=2)") ## Where to put results
-cur.execute("INSERT INTO fastqc_tmp VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", fastqc_line)
+cur.execute("INSERT INTO fastqc_tmp VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", fastqc_line)
 cur.execute("INSERT INTO fastqc SELECT DISTINCT * FROM fastqc_tmp EXCEPT SELECT * FROM fastqc") ## Import only rows not already present 
 cur.execute("DROP TABLE fastqc_tmp")
 cur.close()
-conn.commit()
+if args.nocommit is False:
+    conn.commit()
+else:
+    print(fastqc_line)
 conn.close()
 sys.exit()
 
