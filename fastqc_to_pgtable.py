@@ -61,6 +61,15 @@ parser.add_argument('--mtime',
 default is None. Typically this is returned by os.path.getmtime().
                    ''')
 
+parser.add_argument('--filestats',
+                   required= False,
+                   default= None,
+                   help='''A string formatted like a dictionary which contains
+the file stats md5sum, mtime, fsize. Typically this is the output of get_file_stats2.py.
+If this string is given, it has precedence over the individual args --md5sum, --mtime
+--fsize. MEMO: get_file_stats2.py does not return md5sum unless --mdsum flag is used.
+                   ''')
+
 parser.add_argument('--djangolink',
                    required= False,
                    default= 'uploads/fastqc',
@@ -209,9 +218,16 @@ for s, e in zip(mod_start[1:], mod_end[1:]):
     fastqc_line= fastqc_line + row
 
 ## Get md5sum, fsize and mtime of fastq/bam file
-fastqc_line.append(args.md5sum)
-fastqc_line.append(args.fsize)
-fastqc_line.append(args.mtime)
+if args.filestats is not None:
+    fstats= eval(args.filestats)
+    fastqc_line.append(fstats['md5sum'])
+    fastqc_line.append(fstats['fsize'])
+    fastqc_line.append(fstats['mtime'])
+else:
+    fastqc_line.append(args.md5sum)
+    fastqc_line.append(args.fsize)
+    fastqc_line.append(args.mtime)
+
 fastqc_line.append(os.path.join(args.djangolink, args.infile, 'fastqc_report.html'))
 
 # ---------------------[ Send to postres ]--------------------------------------
