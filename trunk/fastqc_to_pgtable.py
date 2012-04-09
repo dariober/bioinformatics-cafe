@@ -15,15 +15,25 @@ DESCRIPTION
 EXAMPLE
     fastqc_to_pgtable.py -i fastqc/
     
+    ## Include file stats:
+    fastqc_to_pgtable.py -i test.fq_fastqc --md5sum <md5sum> --fsize <int> --mtime <datetime>
+    ## Or
+    fastqc_to_pgtable.py -i test.fq_fastqc --filestats "{'md5sum':'abcd', 'fsize':1234, 'mtime':'25/01/1977'}"
+    ## Or
+    fastqc_to_pgtable.py -i test.fq_fastqc --filestats "`get_file_stats2.py -i test.fq.gz --md5sum`" ## Note the quoting!
+    ## Or:
+    get_file_stats2.py -i test.fq.gz --md5sum > out.stats
+    fastqc_to_pgtable.py -i test.fq_fastqc --filestats "`cat out.stats`"
+
     ## Process all fastqc_data.txt files in all subdirs in current dir:
     for fastqc in `ls .`
     do
     fastqc_to_pgtable.py -i $fastqc/
     done
-
+    
 DEPENDS-ON:
     - Table schema fastqc
-    - File ~/.psycopgapss for connection to sblab.
+    - psycopg2 and file ~/.psycopgapss for connection to sblab.
     
 DEPENDS-ON-ME:
     update_fastqc.py
