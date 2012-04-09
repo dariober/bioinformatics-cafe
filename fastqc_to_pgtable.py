@@ -29,7 +29,8 @@ DEPENDS-ON-ME:
     update_fastqc.py
 
 TODO:
-    - Read zip files
+    - Add argument --filestats which takes as input the dictionary-like string from 
+      get_file_stats2.py. md5sum, mtime and fsize are then taken from this string.
 
 """, formatter_class= argparse.RawTextHelpFormatter)
 
