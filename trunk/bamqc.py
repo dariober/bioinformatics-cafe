@@ -427,9 +427,18 @@ for bam in args.input:
     fstats.mapq= [ x[1] for x in cumdist(fstats.mapq, LIMITS_MAPQ) ]
     fstats.nreads_nm= [ x[1] for x in hist(fstats.nreads_nm, nm_bins) ]
     fstats.perc_aln= round((float(fstats.nreads_aln) / fstats.nreads_tot )* 100, 2)
-    fstats.mapq_quantiles= [ quantile(mapq_sample, q) for q in QUANTILES ]
-    fstats.median_length= round(quantile(length_sample, 0.5), 2)
-    fstats.len_sd= round(stdev(length_sample), 2)
+    try:
+        fstats.mapq_quantiles= [ quantile(mapq_sample, q) for q in QUANTILES ]
+    except:
+        fstats.mapq_quantiles= ['']*len(QUANTILES)
+    try:
+        fstats.median_length= round(quantile(length_sample, 0.5), 2)
+    except:
+        fstats.median_length= ''
+    try:
+        fstats.len_sd= round(stdev(length_sample), 2)
+    except:
+        fstats.len_sd= ''
     bamfile.close()
     bamqc_stats.append(write_stats(fstats, header))
 
