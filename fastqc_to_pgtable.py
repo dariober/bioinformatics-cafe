@@ -238,7 +238,7 @@ else:
     fastqc_line.append(args.fsize)
     fastqc_line.append(args.mtime)
 
-fastqc_line.append(os.path.join(args.djangolink, args.infile, 'fastqc_report.html'))
+fastqc_line.append(os.path.join(args.djangolink, os.path.split(args.infile)[1], 'fastqc_report.html'))
 
 # ---------------------[ Send to postres ]--------------------------------------
 conn= psycopg2.connect(get_psycopgpass())
@@ -246,6 +246,7 @@ cur= conn.cursor()
 ## Memo: get columns with query like this:
 ## select * from information_schema.columns where table_name = 'fastqc' order by ordinal_position;
 cur.execute("CREATE TEMP TABLE fastqc_tmp AS (SELECT * FROM fastqc WHERE 1=2)") ## Where to put results
+
 cur.execute("INSERT INTO fastqc_tmp VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", fastqc_line)
 cur.execute("INSERT INTO fastqc SELECT DISTINCT * FROM fastqc_tmp EXCEPT SELECT * FROM fastqc") ## Import only rows not already present 
 cur.execute("DROP TABLE fastqc_tmp")
