@@ -7,6 +7,7 @@ import argparse
 import subprocess
 import hashlib
 import socket
+import datetime
 
 bamfiles= sys.argv[1:]
 
@@ -134,10 +135,10 @@ if args.input == ['-']:
 # ------------------------------------------------------------------------------
 
 ## Order in which the attributes in class File_Stats should be retured:
-header=  ['filename', 'fullname', 'md5sum', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles']
+header=  ['filename', 'fullname', 'md5sum', 'fsize', 'ctime', 'mtime', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles']
 
 ## Column names to output (must reflect the order in 'header' above)
-colnames=  ['filename', 'fullname', 'md5sum', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
+colnames=  ['filename', 'fullname', 'md5sum', 'fsize', 'ctime', 'mtime', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
            ['mapq.'+str(x) for x in LIMITS_MAPQ] + \
            ['mapq_255'] + \
            ['nm.'+str(x) for x in LIMITS_NM] + \
@@ -155,6 +156,9 @@ class File_Stats:
         self.filename= ''
         self.fullname= ''
         self.md5sum= ''
+	self.fsize= ''
+	self.ctime= ''
+	self.mtime= ''
         self.median_length= 'NA'
         self.len_sd= 'NA'
         self.nreads_tot= 0
@@ -399,6 +403,9 @@ for bam in args.input:
     fstats.filename= os.path.split(bam)[1]
     fstats.fullname= socket.gethostname() + ':' + os.path.abspath(bam)
     fstats.md5sum= md5sum(bam)
+    fstats.fsize= os.path.getsize(bam)
+    fstats.mtime= datetime.datetime.fromtimestamp(os.path.getmtime(bam)).isoformat()
+    fstats.ctime= datetime.datetime.fromtimestamp(os.path.getctime(bam)).isoformat()
     bamfile = pysam.Samfile( bam, "rb" )
     n= 0
     for AlignedRead in bamfile:
