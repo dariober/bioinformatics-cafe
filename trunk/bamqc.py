@@ -401,7 +401,8 @@ for bam in args.input:
     mapq_sample= [] ## Accumulator for sample of mapq scores.
     length_sample= []
     fstats.filename= os.path.split(bam)[1]
-    fstats.fullname= socket.gethostname() + ':' + os.path.abspath(bam)
+    # fstats.fullname= socket.gethostname() + ':' + os.path.abspath(bam)
+    fstats.fullname= os.path.abspath(bam) ## do not output hostname until you sort duplicates in sblab.bamqc table
     fstats.md5sum= md5sum(bam)
     fstats.fsize= os.path.getsize(bam)
     fstats.mtime= datetime.datetime.fromtimestamp(os.path.getmtime(bam)).isoformat()
