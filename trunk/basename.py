@@ -13,7 +13,7 @@ USAGE
 
 EXAMPLE
     ## Return 'myfile'
-    basename.py '\.bam$' path/to/myfile.bam 
+    basename.py  path/to/myfile.bam '\.bam$'
 """)
 
 x= os.path.split(sys.argv[1])[1]

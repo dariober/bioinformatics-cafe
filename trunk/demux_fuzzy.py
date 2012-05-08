@@ -11,6 +11,11 @@ DESCRIPTION
     De-multiplex a FASTQ file into separate files on the bases of the barcode sequence
     found on the read name. The output files are gzipped.
     
+    The barcode is extracted from the header line of each sequence by extracting the substring
+    between rightmost '#' and '/'.
+    From this substring, the first 6 bases are the barcode.
+    barcode_sequence= hline[(hline.rfind('#')+1) : hline.rfind('/')][0:6]
+    
     demux_fuzzy.py rescues imperfect matches provided that
     1) A unique best match can be found
     2) The edit distance between sequence and barcodes is less than a given threshold
@@ -145,7 +150,9 @@ while True:
     n += 1
     if n % 1000000 == 0:
         print(n)
-    bcode= fqline[0][-9:-3]
+    hline= fqline[0]
+    
+    bcode= hline[(hline.rfind('#')+1) : hline.rfind('/')][0:6]## fqline[0][-9:-3]
     if bcode in code_dict:
         ## Test for perfect match
         code_dict[bcode][1].write('\n'.join(fqline) + '\n')
