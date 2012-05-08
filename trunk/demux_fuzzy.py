@@ -13,7 +13,7 @@ DESCRIPTION
     
     The barcode is extracted from the header line of each sequence by extracting the substring
     between rightmost '#' and '/'.
-    From this substring, the first 6 bases are the barcode.
+    From this substring, the first 6 bases are extracted as the barcode.
     barcode_sequence= hline[(hline.rfind('#')+1) : hline.rfind('/')][0:6]
     
     demux_fuzzy.py rescues imperfect matches provided that
