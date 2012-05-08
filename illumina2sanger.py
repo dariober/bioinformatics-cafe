@@ -10,6 +10,7 @@ DESCRIPTION
     Convert Illumina >1.3 and <1.9 encoding to Sanger.
     Throw an exception if characters less than ascii 64 (@) or above 126 (~) are found.
     Use - to read input file from stream
+    Note: Comment lines are rejected if identical to header.
     
 EXAMPLES
 
@@ -62,14 +63,18 @@ while True:
     qname= fastq.readline().rstrip('\n\r')
     if qname == '':
         break
-    print(qname)
-    print(fastq.readline().rstrip('\n\r'))
-    print(fastq.readline().rstrip('\n\r'))
-    qual= fastq.readline().rstrip('\n\r')
+    seqline= fastq.readline().rstrip('\n\r')
+    cmt_line= fastq.readline().rstrip('\n\r')
+    if cmt_line[1:] == qname[1:]:
+        cmt_line= '+'
+    qual= fastq.readline().rstrip('\n\r') 
     qual_sanger= [illumina2sanger(x) for x in qual if ord(x) >= 64 and ord(x) <= 126]
     if len(qual_sanger) != len(qual):
         sys.exit('Invalid Illumina encoding for line %s' %(''.join(qual)))
     qual_sanger= ''.join(qual_sanger)
+    print(qname)
+    print(seqline)
+    print(cmt_line)
     print(qual_sanger)
 fastq.close()
 
