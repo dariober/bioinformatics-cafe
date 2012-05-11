@@ -1,9 +1,10 @@
 #!/home/berald01/.local/bin/python
 
 import sys
+import argparse
 
-if (len(sys.argv) < 2) or (len(sys.argv) > 3):
-    sys.exit("""
+parser = argparse.ArgumentParser(description= """
+
     Reformat a space or tab separated file to have each column aligned by inserting the
     appropriate number of spaces
     
@@ -24,21 +25,44 @@ if (len(sys.argv) < 2) or (len(sys.argv) > 3):
         - Read CSV files: Now a column is split at every space (tab or space, one or more times).
         - Allow custom separator (pass to line.split())
         - Allow rugged files.
-            """)
 
-if len(sys.argv) == 3:
-    spacer= ' ' * int(sys.argv[2])
-else:
-    spacer= ' '*4
-if sys.argv[1] == '-':
+
+""", formatter_class= argparse.RawTextHelpFormatter)
+
+parser.add_argument('input',
+                    type= str,
+                    help="""File to format or - to read from stdin.
+                    """)
+
+parser.add_argument('-n', '--nsep',
+                    type= int,
+                    default= 4,
+                    help="""Separate columns by at least these many blank spaces.
+    Default 4.
+                    """)
+
+parser.add_argument('-s', '--sep',
+                    type= str,
+                    default= '\t',
+                    help="""Columns in input are separated by this string.
+    Default is tab '\t'.
+                    """)
+
+args = parser.parse_args()
+
+# -----------------------------------------------------------------------------
+if args.input == '-':
     fh= sys.stdin
 else:
-    fh= open(sys.argv[1])
+    fh= open(args.input)
+
+spacer= ' ' * args.nsep 
+# -----------------------------------------------------------------------------
 
 table= []
 maxcols= 0
 for line in fh:
-    line= line.strip().split()
+    line= line.strip().split(args.sep)
     if len(line) > maxcols:
         maxcols= len(line)
     table.append(line)
