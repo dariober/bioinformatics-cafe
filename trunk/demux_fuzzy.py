@@ -45,6 +45,8 @@ REQUIREMENTS:
 
 TODO
    - Allow to output in uncompressed format.
+   - Allow for insertions/deletions by searching the whole barcode sequence in the header?
+     (Probably not worth the effort)
      ...
     """, formatter_class= argparse.RawTextHelpFormatter)
 
