@@ -45,7 +45,8 @@ parser.add_argument('-s', '--sep',
                     type= str,
                     default= '\t',
                     help="""Columns in input are separated by this string.
-    Default is tab '\t'.
+    Default is tab '\t'. NB: On bash shell a tab is inserted with Ctrl-V TAB.
+    Typing '\t' will be interpreted literally.
                     """)
 
 args = parser.parse_args()
@@ -58,7 +59,7 @@ else:
 
 spacer= ' ' * args.nsep 
 # -----------------------------------------------------------------------------
-
+print(args.sep)
 table= []
 maxcols= 0
 for line in fh:
@@ -81,5 +82,5 @@ for line in table:
         nspace= colOffset - len(cell)
         line[i]= cell + ' '*nspace
     print(spacer.join(line))
+fh.close()
 sys.exit()
-    
