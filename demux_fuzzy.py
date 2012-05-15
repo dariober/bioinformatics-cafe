@@ -4,6 +4,8 @@ import Levenshtein
 import sys
 import argparse
 import gzip
+import subprocess
+import operator
 
 parser = argparse.ArgumentParser(description="""
 
@@ -67,7 +69,6 @@ Memo: Columns are space (not tab) separated.
                    ''',
                    required= True)
 
-
 parser.add_argument('--distance', '-d',
                    type= int,
                    help='''Maximum edit distance between barcodes found in the sample
@@ -78,9 +79,76 @@ are always discarded)
                    required= False,
                    default= 1)
 
+parser.add_argument('--report', '-r',
+                   type= str,
+                   nargs= '?',
+                   help='''Report file where to write some QC.
+Use - to send to stdout (default). Leave blank to send to file <sample sheet>.demux_report
+                   ''',
+                   required= False,
+                   default= '-')
+
+parser.add_argument('--pgupload', '-p',
+                   action= 'store_true',
+                   help='''Upload report to postgres sblab.main.demux_report
+                   ''')
 args = parser.parse_args()
 
+# -----------------------------------------------------------------------------
+
+barcode_dict= { "ACAGTG": "TruSeq-5",
+                "ACTGAT": "TruSeq-25",
+                "ACTTGA": "TruSeq-8",
+                "AGTCAA": "TruSeq-13",
+                "AGTTCC": "TruSeq-14",
+                "ATCACG": "TruSeq-1",
+                "ATGTCA": "TruSeq-15",
+                "ATTCCT": "TruSeq-27",
+                "CAGATC": "TruSeq-7",
+                "CCGTCC": "TruSeq-16",
+                "CGATGT": "TruSeq-2",
+                "CGTACG": "TruSeq-22",
+                "CTTGTA": "TruSeq-12",
+                "GAGTGG": "TruSeq-23",
+                "GATCAG": "TruSeq-9",
+                "GCCAAT": "TruSeq-6",
+                "GGCTAC": "TruSeq-11",
+                "GTCCGC": "TruSeq-18",
+                "GTGAAA": "TruSeq-19",
+                "GTGGCC": "TruSeq-20",
+                "GTTTCG": "TruSeq-21",
+                "TAGCTT": "TruSeq-10",
+                "TGACCA": "TruSeq-4",
+                "TTAGGC": "TruSeq-3"}
+
+
+if args.report is None:
+    reportname= args.samplesheet + '.demux_report'
+    fhreport= open(reportname,  'w')
+elif args.report == '-':
+    fhreport= sys.stdout
+else:
+    reportname= args.report
+    fhreport= open(reportname, 'w')
+
 #------------------------[ Functions ]-----------------------------------------
+
+def get_dbpass():
+    """
+    Read file ~/.psycopgpass to get the connection arguments to connect to sblab
+    Output is a dict like:
+    {'host': 'xx.zz.yy.qq', 'dbname': 'mydb', 'user': 'myself'}
+    """
+    import os
+    conn= open(os.path.join(os.getenv("HOME"), '.psycopgpass'))
+    conn= conn.readlines()
+    conn_args= [x.strip() for x in conn if x.strip() != '' and x.strip().startswith('#') is False][0]
+    conn_args= conn_args.split(' ')
+    conn_dict= {}
+    for x in conn_args:
+        xc= x.split('=')
+        conn_dict[xc[0]]= xc[1] 
+    return(conn_dict)
 
 def read_fastq_line(fastq_fh):
     """
@@ -131,18 +199,55 @@ def read_samplesheet(sample_sheet):
     print('')
     return(code_dict)
 
+def spurious_hits(barcode_dict_matches, exclude_codes, totreads= None):
+    """
+    Returns a lst of top spurious barcodes.
+    
+    barcode_dict_matches: Dictionary of barcodes and their hit count.
+        Like {'ACTGAC': ['TruSeq-X', 10], }
+    exclude_codes: List of barcodes expected to be present in the master file
+        and therefore don't consider them as spurious.
+    totreads: Total reads to compute percent spurious. If None, percent is not
+              calculated
+    
+    OUTPUT: List of list in descending order: [['TruSeq-A', 100], ['TruSeq-B', 90], ... ]
+    """
+    spurhits= {}
+    for k in barcode_dict_matches:
+        if k in exclude_codes:
+            pass
+        else:
+            spurhits[k]= barcode_dict_matches[k][::-1] ## Make count to be the first
+    sorted_x = sorted(spurhits.iteritems(), key=operator.itemgetter(1), reverse= True)
+    sorted_x= [x[1][::-1] for x in sorted_x] ## MAke code name to be first
+    if totreads is not None:
+        for i in range(0, len(sorted_x)):
+            x= sorted_x[i]
+            x.append(round(float(x[1]) / float(totreads), 2))
+            sorted_x[i]= x
+    return(sorted_x)
+    
 # -----------------------------------------------------------------------------
+
+barcode_dict_matches= {}
+for k in barcode_dict:
+    barcode_dict_matches[k]= [barcode_dict[k], 0]
+barcode_dict_matches['N']= ['Barcodes_with_N', 0]
+barcode_dict_matches['no match']= ['No_match', 0]
 
 if args.fastq == '-':
     fh= sys.stdin
+elif args.fastq.endswith('.gz'):
+    fh= gzip.open(args.fastq)
 else:
     fh= open(args.fastq)
-    
+
 code_dict= read_samplesheet(args.samplesheet)
 codes= []
 for k in code_dict:
     codes.append(k)
-    
+    if k[0:6] not in barcode_dict.keys():
+        print('WARNING: barcode sequence %s is not in current dictionary' %(k))
 n= 0
 n_lost= 0
 while True:
@@ -155,6 +260,14 @@ while True:
     hline= fqline[0]
     
     bcode= hline[(hline.rfind('#')+1) : hline.rfind('/')][0:6]## fqline[0][-9:-3]
+    ## Check match between barcode and barcode dict. This is only for reporting/QC
+    if bcode in barcode_dict_matches.keys():
+        barcode_dict_matches[bcode][1] += 1
+    elif 'N' in bcode.upper():
+        barcode_dict_matches['N'][1] += 1
+    else:
+        barcode_dict_matches['no match'][1] += 1
+    ## Do the actual demultiplexing
     if bcode in code_dict:
         ## Test for perfect match
         code_dict[bcode][1].write('\n'.join(fqline) + '\n')
@@ -172,14 +285,77 @@ while True:
             bcode= codes[dists.index(best_dist)]
             code_dict[bcode][1].write('\n'.join(fqline) + '\n')
             code_dict[bcode][2] += 1
+
 fh.close()
+
+## Convert list of lists to string formatted like a postgres array
+match_report= sorted(barcode_dict_matches.values())
+match_report_array= []
+for x in match_report:
+    match_report_array.append("{'" + x[0] + "'," + str(x[1]) + '}')
+match_report_array='{' + ','.join(match_report_array) + '}'
+
+spur_report= spurious_hits(barcode_dict_matches, codes, n)
+spur_report_array= []
+for x in spur_report:
+    spur_report_array.append("{'" + x[0] + "'," + str(x[1]) + ',' + str(x[2]) + '}')
+spur_report_array='{' + ','.join(spur_report_array) + '}'
+
 perc_lost= round(100*(n_lost/float(n)),2)
 print('\nTotal reads: %s' %(n))
 print('Lost:        %s (%s%%)' %(n_lost, perc_lost))
 print('\nReads in:')
 for k in code_dict:
+    code_dict[k][1].close()
+    p= subprocess.Popen('get_file_stats2.py -i %s --md5sum' %(code_dict[k][0]), stdout= subprocess.PIPE, shell= True)
+    fstats= p.stdout.read()
+    fstats= eval(fstats)
     perc= round(100*(code_dict[k][2]/float(n)),2)
     print('%s\t%s\t%s%%' %(code_dict[k][0], code_dict[k][2], perc,))
-    code_dict[k][1].close()
+    ## Row to print in report 
+    reportline= []
+    reportline.append(code_dict[k][0]) ## Demultiplexed file name
+    reportline.append(args.fastq) ## Master file name
+    reportline.append(k) ## Barcode seq
+    reportline.append(barcode_dict[k]) ## Barcode name (e.g. TruSeq-1)
+    reportline.append(code_dict[k][2]) ## N. reads
+    reportline.append(n) ## Tot reads in master file
+    reportline.append(perc) ## % in this file
+    reportline.append(n_lost) ## Reads lost
+    reportline.append(perc_lost) ## Reads lost
+    reportline.append(fstats['md5sum'])
+    reportline.append(fstats['fsize'])
+    reportline.append(fstats['mtime'])
+    reportline.append(fstats['path'])
+    reportline.append(match_report_array)
+    reportline.append(spur_report_array)
+    fhreport.write('\t'.join([str(x) for x in reportline]) + '\n')
+
 print('')
+fhreport.close()
+
+if args.pgupload and args.report != '-':
+    dbpass= get_dbpass()
+    cmd= 'scp %s %s:/tmp/' %(reportname, dbpass['host'])
+    print(cmd)
+    p= subprocess.Popen(cmd, shell= True)
+    p.wait()
+    
+    sqlscript= """
+    CREATE TEMP TABLE demux_report_tmp (LIKE demux_report INCLUDING DEFAULTS);
+    COPY demux_report_tmp FROM '/tmp/test.demux.txt.demux_report' WITH CSV DELIMITER E'\t';
+    INSERT INTO demux_report SELECT * FROM demux_report_tmp EXCEPT SELECT * FROM demux_report;
+    DROP TABLE demux_report_tmp; 
+    """
+    
+    cmd= '''ssh %s "source ~/.bash_profile;
+    psql -U %s %s -c \\"
+    CREATE TEMP TABLE demux_report_tmp (LIKE demux_report INCLUDING DEFAULTS);
+    COPY demux_report_tmp FROM '/tmp/%s' WITH CSV DELIMITER E'\t';
+    INSERT INTO demux_report SELECT * FROM demux_report_tmp EXCEPT SELECT * FROM demux_report;
+    DROP TABLE demux_report_tmp; 
+    \\"" ''' %(dbpass['host'], dbpass['user'], dbpass['dbname'], reportname)
+    print(cmd)
+    p= subprocess.Popen(cmd, shell= True)
+    p.wait()
 sys.exit()
