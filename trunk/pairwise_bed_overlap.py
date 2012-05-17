@@ -59,8 +59,9 @@ sumout= []
 for fa in files:
     for fb in files:
         if fa == fb:
-            diff= 0
-            inters= filespans[fa]
+            continue
+            #diff= 0
+            #inters= filespans[fa]
         else:
             cmd= 'subtractBed -a %s -b %s | sumbed.py -' %(fa, fb)
             p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE)
