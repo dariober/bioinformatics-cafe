@@ -6,6 +6,11 @@ import argparse
 import gzip
 import subprocess
 import operator
+try:
+    import sblab
+except:
+    pass
+    ## raise Warning('Module sblab not found on this system.')
 
 parser = argparse.ArgumentParser(description="""
 
@@ -40,6 +45,12 @@ USAGE:
     
     ## Read from stdin a zipped file. Use -f -:
     gunzip -c fastq.fq.gz | demux_fuzzy.py -f - -s samplesheet.txt
+
+    ## Upload report to sblab. Report will be in file mysheet.demux_report
+    demux_fuzzy.py -f myfastq.fq.gz -s mysheet.txt --pgupload --report
+    
+    ## Only upload a previoiusly produced report. Options -f and -s are ignored but required (bug).
+    demux_fuzzy.py -f bla -s bla -u test.demux.txt.demux_report
 
 REQUIREMENTS:
     Python with package Levenshtein (http://pypi.python.org/pypi/python-Levenshtein/)
@@ -92,6 +103,13 @@ parser.add_argument('--pgupload', '-p',
                    action= 'store_true',
                    help='''Upload report to postgres sblab.main.demux_report
                    ''')
+
+parser.add_argument('--pgupload_only', '-u',
+                   type= str,
+                   required= False,
+                   help='''Only upload a report file. Using sblab module.
+                   ''')
+
 args = parser.parse_args()
 
 # -----------------------------------------------------------------------------
@@ -121,7 +139,10 @@ barcode_dict= { "ACAGTG": "TruSeq-5",
                 "TGACCA": "TruSeq-4",
                 "TTAGGC": "TruSeq-3"}
 
-
+if args.pgupload_only:
+    reportname= args.pgupload_only
+    sblab.uplod_demux_fuzzy_report(reportname)
+    sys.exit()
 if args.report is None:
     reportname= args.samplesheet + '.demux_report'
     fhreport= open(reportname,  'w')
@@ -132,23 +153,6 @@ else:
     fhreport= open(reportname, 'w')
 
 #------------------------[ Functions ]-----------------------------------------
-
-def get_dbpass():
-    """
-    Read file ~/.psycopgpass to get the connection arguments to connect to sblab
-    Output is a dict like:
-    {'host': 'xx.zz.yy.qq', 'dbname': 'mydb', 'user': 'myself'}
-    """
-    import os
-    conn= open(os.path.join(os.getenv("HOME"), '.psycopgpass'))
-    conn= conn.readlines()
-    conn_args= [x.strip() for x in conn if x.strip() != '' and x.strip().startswith('#') is False][0]
-    conn_args= conn_args.split(' ')
-    conn_dict= {}
-    for x in conn_args:
-        xc= x.split('=')
-        conn_dict[xc[0]]= xc[1] 
-    return(conn_dict)
 
 def read_fastq_line(fastq_fh):
     """
@@ -226,7 +230,8 @@ def spurious_hits(barcode_dict_matches, exclude_codes, totreads= None):
             x.append(round(float(x[1]) / float(totreads), 2))
             sorted_x[i]= x
     return(sorted_x)
-    
+
+   
 # -----------------------------------------------------------------------------
 
 barcode_dict_matches= {}
@@ -335,27 +340,5 @@ print('')
 fhreport.close()
 
 if args.pgupload and args.report != '-':
-    dbpass= get_dbpass()
-    cmd= 'scp %s %s:/tmp/' %(reportname, dbpass['host'])
-    print(cmd)
-    p= subprocess.Popen(cmd, shell= True)
-    p.wait()
-    
-    sqlscript= """
-    CREATE TEMP TABLE demux_report_tmp (LIKE demux_report INCLUDING DEFAULTS);
-    COPY demux_report_tmp FROM '/tmp/test.demux.txt.demux_report' WITH CSV DELIMITER E'\t';
-    INSERT INTO demux_report SELECT * FROM demux_report_tmp EXCEPT SELECT * FROM demux_report;
-    DROP TABLE demux_report_tmp; 
-    """
-    
-    cmd= '''ssh %s "source ~/.bash_profile;
-    psql -U %s %s -c \\"
-    CREATE TEMP TABLE demux_report_tmp (LIKE demux_report INCLUDING DEFAULTS);
-    COPY demux_report_tmp FROM '/tmp/%s' WITH CSV DELIMITER E'\t';
-    INSERT INTO demux_report SELECT * FROM demux_report_tmp EXCEPT SELECT * FROM demux_report;
-    DROP TABLE demux_report_tmp; 
-    \\"" ''' %(dbpass['host'], dbpass['user'], dbpass['dbname'], reportname)
-    print(cmd)
-    p= subprocess.Popen(cmd, shell= True)
-    p.wait()
+    sblab.uplod_demux_fuzzy_report(reportname)
 sys.exit()
