@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/home/berald01/.local/bin/python
 
 import sys
 import argparse
@@ -104,8 +104,10 @@ for line in inbed:
     windows= partition([int(line[1]), int(line[2])], args.nwinds)
     for i in range(0, len(windows)):
         if args.reverse and line[5] == '-':
-            i= (args.nwinds - 1) - i
-        new_line= [line[0], windows[i][0], windows[i][1]] + line[1:] + [i+1]
+            j= (args.nwinds - 1) - i
+        else:
+            j= i
+        new_line= [line[0], windows[i][0], windows[i][1]] + line[1:] + [j+1]
         print('\t'.join([str(x) for x in new_line]))
     n += 1
 sys.exit()
