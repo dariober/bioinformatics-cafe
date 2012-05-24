@@ -4,14 +4,18 @@ import sys
 import subprocess
 import os
 
-if len(sys.argv) != 2:
+if len(sys.argv) != 2 or sys.argv[1] == '-h':
     sys.exit("""
 
 Return the sum of the regions spanned in a bed file after having merged the
 overlapping features.
 
 Output is (tab separated):
-<input filename> <sum of regions> <number of features after merging>
+    <input filename>
+    <sum of regions *merged*>
+    <number of features after merging>
+    <sum of regions *w/o merging*>
+    <number of features w/o merging (i.e wc)>
 
 Use - to read file from stdin
 
@@ -19,6 +23,8 @@ USAGE
 
 sumbed.py <myfile.bed>
 cat myfile.bed | sumbed.py -
+## Skip header line
+tail -n+2 <myfile.bed> | sumbed.py -
 
 E.g.
 chr1 1 10
@@ -29,8 +35,22 @@ sumbed.py >>> (10-1) + (25-20)= 14
 Note: Requires mergeBed and input file must fit in memory
 
 """)
-
-
+# ------------------------------------------------------------------------------
+def sumbed(bedlist):
+    """ Sum the features in a bed file to compute the overall span
+    bedlist: list where each element is a line of the bed file (string).
+             Typically returned by bedlist= open('mybed.bed').readlines()
+    
+    Returns a list of length 2: ['span bp', 'n lines']
+    """
+    span= 0
+    n= 0
+    for line in bedlist:
+        line= line.rstrip('\n\r').split('\t')
+        span += int(line[2]) - int(line[1])
+        n += 1
+    return([span, n])
+# ------------------------------------------------------------------------------
 fin= sys.argv[1]
 
 if fin == '-':
@@ -50,15 +70,13 @@ ftmp= sys.argv[1] + '.sumbed.bed'  ## Merged input bed
 cmd= 'mergeBed -i %s > %s' %(fin, ftmp)
 p= subprocess.Popen(cmd, shell= True)
 p.wait()
-merged= open(ftmp).readlines()
+bed= open(ftmp).readlines()
+sumsmerged= sumbed(bed)
 
-sumbed= 0
-n= 0
-for line in merged:
-    line= line.rstrip('\n\r').split('\t')
-    sumbed += int(line[2]) - int(line[1])
-    n += 1
-print('\t'.join([fin, str(sumbed), str(n)]))
+bed= open(fin).readlines()
+sums= sumbed(bed)
+
+print('\t'.join([fin, str(sumsmerged[0]), str(sumsmerged[1]), str(sums[0]), str(sums[1])]))
 #print('Size spanned (bp):                %s' %(sumbed))
 #print('Number of features after merging: %s' %(n))
 

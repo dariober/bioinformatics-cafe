@@ -25,6 +25,18 @@ USAGE
     
             """)
 
+import random
+
+def sample_wr(population, k):
+    "Chooses k random elements (with replacement) from a population"
+    n = len(population)
+    _random, _int = random.random, int  # speed hack 
+    result = [None] * k
+    for i in xrange(k):
+        j = _int(_random() * n)
+        result[i] = population[j]
+    return(result)
+
 def partition(lst, n): 
     """
     This fun divides a list in nearly equal chunks
@@ -40,9 +52,15 @@ def partition(lst, n):
     [[0, 9], [10, 19], [20, 30], [31, 40], [41, 50]]    
     """
     lst= range(lst[0], lst[1]+1)
+    orin= n
+    if len(lst) < n:
+        n= len(lst)
     division = len(lst) / float(n)
     full= [lst[int(round(division * i)): int(round(division * (i + 1)))] for i in xrange(n)]
     extremes= [[x[0], x[-1]] for x in full]
+    if len(lst) < orin:
+        samples= sample_wr(extremes, orin-len(lst))
+        extremes= sorted(extremes + samples)
     return(extremes)
 
 inbed= open(sys.argv[2])
