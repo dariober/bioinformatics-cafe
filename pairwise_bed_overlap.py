@@ -86,7 +86,7 @@ class pairwise:
         self.fileb= ''
         self.fileb_span= 0
         self.filea_count= 0
-        self.diff= 0
+        self.diff= 0 ##
     
 ## files= shlex.split(sys.argv[1])
 files= sys.argv[1:]
@@ -110,7 +110,7 @@ for f in files:
     p.wait()
     sumout= p.stdout.read().rstrip('\n\r')
     sumout= sumout.split('\t')
-    filespans[sumout[0]]= [int(sumout[1]), int(sumout[2])]
+    filespans[sumout[0]]= [int(x) for x in sumout[1:]] # [int(sumout[1]), int(sumout[2])]
 
 sumout= []
 for fa in files:
