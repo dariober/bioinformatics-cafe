@@ -90,6 +90,12 @@ def partition(lst, n):
     if len(lst) < orin:
         samples= sample_wr(extremes, orin-len(lst))
         extremes= sorted(extremes + samples)
+    ## Increase bins by 1 if span is 0:
+    for i in range(0, len(extremes)):
+        b= extremes[i]
+        if b[0] == b[1]:
+            b[1]= b[1] + 1
+            extremes[i]= b
     return(extremes)
 # ------------------------------------------------------------------------------
 
