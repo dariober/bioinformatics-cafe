@@ -49,11 +49,14 @@ bedDist<- function(start1, end1, start2, end2, strand= NA){
                 dists[i]<- -x
             }
         }
-        else if ((start2[i] >= start1[i] & start2[i] <= end1[i]) | (end2[i] >= start1[i] & end2[i] <= end1[i])){
+        else if ((start1[i] >= start2[i] & start1[i] <= end2[i]) | (end1[i] >= start2[i] & end1[i] <= end2[i]) | (start2[i] >= start1[i] & start2[i] <= end1[i]) | (end2[i] >= start1[i] & end2[i] <= end1[i])){
             # |----1----|              |-----1-----|
             #       |-----2----|    |-----2-----|
             dists[i]<- 0
-        }           
+        }
+        else {
+            stop(paste('Unexpected distance at line', i, '[', start1[i], end1[i], start2[i], end2[i], strand[i], ']'))
+        }
     }
     return(dists)
 }
