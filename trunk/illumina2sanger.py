@@ -56,6 +56,8 @@ else:
 
 if fastq_file == '-':
     fastq= sys.stdin
+elif fastq_file.endswith('.gz'):
+    fastq= gzip.open(fastq_file)
 else:
     fastq= open(fastq_file)
 
