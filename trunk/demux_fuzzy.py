@@ -101,13 +101,15 @@ Use - to send to stdout (default). Leave blank to send to file <sample sheet>.de
 
 parser.add_argument('--pgupload', '-p',
                    action= 'store_true',
-                   help='''Upload report to postgres sblab.main.demux_report
+                   help='''DEPRECATED. Use python module sblab.uplod_demux_fuzzy_report() instead.
+Upload report to postgres sblab.main.demux_report
                    ''')
 
 parser.add_argument('--pgupload_only', '-u',
                    type= str,
                    required= False,
-                   help='''Only upload a report file. Using sblab module.
+                   help='''DEPRECATED. Use python module sblab.uplod_demux_fuzzy_report() instead.
+Only upload a report file. Using sblab module.
                    ''')
 
 args = parser.parse_args()
