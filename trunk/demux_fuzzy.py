@@ -99,6 +99,13 @@ Use - to send to stdout (default). Leave blank to send to file <sample sheet>.de
                    required= False,
                    default= '-')
 
+parser.add_argument('--illumina',
+                   action= 'store_true',
+                   help='''The input fastq is in Illumina 1.5-1.7 encoding. The output
+files will be in Sanger format. NB: No checking is done on whether the encoding is actually
+Illumina!
+                   ''')
+
 parser.add_argument('--pgupload', '-p',
                    action= 'store_true',
                    help='''DEPRECATED. Use python module sblab.uplod_demux_fuzzy_report() instead.
@@ -165,6 +172,12 @@ def read_fastq_line(fastq_fh):
     fqline.append(fastq_fh.readline().strip())
     fqline.append(fastq_fh.readline().strip())
     fqline.append(fastq_fh.readline().strip())
+    return(fqline)
+
+def illumina2sanger(fqline):
+    """Convert illumina <1.9 encoding to sanger """
+    qual_sanger= ''.join([chr(ord(x) - 31) for x in fqline[3]])
+    fqline[3]= qual_sanger
     return(fqline)
     
 def read_samplesheet(sample_sheet):
@@ -264,8 +277,9 @@ while True:
     n += 1
     if n % 1000000 == 0:
         print(n)
-    hline= fqline[0]
-    
+    if args.illumina:
+        fqline= illumina2sanger(fqline)
+    hline= fqline[0]    
     bcode= hline[(hline.rfind('#')+1) : hline.rfind('/')][0:6]## fqline[0][-9:-3]
     ## Check match between barcode and barcode dict. This is only for reporting/QC
     if bcode in barcode_dict_matches.keys():
