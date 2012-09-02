@@ -103,7 +103,7 @@ for line in fastq:
 ## Order dict by decreasing value
 sorted_x = sorted(rdict.iteritems(), key=operator.itemgetter(1), reverse= True)
 p= 0
-print('\n## file: %s; N. reads read-in: %s; N. in dictionary: %s' %(args.infile, n, m))
+print('\n## file: %s; N. reads: %s; N. in dictionary: %s; N. distinct reads: %s' %(args.infile, n, m, len(sorted_x)))
 for x in sorted_x:
     p += 1
     vcount= x[1]
