@@ -161,7 +161,7 @@ def get_mapping_efficiency(report_list):
     if len(line) > 1:
         sys.exit('%s: More than one line found!' %(inspect.stack()[0][3], ))
     line= line[0]
-    line= re.sub(tag, '', line)
+    line= re.sub(tag, '', line).rstrip('%')
     return(re.sub('^get_', '',  inspect.stack()[0][3]), line)
 
 def get_seqs_not_alned(report_list):
@@ -339,7 +339,7 @@ def get_perc_mC_cpg(report_list):
     if len(line) > 1:
         sys.exit('%s: More than one line found!' %(inspect.stack()[0][3], ))
     line= line[0]
-    line= re.sub(tag, '', line)
+    line= re.sub(tag, '', line).rstrip('%')
     return(re.sub('^get_', '',  inspect.stack()[0][3]), line)
 
 def get_perc_mC_chg(report_list):
@@ -350,7 +350,7 @@ def get_perc_mC_chg(report_list):
     if len(line) > 1:
         sys.exit('%s: More than one line found!' %(inspect.stack()[0][3], ))
     line= line[0]
-    line= re.sub(tag, '', line)
+    line= re.sub(tag, '', line).rstrip('%')
     return(re.sub('^get_', '',  inspect.stack()[0][3]), line)
 
 def get_perc_mC_chh(report_list):
@@ -361,7 +361,7 @@ def get_perc_mC_chh(report_list):
     if len(line) > 1:
         sys.exit('%s: More than one line found!' %(inspect.stack()[0][3], ))
     line= line[0]
-    line= re.sub(tag, '', line)
+    line= re.sub(tag, '', line).rstrip('%')
     return(re.sub('^get_', '',  inspect.stack()[0][3]), line)
 
 # ------------------------------------------------------------------------------
