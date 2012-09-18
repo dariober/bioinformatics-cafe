@@ -6,14 +6,23 @@ import os
 import re
 import inspect
 import traceback
+import subprocess
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
-    
+    Parse one or more reports from trim_galore to tabular format.
+    Formatted output can be uplaoded to sblab. Only rows not already found in trim_galore_report
+    are inserted.
 EXAMPLE
-    
+    ## Parse all reports in pwd:
+    ls *_trimming_report.txt | trim_galore_report2tab.py --first_header -
+    ## Upload to sblab
+    trim_galore_report2tab.py sh023_hela_i_trimming_report.txt --sblab_upload
 TODO:
-
+    - For uplaoding to sblab: Name of data file and sql script file are hardcoded.
+      This means that if multiple instances of trim_galore_report2tab are executed
+      simulataneously  the data and ssql files might be overwritten.
+      
 """, formatter_class= argparse.RawTextHelpFormatter)
 
 parser.add_argument('infile',
@@ -30,11 +39,23 @@ parser.add_argument('--first_header',
                    action= 'store_true',
                    help='''The first line to be printed out is the header.
                    ''')
+parser.add_argument('--sblab_upload',
+                   action= 'store_true',
+                   help='''Uplaod the report(s) to sblab database.
+With this option no output to stdin other than the upload logs.
+                   ''')
 
 args = parser.parse_args()
 
 # -----------------------------------------------------------------------------
-
+def list2pgarray(tuplelist):
+    """Convert a list of tuple to a string formatted like an 2D-array suiatble for postgres
+    list2pgarray([('3', '565296'), ('4', '113096'), (5, 30513.0)]) => "{{'3', '565296'}, {'4', '113096'}, {5, 30513.0}}"
+    The tuples are expected to be 
+    """
+    strarray= str(tuplelist).replace(')', '}').replace('(', '{').replace('[', '{').replace(']', '}')
+    return(strarray)    
+# -----------------------------------------------------------------------------
 
 def get_input_filename(report_list):
     tag= 'Input filename: '
@@ -226,7 +247,11 @@ def get_adapt_hist(report_list):
         sys.exit('%s: More than one line found' %(inspect.stack()[0][3], ))
     hist_end= report_list.index(hist_end[0])
     hist= report_list[hist_start:hist_end]
-    hist= [tuple(x.split('\t')) for x in hist]
+    hist2= [tuple(x.split('\t')) for x in hist]
+    hist= []
+    for t in hist2:
+        t= (int(t[0]), int(t[1]))
+        hist.append(t)
     return(re.sub('^get_', '',  inspect.stack()[0][3]), hist)
 
 def get_adapt_hist_freq(report_list):
@@ -235,8 +260,13 @@ def get_adapt_hist_freq(report_list):
     lengths= [x[0] for x in hist]
     nreads= float(get_proc_reads(report_list)[1])
     hist_freq= [round((x/nreads)*100, 2) for x in counts]
-    hist_freq= zip(lengths, hist_freq)
+    hist_freq2= zip(lengths, hist_freq)
+    hist_freq= []
+    for t in hist_freq2:
+        t= (int(t[0]), float(t[1]))
+        hist_freq.append(t)
     return(re.sub('^get_', '',  inspect.stack()[0][3]), hist_freq)
+# -----------------------------------------------------------------------------
 
 if args.infile == ['-']:
     args.infile= sys.stdin.readlines()
@@ -247,6 +277,10 @@ for trim_report in args.infile:
     report_list= open(trim_report).readlines()
     report_list= [x.strip() for x in report_list if not x.strip() == '']
     try:
+        adapt_hist= get_adapt_hist(report_list)
+        adapt_hist= (adapt_hist[0], list2pgarray(adapt_hist[1]))
+        adapt_hist_freq= get_adapt_hist_freq(report_list)
+        adapt_hist_freq= (adapt_hist_freq[0], list2pgarray(adapt_hist_freq[1]))
         values= [get_input_filename(report_list), ## Each item is tuple (header_name, value)
                 get_phred_cutoff(report_list),
                 get_adapter_seq(report_list),
@@ -262,8 +296,8 @@ for trim_report in args.infile:
                 get_too_short_perc(report_list),
                 get_time_sec(report_list),
                 get_time_read_ms(report_list),
-                get_adapt_hist(report_list),
-                get_adapt_hist_freq(report_list),
+                adapt_hist,
+                adapt_hist_freq,
                 ('report_name', trim_report)]
     except:
         stack_trace = traceback.format_exc()
@@ -271,6 +305,45 @@ for trim_report in args.infile:
         sys.exit(stack_trace)
         
     data.append(values)
+
+if args.sblab_upload:
+    reportname= 'trim_galore_report_upload.tsv'
+    fout= open(reportname, 'w')
+    for report in data:
+        fout.write('\t'.join([str(v[1]) for v in report]) + '\n')
+    fout.close()
+    
+    sql= """-- Script to upload trim_galore_report: 
+CREATE TEMP TABLE tmp_trim_galore_report (LIKE trim_galore_report);
+COPY tmp_trim_galore_report FROM '%s' WITH CSV DELIMITER E'\\t' NULL AS 'NA';
+INSERT INTO trim_galore_report (SELECT * FROM tmp_trim_galore_report EXCEPT SELECT * FROM trim_galore_report);
+DROP TABLE tmp_trim_galore_report; """ %("/tmp/" + reportname)
+    sqlscript= reportname + '.upload.tmp.sql'
+    fout= open(sqlscript, 'w')
+    fout.write(sql)
+    fout.close()
+    ## Send data file and SQL script to sblab machine
+    cmd= 'scp %s $mac_office:/tmp; scp %s $mac_office:/tmp' %(reportname, sqlscript)
+    print(cmd)
+    p= subprocess.Popen(cmd, shell= True)
+    p.wait()
+    
+    ## Upload data
+    cmd= '''ssh $mac_office 'source ~/.bash_profile;
+    chmod 777 /tmp/%(report)s;
+    psql -U dberaldi -d sblab -w < /tmp/%(sqlscript)s;
+    rm /tmp/%(report)s;
+    rm /tmp/%(sqlscript)s;
+    exit' ''' %{'report': reportname, 'sqlscript': sqlscript}
+    print(cmd)
+    p= subprocess.Popen(cmd, shell= True)
+    p.wait()
+
+    os.remove(reportname)
+    os.remove(sqlscript)
+    sys.exit()
+
+
 if args.first_header:
     header= [x[0] for x in data[0]]
     print('\t'.join(header))
