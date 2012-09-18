@@ -42,7 +42,9 @@ parser.add_argument('--first_header',
 parser.add_argument('--sblab_upload',
                    action= 'store_true',
                    help='''Uplaod the report(s) to sblab database.
-With this option no output to stdin other than the upload logs.
+With this option no output to stdin other than the upload logs. It is not necessary to
+to be on the machine hosting sblab, but the local machine must be abple to ssh/scp to
+sblab machine
                    ''')
 
 args = parser.parse_args()
