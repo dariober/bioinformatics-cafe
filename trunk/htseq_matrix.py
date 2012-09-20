@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import re
+import redmine
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -47,6 +48,12 @@ parser.add_argument('--keepdir', '-d',
 it is removed).
                    ''')
 
+parser.add_argument('--redmine',
+                    action= 'store_true',
+                   help='''Format the report output as a table for redmine (default
+is a tab separatetd table).
+                   ''')
+
 args = parser.parse_args()
 
 # ------------------------------------------------------------------------------
@@ -61,12 +68,16 @@ else:
     header= [x for x in args.htseqfiles]
 if args.strip is not None:
     header= [re.sub(args.strip, '', x) for x in header]
-header= '\t'.join(['feature_id'] + header)
+header= ['feature_id'] + header
 
 outf= open(args.outmatrix, 'w')
-outf.write(header + '\n')
-print(header)
-
+outf.write('\t'.join(header) + '\n')
+if args.redmine:
+    print(redmine.list2table(header, header= True))
+else:
+    header= '\t'.join(header)
+    print(header)
+    
 is_feature= True ## Mark to say whether the current line is feature to be inlcuded in the matrix
                  ## Will turn to False once the row 'no_feature' is found
 
@@ -104,9 +115,15 @@ while True:
     if is_feature:
         outf.write('\t'.join(line) + '\n')
     else:
-        print('\t'.join(line))
+        if args.redmine:
+            print(redmine.list2table(line))
+        else:
+            print('\t'.join(line))
 read_count= [str(x) for x in read_count]
-print('\t'.join(['assigned'] + read_count))
+if args.redmine:
+    print(redmine.list2table(['assigned'] + read_count))
+else:
+    print('\t'.join(['assigned'] + read_count))
 for f in infiles:
     f.close()    
 outf.close()
