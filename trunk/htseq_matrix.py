@@ -13,7 +13,7 @@ DESCRIPTION
 
 EXAMPLE
     ## Produce matrix of all the files ending in .htseq, remove .htseq from file name
-    find . -name '*.htseq' | htseq_matrix.py - -s '\.htseq$' htseq.matrix
+    find . -name '*.htseq' | sort | htseq_matrix.py - -s '\.htseq$' htseq.matrix
 TODO:
 
 """, formatter_class= argparse.RawTextHelpFormatter)
@@ -73,6 +73,8 @@ is_feature= True ## Mark to say whether the current line is feature to be inlcud
 infiles= []
 for lib in args.htseqfiles:
     infiles.append(open(lib))
+read_count= [0] * len(infiles) ## Keep track of how many reads are mapped to feature
+
 while True:
     for i in range(0, len(infiles)):
         if i == 0:
@@ -84,6 +86,8 @@ while True:
             if fline == ['']:
                 break
             line= fline
+            if is_feature:
+                read_count[i] += int(line[1])
         else:
             fline= infiles[i].readline()
             fline= fline.strip().split('\t')
@@ -93,12 +97,16 @@ while True:
             if next_feature != feature_id:
                 sys.exit('Input files do not seem to have the same features and/or they are not in the same order: %s, %s' %(feature_id, next_feature))
             line.append(fline[1])
+            if is_feature:
+                read_count[i] += int(fline[1])
     if fline == ['']:
         break
     if is_feature:
         outf.write('\t'.join(line) + '\n')
     else:
         print('\t'.join(line))
+read_count= [str(x) for x in read_count]
+print('\t'.join(['assigned'] + read_count))
 for f in infiles:
     f.close()    
 outf.close()
