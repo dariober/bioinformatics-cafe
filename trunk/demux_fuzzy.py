@@ -42,31 +42,20 @@ ACTTGAA demultiplex_file-2.fq
     
 USAGE:
     demux_fuzzy.py -f <fastqfile> -s <sample sheet>
-    
-    ## Read from stdin a zipped file. Use -f -:
-    gunzip -c fastq.fq.gz | demux_fuzzy.py -f - -s samplesheet.txt
-
-    ## Upload report to sblab. Report will be in file mysheet.demux_report
-    demux_fuzzy.py -f myfastq.fq.gz -s mysheet.txt --pgupload --report
-    
-    ## Only upload a previoiusly produced report. Options -f and -s are ignored but required (bug).
-    demux_fuzzy.py -f bla -s bla -u test.demux.txt.demux_report
-
+       
 REQUIREMENTS:
     Python with package Levenshtein (http://pypi.python.org/pypi/python-Levenshtein/)
     and argparse (http://pypi.python.org/pypi/argparse)
 
 TODO
    - Allow to output in uncompressed format.
-   - Allow for insertions/deletions by searching the whole barcode sequence in the header?
-     (Probably not worth the effort)
-     ...
+
     """, formatter_class= argparse.RawTextHelpFormatter)
 
 
 parser.add_argument('--fastq', '-f',
                    type= str,
-                   help='''Input FASTQ file to de-multiplex. Use - to read from stdin
+                   help='''Input FASTQ file to de-multiplex.
                                    
                    ''',
                    required= True)
@@ -101,9 +90,9 @@ Use - to send to stdout (default). Leave blank to send to file <sample sheet>.de
 
 parser.add_argument('--illumina',
                    action= 'store_true',
-                   help='''The input fastq is in Illumina 1.5-1.7 encoding. The output
-files will be in Sanger format. NB: No checking is done on whether the encoding is actually
-Illumina!
+                   help='''DEPRECATED: Encoding is determined by reading the file.
+The input fastq is in Illumina 1.5-1.7 encoding. The output files will be in Sanger format.
+NB: No checking is done on whether the encoding is actually Illumina!
                    ''')
 
 parser.add_argument('--pgupload', '-p',
@@ -249,20 +238,27 @@ def spurious_hits(barcode_dict_matches, exclude_codes, totreads= None):
    
 # -----------------------------------------------------------------------------
 
+## Determine encoding of fastq file
+encoding= sblab.get_fastq_encoding(args.fastq)
+
 barcode_dict_matches= {}
 for k in barcode_dict:
     barcode_dict_matches[k]= [barcode_dict[k], 0]
 barcode_dict_matches['N']= ['Barcodes_with_N', 0]
 barcode_dict_matches['no match']= ['No_match', 0]
 
-if args.fastq == '-':
-    fh= sys.stdin
-elif args.fastq.endswith('.gz'):
+if args.fastq.endswith('.gz'):
     fh= gzip.open(args.fastq)
+    fastq_undt= 'undetermined.' + args.fastq
 else:
     fh= open(args.fastq)
+    fastq_undt= 'undetermined.' + args.fastq + '.gz'
+
+## Open a file to write undetermined reads
+fh_undt= gzip.open(fastq_undt, 'wb')
 
 code_dict= read_samplesheet(args.samplesheet)
+print('Undetermined reads will go to: %s' %(fastq_undt))
 codes= []
 for k in code_dict:
     codes.append(k)
@@ -277,7 +273,7 @@ while True:
     n += 1
     if n % 1000000 == 0:
         print(n)
-    if args.illumina:
+    if encoding != 'Sanger':
         fqline= illumina2sanger(fqline)
     hline= fqline[0]    
     bcode= hline[(hline.rfind('#')+1) : hline.rfind('/')][0:6]## fqline[0][-9:-3]
@@ -296,17 +292,22 @@ while True:
     elif args.distance == 0 or bcode.count('N') > args.distance:
         ## If there are more Ns than allowed by args.distance, don't go to Levenshtein distance at all 
         n_lost += 1
+        fh_undt.write('\n'.join(fqline) + '\n')
         continue
     else:
         dists= [Levenshtein.distance(bcode, x) for x in codes]
         best_dist= min(dists)
         if best_dist > args.distance or len([x for x in dists if x == best_dist]) > 1:
             n_lost += 1
+            fh_undt.write('\n'.join(fqline) + '\n')
         else:
             bcode= codes[dists.index(best_dist)]
             code_dict[bcode][1].write('\n'.join(fqline) + '\n')
             code_dict[bcode][2] += 1
-
+for f in code_dict:
+    "Close demultiplexed files"
+    code_dict[f][1].close()
+fh_undt.close()
 fh.close()
 
 ## Convert list of lists to string formatted like a postgres array
