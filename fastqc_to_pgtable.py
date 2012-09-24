@@ -1,9 +1,11 @@
-#!/usr/bin/python
+#!/home/berald01/.local/bin/python
 
 import os
 import sys
 import psycopg2
 import argparse
+import subprocess
+import shutil
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -80,6 +82,15 @@ If this string is given, it has precedence over the individual args --md5sum, --
 --fsize. MEMO: get_file_stats2.py does not return md5sum unless --mdsum flag is used.
                    ''')
 
+parser.add_argument('--djangobase',
+                   required= False,
+                   default= '$mac_office:$django_sblab',
+                   help='''Hostname (ip address) and directory hosting sblab.
+Defualt is $mac_office:$django_sblab
+The Fastqc directory will be scp'd to this address, and put in the subdir given in
+--djangolink.
+                   ''')
+
 parser.add_argument('--djangolink',
                    required= False,
                    default= 'uploads/fastqc',
@@ -90,11 +101,17 @@ Default is 'uploads/fastqc'. For example, if infile is directory 'db001_fastqc',
 fastqc_to_pgtable.py will upload: "uploads/fastqc/db001_fastqc/fastqc_report.html"
                    ''')
 
+
 parser.add_argument('--nocommit',
                    action= 'store_true',
                    help='''Do not commit changes to database. Use this option
 to test whether the data can be uploaded. The data that would be uploaded is printed
 to stdout.
+                   ''')
+
+parser.add_argument('--nosend',
+                   action= 'store_true',
+                   help='''Do not send the fastqc directory to django. 
                    ''')
 
 args = parser.parse_args()
@@ -186,7 +203,16 @@ def list_to_pgcolumns(lst):
  
 " ---------------------------------------------------------------------------- "
 
-fq= open(os.path.join(args.infile, 'fastqc_data.txt')).readlines()
+rmunzip= False
+if args.infile.endswith('.zip'):
+    fastqcdir= args.infile.rstrip('.zip')
+    p= subprocess.Popen('unzip -q -o %s' %(args.infile), shell= True)
+    p.wait()
+    rmunzip= True
+else:
+    fastqcdir= args.infile
+
+fq= open(os.path.join(fastqcdir, 'fastqc_data.txt')).readlines()
 fq= [x.strip() for x in fq]
 
 fastqc_line= [] ## The entire report will be in this list. Each item is a column in the database table 
@@ -238,7 +264,13 @@ else:
     fastqc_line.append(args.fsize)
     fastqc_line.append(args.mtime)
 
-fastqc_line.append(os.path.join(args.djangolink, os.path.split(args.infile)[1], 'fastqc_report.html'))
+fastqc_line.append(os.path.join(args.djangolink, os.path.split(fastqcdir)[1], 'fastqc_report.html'))
+
+# --------------------------[Send to django]-----------------------------------
+if not args.nosend:
+    cmd= 'scp -q -r %s %s/%s' %(fastqcdir, args.djangobase, args.djangolink)
+    p= subprocess.Popen(cmd, shell= True)
+    p.wait()
 
 # ---------------------[ Send to postres ]--------------------------------------
 conn= psycopg2.connect(get_psycopgpass())
@@ -256,6 +288,11 @@ if args.nocommit is False:
 else:
     print(fastqc_line)
 conn.close()
+
+if rmunzip:
+    ## This means that the input was a zipped directory unzipped by fastqc_to_pgtable
+    ## so the unzipped directory is removed to return to original state.
+    shutil.rmtree(fastqcdir)
 sys.exit()
 
 
