@@ -51,37 +51,6 @@ parser.add_argument('--infile', '-i',
                    help='''Fastqc *directory* where to look for file fastqc_data.txt.
                    ''')
 
-parser.add_argument('--md5sum',
-                   required= False,
-                   default= None,
-                   help='''Optional md5sum of the fastq/bam file passed to fastqc
-default is None
-                   ''')
-
-parser.add_argument('--fsize',
-                   required= False,
-                   default= None,
-                   type= int,
-                   help='''Optional file size (as int) of the fastq/bam file passed to fastqc
-default is None
-                   ''')
-
-parser.add_argument('--mtime',
-                   required= False,
-                   default= None,
-                   help='''Optional modification time of the fastq/bam file passed to fastqc
-default is None. Typically this is returned by os.path.getmtime().
-                   ''')
-
-parser.add_argument('--filestats',
-                   required= False,
-                   default= None,
-                   help='''A string formatted like a dictionary which contains
-the file stats md5sum, mtime, fsize. Typically this is the output of get_file_stats2.py.
-If this string is given, it has precedence over the individual args --md5sum, --mtime
---fsize. MEMO: get_file_stats2.py does not return md5sum unless --mdsum flag is used.
-                   ''')
-
 parser.add_argument('--djangobase',
                    required= False,
                    default= '$mac_office:$django_sblab',
@@ -101,7 +70,6 @@ Default is 'uploads/fastqc'. For example, if infile is directory 'db001_fastqc',
 fastqc_to_pgtable.py will upload: "uploads/fastqc/db001_fastqc/fastqc_report.html"
                    ''')
 
-
 parser.add_argument('--nocommit',
                    action= 'store_true',
                    help='''Do not commit changes to database. Use this option
@@ -113,6 +81,37 @@ parser.add_argument('--nosend',
                    action= 'store_true',
                    help='''Do not send the fastqc directory to django. 
                    ''')
+
+#parser.add_argument('--md5sum',
+#                   required= False,
+#                   default= None,
+#                   help='''Optional md5sum of the fastq/bam file passed to fastqc
+#default is None
+#                   ''')
+
+#parser.add_argument('--fsize',
+#                   required= False,
+#                   default= None,
+#                   type= int,
+#                   help='''Optional file size (as int) of the fastq/bam file passed to fastqc
+#default is None
+#                   ''')
+
+#parser.add_argument('--mtime',
+#                   required= False,
+#                   default= None,
+#                   help='''Optional modification time of the fastq/bam file passed to fastqc
+#default is None. Typically this is returned by os.path.getmtime().
+#                   ''')
+
+#parser.add_argument('--filestats',
+#                   required= False,
+#                   default= None,
+#                   help='''A string formatted like a dictionary which contains
+#the file stats md5sum, mtime, fsize. Typically this is the output of get_file_stats2.py.
+#If this string is given, it has precedence over the individual args --md5sum, --mtime
+#--fsize. MEMO: get_file_stats2.py does not return md5sum unless --mdsum flag is used.
+#                   ''')
 
 args = parser.parse_args()
 
@@ -234,6 +233,11 @@ for i in range(0, len(fq)):
 
 ## Process First module:
 module= fq[mod_start[0]:mod_end[0]]
+if not module[-1].startswith('md5sum'):
+    """This is a patch to make fastqc_to_pgtable compatible with the output of fastqc v0.10.0 and with fastqc_md5.py.
+    fastqc_md5.py puts md5sum as last line of the basic stats module. Add a dummy line if this output comes from fastqc.
+    """
+    module.append('md5sum\tNA')
 for line in module[2:]:
     line= line.split('\t')
     if line[0] == 'Filename':
@@ -254,15 +258,15 @@ for s, e in zip(mod_start[1:], mod_end[1:]):
     fastqc_line= fastqc_line + row
 
 ## Get md5sum, fsize and mtime of fastq/bam file
-if args.filestats is not None:
-    fstats= eval(args.filestats)
-    fastqc_line.append(fstats['md5sum'])
-    fastqc_line.append(fstats['fsize'])
-    fastqc_line.append(fstats['mtime'])
-else:
-    fastqc_line.append(args.md5sum)
-    fastqc_line.append(args.fsize)
-    fastqc_line.append(args.mtime)
+#if args.filestats is not None:
+#    fstats= eval(args.filestats)
+#    fastqc_line.append(fstats['md5sum'])
+#    fastqc_line.append(fstats['fsize'])
+#    fastqc_line.append(fstats['mtime'])
+#else:
+#    fastqc_line.append(args.md5sum)
+#    fastqc_line.append(args.fsize)
+#    fastqc_line.append(args.mtime)
 
 fastqc_line.append(os.path.join(args.djangolink, os.path.split(fastqcdir)[1], 'fastqc_report.html'))
 
@@ -279,7 +283,8 @@ cur= conn.cursor()
 ## select * from information_schema.columns where table_name = 'fastqc' order by ordinal_position;
 cur.execute("CREATE TEMP TABLE fastqc_tmp AS (SELECT * FROM fastqc WHERE 1=2)") ## Where to put results
 
-cur.execute("INSERT INTO fastqc_tmp VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", fastqc_line)
+sql= "INSERT INTO fastqc_tmp VALUES (%s)" %(', '.join(['%s'] * len(fastqc_line)))
+cur.execute(sql, fastqc_line)
 cur.execute("INSERT INTO fastqc SELECT DISTINCT * FROM fastqc_tmp EXCEPT SELECT * FROM fastqc") ## Import only rows not already present 
 cur.execute("DROP TABLE fastqc_tmp")
 cur.close()
