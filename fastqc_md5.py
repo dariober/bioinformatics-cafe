@@ -134,14 +134,14 @@ for fq in fastq:
         "Output fastqc files are where --outdir was set"
         fqdir= outd
     print('Computing md5sum for: %s' %(fq))
-    md5= md5sum(fq)
+    md5s= md5sum(fq)
     fastqc_dir= os.path.join(fqdir, os.path.split(sblab.get_fastqc_dir(fq))[1])
     cmd= 'unzip -q -o -d %s %s.zip' %(fqdir, fastqc_dir)
     print(cmd)
     p= subprocess.Popen(cmd, shell= True)
     p.wait()
     fastqc_data_file= os.path.join(fastqc_dir, 'fastqc_data.txt')
-    fastqc_data= add_md5_fastqc(fastqc_data_file, md5)
+    fastqc_data= add_md5_fastqc(fastqc_data_file, md5s)
     fastqc_data_out= open(os.path.join(fastqc_dir, 'fastqc_data.txt'), 'w')
     for line in fastqc_data:
         "Replace original file"
