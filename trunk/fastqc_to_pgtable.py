@@ -284,6 +284,7 @@ cur= conn.cursor()
 cur.execute("CREATE TEMP TABLE fastqc_tmp AS (SELECT * FROM fastqc WHERE 1=2)") ## Where to put results
 
 sql= "INSERT INTO fastqc_tmp VALUES (%s)" %(', '.join(['%s'] * len(fastqc_line)))
+cur.mogrify(sql, fastqc_line)
 cur.execute(sql, fastqc_line)
 cur.execute("INSERT INTO fastqc SELECT DISTINCT * FROM fastqc_tmp EXCEPT SELECT * FROM fastqc") ## Import only rows not already present 
 cur.execute("DROP TABLE fastqc_tmp")
