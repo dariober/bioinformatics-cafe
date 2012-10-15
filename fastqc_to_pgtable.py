@@ -237,7 +237,7 @@ if not module[-1].startswith('md5sum'):
     """This is a patch to make fastqc_to_pgtable compatible with the output of fastqc v0.10.0 and with fastqc_md5.py.
     fastqc_md5.py puts md5sum as last line of the basic stats module. Add a dummy line if this output comes from fastqc.
     """
-    module.append('md5sum\tNA')
+    module.append('md5sum\tNULL')
 for line in module[2:]:
     line= line.split('\t')
     if line[0] == 'Filename':
@@ -283,9 +283,12 @@ cur= conn.cursor()
 ## select * from information_schema.columns where table_name = 'fastqc' order by ordinal_position;
 cur.execute("CREATE TEMP TABLE fastqc_tmp AS (SELECT * FROM fastqc WHERE 1=2)") ## Where to put results
 
+for i in range(0, len(fastqc_line)):
+    "Replace NULL keyword with None"
+    if fastqc_line[i] == 'NULL':
+        fastqc_line[i]= None
+
 sql= "INSERT INTO fastqc_tmp VALUES (%s)" %(', '.join(['%s'] * len(fastqc_line)))
-print(sql)
-print(fastqc_line)
 cur.execute(sql, fastqc_line)
 cur.execute("INSERT INTO fastqc SELECT DISTINCT * FROM fastqc_tmp EXCEPT SELECT * FROM fastqc") ## Import only rows not already present 
 cur.execute("DROP TABLE fastqc_tmp")
