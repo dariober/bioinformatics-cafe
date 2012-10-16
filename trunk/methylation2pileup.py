@@ -3,6 +3,7 @@
 import argparse
 import os
 import sys
+import decimal
 
 parser = argparse.ArgumentParser(description= """
 
@@ -69,21 +70,47 @@ parser.add_argument('--skip', '-s',
 args = parser.parse_args()
 
 " ----------------------------------------------------------------------------- "
+
+def sumMethylation(calldict):
+    """ Sum methylation calls in calldict and return percent metheylated
+    calldict: {'z': 2, 'Z': 10, 'h': 0, 'H': 0, 'x': 0, 'X': 0}"""
     
+    methylationSumDict= {'tot': 0, 'M':0 , 'pM': 0}
+    
+    for k in calldict:
+        if k in ('Z', 'X', 'H'):
+            methylationSumDict['M'] += calldict[k]
+        methylationSumDict['tot'] += calldict[k]
+    methylationSumDict['pM']= round(100*(float(methylationSumDict['M'])/(methylationSumDict['tot'])), 3) ## % methylated
+    return(methylationSumDict)
+
 def writeline(chrom, chrdict, outputcalls):
+    """chrom= str for the name of the current chrom
+    chrdict= dict of dicts with calls at each position: chrdict= {1:  {'z': 2, 'Z': 10, 'h': 0, 'H': 0, 'x': 0, 'X': 0}, 
+                                                                  4:  {'z': 0, 'Z': 0, 'h': 0, 'H': 0, 'x': 3, 'X': 20}, 
+                                                                  10: {...}
+                                                                 }
+    outputcalls: List of tags to represent each call from bismark: ['z', 'Z', 'x', 'X', 'h', 'H', ...] 
+    """
     sortpos= sorted(chrdict.keys())
     for x in sortpos:
+        callLine= chrdict[x]
+        lineSum= sumMethylation(callLine) ## Add summary of meyhtaltion
+        for k in lineSum:
+            callLine[k]= lineSum[k]
         outline= [chrom, str(x)]
         for k in outputcalls:
-            outline.append(str(chrdict[x][k]))
+            outline.append(str(callLine[k]))
         print('\t'.join(outline))
     
 " ----------------------------------------------------------------------------- "
 
-OUTPUTCALLS= ['z', 'Z', 'x', 'X', 'h', 'H'] ## Calls and their order to be sent to output
+decimal.getcontext().prec = 2
 
+OUTPUTCALLS= ['z', 'Z', 'x', 'X', 'h', 'H'] ## Calls and their order to be sent to output
+outputcallsSum= OUTPUTCALLS + ['tot', 'M', 'pM']
 ## Print header
-print('\t'.join(['chr', 'pos'] + OUTPUTCALLS))
+print('\t'.join(['chr', 'pos'] + outputcallsSum))
 
 nskip= 0
 fh= open(args.input)
@@ -120,9 +147,9 @@ while True:
         pos= int(line[3])
         call= line[4]
     if line == ['']:
-        writeline(curchrom, chrdict, OUTPUTCALLS)
+        writeline(curchrom, chrdict, outputcallsSum)
         break
-    writeline(curchrom, chrdict, OUTPUTCALLS)
+    writeline(curchrom, chrdict, outputcallsSum)
     curchrom= chrom
     curpos= pos
     chrdict= {}
