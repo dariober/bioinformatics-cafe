@@ -11,8 +11,8 @@ parser = argparse.ArgumentParser(description= """
 DESCRIPTION
     Convert the FastQC report (file: fastqc_data.txt) to a single line with columns
     tab-separated. The output is uploaded to the postgres database given in the
-    connection string. The input is the directory produced by fastqc which must
-    contain the file fastqc_data.txt with the actual stats.
+    connection string. The input is the directory or zip archive produced by fastqc 
+    (actually, any dir containing the file fastqc_data.txt with the actual stats).
         
 EXAMPLE
     fastqc_to_pgtable.py -i fastqc/
@@ -48,7 +48,7 @@ TODO:
 
 parser.add_argument('--infile', '-i',
                    required= True,
-                   help='''Fastqc *directory* where to look for file fastqc_data.txt.
+                   help='''Fastqc directory or zip archive where to look for file fastqc_data.txt.
                    ''')
 
 parser.add_argument('--djangobase',
@@ -205,7 +205,11 @@ def list_to_pgcolumns(lst):
 rmunzip= False
 if args.infile.endswith('.zip'):
     fastqcdir= args.infile.rstrip('.zip')
-    p= subprocess.Popen('unzip -q -o %s' %(args.infile), shell= True)
+    archivedir= os.path.split(args.infile)[0] ## Directory where archive lives
+    if archivedir == '':
+        archivedir= '.'
+    cmd= 'unzip -q -o -d %s %s' %(archivedir, args.infile)
+    p= subprocess.Popen(cmd, shell= True)
     p.wait()
     rmunzip= True
 else:

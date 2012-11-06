@@ -10,31 +10,19 @@ summariseGenometriCorr<- function(x, xslot= "awhole"){
     #                       Values
     # Statistics as dataframe
     
-    stats<-   c("query.population",
-                "reference.population",
-            #    "relative.distances.data",
-                "relative.distances.ks.p.value",
-                "relative.distances.ecdf.deviation.area",
-                "relative.distances.ecdf.area.correlation",
-            #    "projection.test",
-            #    "query.reference.intersection",
-            #    "query.reference.union",
-            #    "jaccard.measure",
-                "projection.test.p.value",
-                "projection.test.lower.tail",
-            #    "absolute.min.distance.data",
-            #    "absolute.inter.reference.distance.data",
-            #    "scaled.absolute.min.distance.sum",
-            #    "relative.distances.ecdf.deviation.area.null.list",
-            #    "scaled.absolute.min.distance.sum.null.list",
-            #    "jaccard.measure.null.list",
-            #    "relative.distances.ecdf.deviation.area.p.value",
-                "scaled.absolute.min.distance.sum.p.value",
-                "scaled.absolute.min.distance.sum.lower.tail",
-                "jaccard.measure.p.value",
-                "jaccard.measure.lower.tail")
+   exlude_stats<- c("relative.distances.data",
+                    "projection.test",
+                    "absolute.min.distance.data",
+                    "absolute.inter.reference.distance.data",
+                    "relative.distances.ecdf.deviation.area.null.list",
+                    "scaled.absolute.min.distance.sum.null.list",
+                    "jaccard.measure.null.list")
     
     dataset= x[[xslot]]
+    for(ptest in dataset["projection.test"]){
+        dataset<- c(dataset, ptest)
+    }
+    stats<- names(dataset)[!names(dataset) %in% exlude_stats]
     stats_list<- as.data.frame(t(as.matrix(unlist(dataset[stats]))))
     return(stats_list)
 }
