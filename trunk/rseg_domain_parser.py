@@ -39,7 +39,7 @@ fhout= open(fout, 'w')
 
 # ----------------------- [ Stuff to store ]-----------------------------------
 
-domain_states= {}         ## Dictionary to hold the count of states {'ENRICHED': x, 'BACKGROND': y, 'UNCERTAIN': z, ...}
+domain_states= {'ENRICHED': 0}         ## Dictionary to hold the count of states {'ENRICHED': x, 'BACKGROND': y, 'UNCERTAIN': z, ...}
 enriched_sizes= []        ## List for the size of the enriched regions
 enriched_counts= []    ## 5th column from domain file. From manuka: The 5th column gives the average read count in the domain
 enriched_domain_score= [] ## 6th column: The sum of posterior scores of all bins within this domain; it measures both the quality and size of the domain
@@ -63,12 +63,19 @@ for k in sorted(domain_states.keys()):
     domain_counts.append(c)
 domain_counts= '; '.join(domain_counts)
 
-avg_enriched_size= sum(enriched_sizes) / float(len(enriched_sizes))
-med_enriched_size= median(enriched_sizes)
-avg_enriched_counts= sum(enriched_counts) / float(len(enriched_counts))
-avg_enriched_domain_score= sum(enriched_domain_score) / float(len(enriched_domain_score))
-enriched_length= sum(enriched_sizes)
+if domain_states['ENRICHED'] > 0:
+    avg_enriched_size= str(round(sum(enriched_sizes) / float(len(enriched_sizes)), 0))
+    med_enriched_size= str(median(enriched_sizes))
+    avg_enriched_counts= str(round(sum(enriched_counts) / float(len(enriched_counts)), 0))
+    avg_enriched_domain_score= str(round(sum(enriched_domain_score) / float(len(enriched_domain_score)), 0))
+    enriched_length= str(sum(enriched_sizes))
+else:
+    avg_enriched_size= 'NA'
+    med_enriched_size= 'NA'
+    avg_enriched_counts= 'NA'
+    avg_enriched_domain_score= 'NA'
+    enriched_length= 'NA'
 
-outline= [sys.argv[1], domain_counts, 'AVG_ENRICHED_SIZE', str(round(avg_enriched_size, 0)), 'MEDIAN_ENRICHED_SIZE', str(med_enriched_size), 'ENRICHED_LENGTH', str(enriched_length),'AVG_COUNTS', str(round(avg_enriched_counts, 0)), 'AVG_SCORE', str(round(avg_enriched_domain_score, 0))]
+outline= [sys.argv[1], domain_counts, 'AVG_ENRICHED_SIZE', avg_enriched_size, 'MEDIAN_ENRICHED_SIZE', med_enriched_size, 'ENRICHED_LENGTH', enriched_length ,'AVG_COUNTS', avg_enriched_counts, 'AVG_SCORE', avg_enriched_domain_score]
 print('\t'.join(outline))
 sys.exit()
