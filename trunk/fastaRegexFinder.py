@@ -4,6 +4,7 @@ import re
 import sys
 import string
 import argparse
+import operator
 
 parser = argparse.ArgumentParser(description="""
 
@@ -43,6 +44,12 @@ EXAMPLE:
         mychr	10	14	mychr_10_14_for	4	+	ACTG
         mychr	15	19	mychr_15_19_rev	4	-	TGAC
 
+    fastaRegexFinder.py -f /tmp/mychr.fa -r 'ACTG' --maxstr 3
+        mychr	0	4	mychr_0_4_for	4	+	ACT[3,4]
+        mychr	5	9	mychr_5_9_for	4	+	ACT[3,4]
+        mychr	10	14	mychr_10_14_for	4	+	ACT[3,4]
+        mychr	15	19	mychr_15_19_rev	4	-	TGA[3,4]
+
     
     less /tmp/mychr.fa | fastaRegexFinder.py -f - -r 'A\w\wGn'
         mychr	0	5	mychr_0_5_for	5	+	ACTGn
@@ -55,7 +62,7 @@ DOWNLOAD
 TODO
 
     - Better handling of forward and reverse matches (i.e. other than complementing
-      the forward regex?).
+      the forward regex?). Reverse complement the fasta sequence NOT the regexp
     """, formatter_class= argparse.RawTextHelpFormatter)
 
 
@@ -97,6 +104,16 @@ sequences.
                                    
                    ''')
 
+parser.add_argument('--maxstr',
+                   type= int,
+                   required= False,
+                   default= None,
+                   help='''Maximum length of the reported match. By defualt, the
+7th column of the output reports the *whole* matched regexp. Set --maxstr to some
+int to trim the match to at most this many characters
+                                   
+                   ''')
+
 args = parser.parse_args()
 
 " --------------------------[ Check and pare arguments ]---------------------- "
@@ -112,14 +129,11 @@ else:
 
 " ------------------------------[  Functions ]--------------------------------- "
 
-"""                               LIST SORTER
-Code to sort list of lists
-see http://www.saltycrane.com/blog/2007/12/how-to-sort-table-by-columns-in-python/
-"""
-import operator
-
 def sort_table(table, cols):
-    """ sort a table by multiple columns
+    """ Code to sort list of lists
+    see http://www.saltycrane.com/blog/2007/12/how-to-sort-table-by-columns-in-python/
+
+    sort a table by multiple columns
         table: a list of lists (or tuple of tuples) where each inner list 
                represents a row
         cols:  a list (or tuple) specifying the column numbers to sort by
@@ -129,9 +143,22 @@ def sort_table(table, cols):
         table = sorted(table, key=operator.itemgetter(col))
     return(table)
 
-"""                           END of SORTER
------------------------------------------------------------------------------
-"""
+def trimMatch(x, n):
+    """ Trim the string x to be at most length n. Trimmed matches will be reported
+    with the syntax ACTG[a,b] where Ns are the beginning of x, a is the length of
+    the trimmed strng (e.g 4 here) and b is the full length of the match
+    EXAMPLE:
+        trimMatch('ACTGNNNN', 4)
+        >>>'ACTG[4,8]'
+        trimMatch('ACTGNNNN', 8)
+        >>>'ACTGNNNN'
+    """
+    if len(x) > n and n is not None:
+        m= x[0:n] + '[' + str(n) + ',' + str(len(x)) + ']'
+    else:
+        m= x
+    return(m)
+# -----------------------------------------------------------------------------
 
 
 psq_re_f= re.compile(args.regex)
@@ -155,12 +182,14 @@ while True:
             break
     ref_seq= ''.join(ref_seq)
     for m in re.finditer(psq_re_f, ref_seq):
+        matchstr= trimMatch(m.group(0), args.maxstr)
         quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_for'
-        gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '+', m.group(0)])
+        gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '+', matchstr])
     if args.noreverse is False:
         for m in re.finditer(psq_re_r, ref_seq):
+            matchstr= trimMatch(m.group(0), args.maxstr)
             quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_rev'
-            gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '-', m.group(0)])
+            gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '-', matchstr])
     chr= re.sub('^>', '', line)
     ref_seq= []
     line= (ref_seq_fh.readline()).strip()
