@@ -11,13 +11,38 @@ import subprocess
 parser = argparse.ArgumentParser(description= """
 
 DESCRIPTION:
+    Divides each input bed feature in n equally sized windows and counts the overlaps
+    with the input bam. Bins are then grouped to produce a coverage profile.
 
+OUTPUT:
+    Output is a tab separated with header line:
+    bin: Bin number (see below)
+    mean_rpkm: Mean RPKM for this bin number (see below).
+    mean_count: Mean of row count (sum_count/no_bins)
+    sum_count: Sum of row counts
+    mean_size: Mean size of this bin number
+    no_bins: Number of bins (i.e. number of bed features *after* merging)
+
+NOTES:
+    - Bins are numbered so that bin number 1 is always the most upstream and bin
+        n the most dowmnstream. E.g.
+        If a gene is on - strand, bin 1 is on TSS and will be the rightmost.
+    - Input BED file must be a BED6 (additional columns ignorerd).
+    - Rpkm is calculated using the total number of reads mapping to bed features
+        (not the total number of reads in the BAM)
+    - Before counting, bed features are merged in a strand specific way. Threfore overalapping
+        features on opposite strands are double counted!
     
+REQUIRES:
+    bedtools 
+    bed_windows.py (http://code.google.com/p/bioinformatics-misc/source/browse/trunk/bed_windows.py)
+
 EXAMPLES:
-    
 
 TODO:
-      
+    Extend rads by x bases using slopBed (see snippet in the code).
+    Exit with error if any of the shell commands don't return clean.
+    
 """, formatter_class= argparse.RawTextHelpFormatter)
 
 parser.add_argument('--bed',
@@ -36,7 +61,7 @@ parser.add_argument('--bam',
 parser.add_argument('-o', '--out',
                     type= str,
                     required= True,
-                    help="""Name of the output file. 
+                    help="""Name for the output file. 
                     """)
 
 parser.add_argument('-w', '--nwins',
@@ -44,14 +69,12 @@ parser.add_argument('-w', '--nwins',
                     default= 100,
                     help="""Divide each bed feature in this many windows. Default 100. 
                     """)
-
-#parser.add_argument('--groupbyOps',
-#                    type= str,
-#                    default= 'mean,sum',
-#                    help="""The operation that will be applied to the each window.
-#This arg passed to bedtools "groupBy -ops". See "groupBy -h" for possible options.
-#Default: mean
-#                    """)
+parser.add_argument('--skip',
+                    type= int,
+                    default= 0,
+                    help="""Skip these many lines from input bed. E.g. set 1 for
+skipping the header. Default 0.
+                    """)
 
 parser.add_argument('--tmpdir',
                     type= str,
@@ -133,12 +156,21 @@ geneprofile= os.path.join(tmpdir, 'geneprofile.bed')
 
 # ----------------------[ Merge overalapping features ]------------------------
 
-cmd= 'sort -k1,1 -k2,2n %s | mergeBed -s -i stdin > %s' %(args.bed, mergebed) 
+## Awk will make bed6 format
+print('\n\nMerging overalpping features:\n')
+cmd= '''tail -n+%s %s | sort -k1,1 -k2,2n | mergeBed -s -i stdin | awk '{print $1"\\t"$2"\\t"$3"\\tmerged\\t"$3-$2"\\t"$4}' > %s''' %(args.skip, args.bed, mergebed) 
 print(cmd)
 p= subprocess.Popen(cmd, shell= True); p.wait()
 
 # ------------------[ Prepare windows ]-----------------------------------------
 
+print('\n\nPreparing windows\n')
+## To comply with BED6, awk will place the bin number on column 4 and the strand on column 6. Column 5 will be window size
+cmd= '''bed_windows.py --nwinds %(nwins)s -r %(bedfeatures)s | awk '{print $1"\\t"$2"\\t"$3"\\t"$9"\\t"$3-$2"\\t"$8}' > %(winds)s ''' %{'bedfeatures':mergebed, 'winds': winds, 'nwins': args.nwins}
+print(cmd)
+p= subprocess.Popen(cmd, shell= True); p.wait()
+
+""" This part uses bedtools to make windows
 print("\n\nProduce windows for plus and minus strand\n")
 cmd= '''grep -P '\\t\+$' %(bedfeatures)s | cut -f 1-3 | sort -k1,1 -k2,2n -k3,3n | \
      uniq | bedtools makewindows -b stdin -n %(nwins)s -i winnum | awk '{print $1"\\t"$2"\\t"$3"\\t"$4"\\t.\\t+"}' > %(windplus)s ''' %{'bedfeatures':mergebed, 'windplus': windplus, 'nwins': args.nwins} ## Bin 1 is on the TSS
@@ -151,7 +183,7 @@ p= subprocess.Popen(cmd, shell= True); p.wait()
 cmd= '''cat %(windplus)s %(windminus)s > %(winds)s''' %{'windplus':windplus, 'windminus':windminus, 'winds': winds}
 print(cmd)
 p= subprocess.Popen(cmd, shell= True); p.wait()
-
+"""
 # ------------------[ Produce coverage ]----------------------------------------
 
 print("\n\nProfile coverage\n")
@@ -161,6 +193,7 @@ print("\n\nProfile coverage\n")
 
 cmd= '''coverageBed -abam %(bam)s -b %(winds)s | sort -S 20%% -k4,4n > %(geneprofile)s''' %{'bam':args.bam, 'winds': winds, 'geneprofile': geneprofile}
 print(cmd)
+
 p= subprocess.Popen(cmd, shell= True); p.wait()
 
 print("\n\nNormalizing read counts...")
@@ -168,18 +201,30 @@ totreads= totReadsCoverageBed(geneprofile)
 geneprofilerpkm= rpkmCoveragebed(geneprofile, totreads)
 print("Reads mapped to windows: %s\nNormalized read count in %s" %(totreads, geneprofilerpkm))
 
-## MEMO: Default output of coverageBed (2.17) has the input bed with last 4 columns being:
-#          1) The number of features in A that overlapped the B interval.
-#	   2) The number of bases in B that had non-zero coverage.
-#	   3) The length of the entry in B.
-#	   4) The fraction of bases in B that had non-zero coverage.
+## MEMO: File geneprofilerpkm has format:
+## 1) Chrom
+## 2) Bin start
+## 3) Bin end
+## 4) Bin number
+## 5) Bin size
+## 6) Strand
+## 7) Bin RPKM
+## 8) The number of features in A that overlapped the B interval.
+## 9) The number of bases in B that had non-zero coverage.
+## 10) The length of the entry in B.
+## 11) The fraction of bases in B that had non-zero coverage.
 
-
+# -------------------------[ GroupBy (summarize) ]-----------------------------
 print("\n\nSummarize coverage\n")
-cmd= '''bedtools groupby -i %(geneprofile)s -g 4 -c 8,8,10,10 -o mean,sum,mean,count  > %(profileGroupby)s''' %{'geneprofile': geneprofilerpkm, 'profileGroupby':args.out}
+header= '\t'.join(['bin', 'mean_rpkm', 'mean_count', 'sum_count', 'mean_size', 'no_bins'])
+fout= open(args.out, 'w')
+fout.write(header + '\n')
+fout.close()
+cmd= '''bedtools groupby -i %(geneprofile)s -g 4 -c 7,8,8,10,10 -o mean,mean,sum,mean,count  >> %(profileGroupby)s''' %{'geneprofile': geneprofilerpkm, 'profileGroupby':args.out}
 print(cmd)
 p= subprocess.Popen(cmd, shell= True); p.wait()
 
+# -------------------------------[ Clean-up ]----------------------------------
 if not args.keeptmp:
     shutil.rmtree(tmpdir)
 else:
