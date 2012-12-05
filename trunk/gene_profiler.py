@@ -40,8 +40,10 @@ REQUIRES:
 EXAMPLES:
 
 TODO:
-    Extend rads by x bases using slopBed (see snippet in the code).
-    Exit with error if any of the shell commands don't return clean.
+    - Extend rads by x bases using slopBed (see snippet in the code).
+    - Extend each bed feature by a certain % to get upstream/dwonstream regions
+        (see slopBed for this).
+    - Exit with error if any of the shell commands don't return clean.
     
 """, formatter_class= argparse.RawTextHelpFormatter)
 
@@ -49,13 +51,21 @@ parser.add_argument('--bed',
                     type= str,
                     required= True,
                     help="""Input bed files for which the profile should be
-computed.
+computed (e.g. TSS +/- 1000bp, genes).
                     """)
 
-parser.add_argument('--bam',
+parser.add_argument('--abam',
                     type= str,
-                    required= True,
-                    help="""Input bam file.
+                    required= False,
+                    help="""Input bam file with reads to profile. Either --abam
+option or --abed is required.
+                    """)
+
+parser.add_argument('--abed',
+                    type= str,
+                    required= False,
+                    help="""Input bed file with features to profile.  Either --abam
+option or --abed is required. 
                     """)
 
 parser.add_argument('-o', '--out',
@@ -93,6 +103,15 @@ it will not be removed.
 
 args = parser.parse_args()
 
+if (args.abam is not None and args.abed is None):
+    readfile= args.abam
+    afile= '-abam' ## This option passed to coveregeBed
+elif (args.abam is None and args.abed is not None):
+    readfile= args.abed
+    afile= '-a'
+else:
+    sys.exit('Either --abam OR --abed option must be supplied.')
+    
 # -----------------------------------------------------------------------------
 
 def totReadsCoverageBed(covbed):
@@ -191,7 +210,7 @@ print("\n\nProfile coverage\n")
 ## Extend reads by X many bases. See also http://gabriele-bucci.blogspot.co.uk/2012/02/create-bigwig-file-from-bam.html
 ## samtools view -b %(bam)s | bamToBed | slopBed -r 200 -s -i stdin -g chrSizes.genome | coverageBed -a stdin -b %(winds)s
 
-cmd= '''coverageBed -abam %(bam)s -b %(winds)s | sort -S 20%% -k4,4n > %(geneprofile)s''' %{'bam':args.bam, 'winds': winds, 'geneprofile': geneprofile}
+cmd= '''coverageBed %(afile)s %(bam)s -b %(winds)s | sort -S 20%% -k4,4n > %(geneprofile)s''' %{'afile':afile, 'bam':readfile, 'winds': winds, 'geneprofile': geneprofile}
 print(cmd)
 
 p= subprocess.Popen(cmd, shell= True); p.wait()

@@ -21,6 +21,14 @@ DESCRIPTION
     of size 1bp and some (randomly chosen) windows will be duplicated to make up
     for the missing ones. 
 
+OUTPUT:
+    It's not true BED:
+    1) chrom
+    2) window start
+    3) window end
+    4+) Original input line starting from column 2 (i.e. excluding chrom)
+    last) Window number
+    
     """, formatter_class= argparse.RawTextHelpFormatter)
 
 
@@ -80,13 +88,19 @@ def partition(lst, n):
     >>> partition([0,50], 5)
     [[0, 9], [10, 19], [20, 30], [31, 40], [41, 50]]    
     """
-    lst= range(lst[0], lst[1]+1)
+    lst[0]= lst[0]+1 ## This is because bed is 0-based but the algorithm below not (check though)
+    lst= range(lst[0], lst[1]+1) ## Expand the whole range
     orin= n
     if len(lst) < n:
         n= len(lst)
     division = len(lst) / float(n)
+    ## Put separators. Now you have list of lists
     full= [lst[int(round(division * i)): int(round(division * (i + 1)))] for i in xrange(n)]
-    extremes= [[x[0], x[-1]] for x in full]
+    
+    ## Get the start and end of each nested list.
+    ## Take 1 from the start positions to return to bed being 0 based.
+    ## Note that the end of one bin will become the start of the next.
+    extremes= [[x[0]-1, x[-1]] for x in full]
     if len(lst) < orin:
         samples= sample_wr(extremes, orin-len(lst))
         extremes= sorted(extremes + samples)
