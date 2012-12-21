@@ -14,8 +14,8 @@ EXAMPLE
     ## See what the pipeline consists of.
     ## It doesn't matter if the input file doesn't exists as --noexec will only
     ## create the script file:
-    bismark_pipeline.py -f myfastq.fq.gz -g mygenome -o myfastq --noexec
-    cat myfastq.fq.gz.sh
+    bismark_pipeline.py -f FASTQ -g GENOME -o OUTDIR --noexec
+    cat FASTQ.sh
 TODO:
 
 """, formatter_class= argparse.RawTextHelpFormatter)
@@ -108,10 +108,10 @@ methylation_suffix= '_bt2_bismark.txt'
 
 ## Prepare output dir:
 outdir= os.path.join(args.outdir, 'bismark-' + fqBname)
-p= subprocess.Popen('mkdir -p %s' %(outdir), shell= True)
-p.wait()
 
 ## Compile commands
+mkdir_cmd= 'mkdir -p %s' %(outdir)
+
 trim_cmd= 'trim_galore -q 20 %s/%s' %(fqDir, fqInput)
 
 bismark_cmd= 'bismark --bowtie2 -o %(outdir)s %(genome)s %(fqDir)s/%(fqBname)s%(suffix)s' %{'outdir': outdir, 'genome': args.genome, 'fqDir': fqDir, 'fqBname': fqBname, 'suffix': trim_suffix}
@@ -137,6 +137,7 @@ else:
     rm_fastq_cmd= 'echo'
     
 script= '\n\n'.join(['#!/bin/sh', 'set -e', 'echo "cd %s"' %(cwd),
+                     mkdir_cmd,
                      trim_cmd,
                      bismark_cmd,
                      trim_rm,
