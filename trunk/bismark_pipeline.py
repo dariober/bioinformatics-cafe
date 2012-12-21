@@ -101,6 +101,9 @@ if fqDir == '':
 fqBname= re.sub('\.gz$', '', fqInput )
 fqBname= re.sub('\.fastq$|\.fq$', '', fqBname)
 
+## Full path to genome
+genome= os.path.abspath(args.genome)
+
 ## Suffixes:
 trim_suffix= '_trimmed.fq' + gz
 bismark_suffix= '_bt2_bismark.sam'
@@ -109,17 +112,17 @@ methylation_suffix= '_bt2_bismark.txt'
 ## Prepare output dir:
 outdir= os.path.join(args.outdir, 'bismark-' + fqBname)
 
-## Compile commands
+# -----------------------[ Compile commands ]----------------------------------
 mkdir_cmd= 'mkdir -p %s' %(outdir)
 
-trim_cmd= 'trim_galore -q 20 %s/%s' %(fqDir, fqInput)
+trim_cmd= 'trim_galore -q 20 %(fqDir)s/%(fqInput)s; mv %(fqDir)s/%(fqInput)s_trimming_report.txt %(outdir)s' %{'fqDir': fqDir, 'fqInput': fqInput, 'outdir': outdir}
 
-bismark_cmd= 'bismark --bowtie2 -o %(outdir)s %(genome)s %(fqDir)s/%(fqBname)s%(suffix)s' %{'outdir': outdir, 'genome': args.genome, 'fqDir': fqDir, 'fqBname': fqBname, 'suffix': trim_suffix}
+bismark_cmd= 'bismark --bowtie2 -o %(outdir)s %(genome)s %(fqDir)s/%(fqBname)s%(suffix)s' %{'outdir': outdir, 'genome': genome, 'fqDir': fqDir, 'fqBname': fqBname, 'suffix': trim_suffix}
 
 trim_rm= 'rm %(fqDir)s/%(fqBname)s%(suffix)s' %{'fqDir': fqDir, 'fqBname': fqBname, 'suffix': trim_suffix}
 
 methyl_cmd= 'cd %(outdir)s; bismark_methylation_extractor -o . --single-end --comprehensive --merge_non_CpG --report --cytosine_report --genome_folder %(genome)s ./%(fqBname)s%(suffix)s; cd %(cwd)s' \
-            %{'outdir': outdir, 'genome': args.genome, 'fqBname': fqBname, 'suffix': trim_suffix + bismark_suffix, 'cwd': cwd}
+            %{'outdir': outdir, 'genome': genome, 'fqBname': fqBname, 'suffix': trim_suffix + bismark_suffix, 'cwd': cwd}
 
 methyl_bg_rm= 'rm %(outdir)s/%(fqBname)s%(suffix)s.bedGraph' %{'outdir': outdir, 'fqBname': fqBname, 'suffix': trim_suffix + re.sub('\.sam', '', bismark_suffix)}
 methyl_noncpg_rm= 'rm %(outdir)s/Non_CpG_context_%(fqBname)s%(trim_suffix)s%(methylation_suffix)s' %{'outdir': outdir, 'fqBname': fqBname, 'trim_suffix':trim_suffix, 'methylation_suffix':methylation_suffix}
@@ -135,7 +138,8 @@ if args.rm_fastq:
     rm_fastq_cmd= 'rm %s' %(args.fastq)
 else:
     rm_fastq_cmd= 'echo'
-    
+
+# ------------------------------------------------------------------------------   
 script= '\n\n'.join(['#!/bin/sh', 'set -e', 'echo "cd %s"' %(cwd),
                      mkdir_cmd,
                      trim_cmd,
@@ -146,7 +150,8 @@ script= '\n\n'.join(['#!/bin/sh', 'set -e', 'echo "cd %s"' %(cwd),
                      methyl_noncpg_rm,
                      methyl_cpg_rm,
                      sam2bam_cmd,
-                     rm_fastq_cmd])
+                     rm_fastq_cmd,
+                     'exit'])
 
 fout= open(scriptname, 'w')
 fout.write(script)
@@ -161,5 +166,7 @@ if args.noexec:
     print(cmd)
 else:
     p= subprocess.Popen(cmd, shell= True)
-    
+    p.wait()
+p= subprocess.Popen('mv %s %s' %(scriptname, outdir), shell= True)
+p.wait()
 sys.exit()
