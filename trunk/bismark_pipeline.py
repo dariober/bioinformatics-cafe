@@ -1,4 +1,4 @@
-#!/usr/local/bin/env python
+#!/bin/env python
 
 import sys
 import subprocess
@@ -11,7 +11,11 @@ DESCRIPTION
     Execute a series of steps starting from fastq files untrimmed and in sanger encoding.        
 
 EXAMPLE
-    
+    ## See what the pipeline consists of.
+    ## It doesn't matter if the input file doesn't exists as --noexec will only
+    ## create the script file:
+    bismark_pipeline.py -f myfastq.fq.gz -g mygenome -o myfastq --noexec
+    cat myfastq.fq.gz.sh
 TODO:
 
 """, formatter_class= argparse.RawTextHelpFormatter)
