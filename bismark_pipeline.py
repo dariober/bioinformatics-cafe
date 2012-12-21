@@ -167,6 +167,6 @@ if args.noexec:
 else:
     p= subprocess.Popen(cmd, shell= True)
     p.wait()
-p= subprocess.Popen('mv %s %s' %(scriptname, outdir), shell= True)
-p.wait()
+    p= subprocess.Popen('mv %s %s' %(scriptname, outdir), shell= True)
+    p.wait()
 sys.exit()
