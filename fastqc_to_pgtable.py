@@ -216,7 +216,7 @@ else:
     fastqcdir= args.infile
 
 fq= open(os.path.join(fastqcdir, 'fastqc_data.txt')).readlines()
-fq= [x.strip() for x in fq]
+fq= [x.rstrip('\n\r') for x in fq]
 
 fastqc_line= [] ## The entire report will be in this list. Each item is a column in the database table 
 
