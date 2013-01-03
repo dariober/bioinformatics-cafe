@@ -53,11 +53,24 @@ parser.add_argument('--scriptname',
 This file is then passed to bsub or executed on the current shell.
                    ''')
 
+parser.add_argument('--mem',
+                   type= int,
+                   required= False,
+                   default= 2048,
+                   help='''Memory requirement for bsub -R "rusage[mem=xxxx]". Default is 2048.
+                   ''')
+
 parser.add_argument('--bsubOpt',
                    required= False,
                    default= None,
                    help='''Options to pass to bsub. Ignored if --sh flag is used.
-See code for default.
+NB: If this opiton is set the defualt (-J -oo --R) are not set. 
+                   ''')
+
+parser.add_argument('--CX',
+                   action= 'store_true',
+                   help='''Pass this option to bismark_methylation_extractor. It will
+produce a pileup for each C in the genome
                    ''')
 
 parser.add_argument('--noexec',
@@ -82,7 +95,7 @@ else:
     scriptname= args.scriptname
 
 if args.bsubOpt is None:
-    bsubOpt= '-J bismark_pipeline-' + args.fastq + ' -oo ' + args.fastq + '.bsub.log' + ' -R "rusage[mem=1024]"'
+    bsubOpt= '-J bismark_pipeline-' + args.fastq + ' -oo ' + args.fastq + '.bsub.log' + ' -R "rusage[mem=%(mem)s]"' %{'mem': args.mem}
 else:
     bsubOpt= args.bsubOpt
     
@@ -112,6 +125,10 @@ methylation_suffix= '_bt2_bismark.txt'
 ## Prepare output dir:
 outdir= os.path.join(args.outdir, 'bismark-' + fqBname)
 
+if args.CX:
+    CX= '--CX'
+else:
+    CX= ''
 # -----------------------[ Compile commands ]----------------------------------
 mkdir_cmd= 'mkdir -p %s' %(outdir)
 
@@ -121,8 +138,8 @@ bismark_cmd= 'bismark --bowtie2 -o %(outdir)s %(genome)s %(fqDir)s/%(fqBname)s%(
 
 trim_rm= 'rm %(fqDir)s/%(fqBname)s%(suffix)s' %{'fqDir': fqDir, 'fqBname': fqBname, 'suffix': trim_suffix}
 
-methyl_cmd= 'cd %(outdir)s; bismark_methylation_extractor -o . --single-end --comprehensive --merge_non_CpG --report --cytosine_report --genome_folder %(genome)s ./%(fqBname)s%(suffix)s; cd %(cwd)s' \
-            %{'outdir': outdir, 'genome': genome, 'fqBname': fqBname, 'suffix': trim_suffix + bismark_suffix, 'cwd': cwd}
+methyl_cmd= 'cd %(outdir)s; bismark_methylation_extractor -o . --single-end --comprehensive --merge_non_CpG --report --cytosine_report %(CX)s --genome_folder %(genome)s ./%(fqBname)s%(suffix)s; cd %(cwd)s' \
+            %{'outdir': outdir, 'genome': genome, 'fqBname': fqBname, 'suffix': trim_suffix + bismark_suffix, 'cwd': cwd, 'CX': CX}
 
 methyl_bg_rm= 'rm %(outdir)s/%(fqBname)s%(suffix)s.bedGraph' %{'outdir': outdir, 'fqBname': fqBname, 'suffix': trim_suffix + re.sub('\.sam', '', bismark_suffix)}
 methyl_noncpg_rm= 'rm %(outdir)s/Non_CpG_context_%(fqBname)s%(trim_suffix)s%(methylation_suffix)s' %{'outdir': outdir, 'fqBname': fqBname, 'trim_suffix':trim_suffix, 'methylation_suffix':methylation_suffix}

@@ -1,4 +1,4 @@
-#!/home/berald01/.local/bin/python
+#!/usr/bin/env python
 
 import pysam
 import sys
@@ -95,7 +95,7 @@ parser.add_argument('--nograph', # nargs='?', default=sys.stdout,
 
 parser.add_argument('-l', '--limit',
                     type= int,
-		    default= 0,
+            default= 0,
                     help= """Maximum number of lines to read from each input file.
 0 (default) means no limit.
                     
@@ -103,23 +103,23 @@ parser.add_argument('-l', '--limit',
 
 parser.add_argument('-s', '--sampling',
                     type= int,
-		    default= 100,
+            default= 100,
                     help= """For collecting quantile and length statistics: Store 
 MAPQ score and read length every this many reads. Default: 100
-		    
+            
                     """)
 
 parser.add_argument('-H', '--noheader',
                     action= 'store_true',
                     help= """Do not output the header row of column names. (Useful to
 append results to previous report)
-		    
+            
                     """)
 
 parser.add_argument('--onlyheader',
                     action= 'store_true',
                     help= """Only output the header line and exit.
-		    
+            
                     """)
 
 args = parser.parse_args()
@@ -134,8 +134,8 @@ if args.input == ['-']:
 #                             Classes & Functions
 # ------------------------------------------------------------------------------
 
-## Order in which the attributes in class File_Stats should be retured:
-header=  ['filename', 'fullname', 'md5sum', 'fsize', 'ctime', 'mtime', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles']
+## Order in which the attributes in class FileStats should be retured:
+header=  ['filename', 'fullname', 'md5sum', 'fsize', 'ctime', 'mtime', 'median_length', 'len_sd', 'nreads_tot', 'nreads_aln', 'perc_aln', 'mapq', 'nreads_mapq_255', 'nreads_nm', 'nreads_nm_na', 'mapq_quantiles', 'samflags']
 
 ## Column names to output (must reflect the order in 'header' above)
 colnames=  ['filename', 'fullname', 'md5sum', 'fsize', 'ctime', 'mtime', 'len_median', 'len_sd', 'n', 'aln', 'perc_aln'] +  \
@@ -143,22 +143,23 @@ colnames=  ['filename', 'fullname', 'md5sum', 'fsize', 'ctime', 'mtime', 'len_me
            ['mapq_255'] + \
            ['nm.'+str(x) for x in LIMITS_NM] + \
            ['nm.na'] + \
-           ['mapq_quant.'+str(x) for x in QUANTILES]
+           ['mapq_quant.'+str(x) for x in QUANTILES] +\
+           ['samflags']
 
 if args.onlyheader:
     args.output.write('\t'.join(colnames) + '\n')
     args.output.close()
     sys.exit()
 
-class File_Stats:
+class FileStats:
     def __init__(self):
         """ Attributes here will be columns in output table """
         self.filename= ''
         self.fullname= ''
         self.md5sum= ''
-	self.fsize= ''
-	self.ctime= ''
-	self.mtime= ''
+        self.fsize= ''
+        self.ctime= ''
+        self.mtime= ''
         self.median_length= 'NA'
         self.len_sd= 'NA'
         self.nreads_tot= 0
@@ -170,6 +171,17 @@ class File_Stats:
         self.nreads_nm_na= 0
         self.mapq= {}
         self.mapq_quantiles= []
+        self.samflags= ''
+
+def samflag2str(samflagDict):
+        """Return the samflag dict as string with keys in ascending order
+        """
+        bits= sorted([k for k in samflagDict])
+        samflagList= []
+        for bit in bits:
+            samflagList.append(str(bit) + ': ' + str(samflagDict[bit]))
+        samflagStr= '{' + ', '.join(samflagList) + '}'
+        return(samflagStr)
 
 def sumfile(fobj):
     '''Returns an md5 hash for an object with read() method.'''
@@ -266,7 +278,7 @@ def flatten(lst):
 
 def write_stats(fstats, header):
     """
-    Read the attributes in object fstats (of class File_Stats) and return them
+    Read the attributes in object fstats (of class FileStats) and return them
     in a *list* in the order given in header.
     """
     data_line= []
@@ -318,10 +330,10 @@ def stdev(xlist):
 
 from math import modf, floor
 """
-File	quantile.py
-Desc	computes sample quantiles
+File    quantile.py
+Desc    computes sample quantiles
 Author  Ernesto P. Adorio, PhD.
-		UPDEPP (U.P. at Clarkfield)
+        UPDEPP (U.P. at Clarkfield)
 Version 0.0.1 August 7. 2009
 """
 
@@ -371,33 +383,34 @@ def quantile(x, q,  qtype = 7, issorted = False):
     else:
         return y[j] + (y[j+1]- y[j])* (c + d * g)
 def Test():
-	x = [11.4, 17.3, 21.3, 25.9, 40.1, 50.5, 60.0, 70.0, 75]
-	for qtype in range(1,10):
-		print qtype, quantile(x, 0.35, qtype)
+    x = [11.4, 17.3, 21.3, 25.9, 40.1, 50.5, 60.0, 70.0, 75]
+    for qtype in range(1,10):
+        print qtype, quantile(x, 0.35, qtype)
 #if __name__ == "__main__":
-#	Test()
+#    Test()
 # -----------------------------------------------------------------------------
 #                       End code for quantile
 # -----------------------------------------------------------------------------
 #                       Start processing files
 # -----------------------------------------------------------------------------
 
+
 nm_bins= []
 for n in LIMITS_NM[0:-1]:
     nm_bins.append((n, n))
 nm_bins.append((LIMITS_NM[-1], 10000))
-
+    
 if args.noheader is True:
     bamqc_stats= [] ## List (of lists) to hold output
 else:
     bamqc_stats= [colnames] ## List (of lists) to hold output
 
-#args.output.write('\t'.join(colnames)+ '\n')
+## Initialize a dictionary for each possible samflag: {1:0, 2:0, 4:0, .... 1024:0}
 
 for bam in args.input:
     if outfilename != '<stdout>':
         print('Processing file: %s' %(bam))
-    fstats= File_Stats()
+    fstats= FileStats()
     mapq_sample= [] ## Accumulator for sample of mapq scores.
     length_sample= []
     fstats.filename= os.path.split(bam)[1]
@@ -409,13 +422,26 @@ for bam in args.input:
     fstats.ctime= datetime.datetime.fromtimestamp(os.path.getctime(bam)).isoformat()
     bamfile = pysam.Samfile( bam, "rb" )
     n= 0
+    ## Dictionary of possible flags
+    samflags= {0: 0}
+    bits= [2**i for i in range(0,11)]
+    for bit in bits:
+        samflags[bit]= 0
     for AlignedRead in bamfile:
         fstats.nreads_tot += 1
         if AlignedRead.flag == 0 or 4 % AlignedRead.flag != 0:
             fstats.nreads_aln += 1
-#        else:
-#            fstats.nreads_unaln += 1
-#            continue
+
+        ## This part produce a dictionary of samflags, including the flag 0        
+        if AlignedRead.flag == 0:
+            samflags[0] += 1    
+        for bit in bits:
+            if bit > AlignedRead.flag:
+                break
+            elif bit & AlignedRead.flag > 0:
+                samflags[bit] += 1
+            else:
+                pass
         if AlignedRead.mapq == 255:
             fstats.nreads_mapq_255 = fstats.nreads_mapq_255 + 1 
         else:
@@ -432,6 +458,8 @@ for bam in args.input:
         n += 1
         if args.limit > 0 and n >= args.limit:
             break
+    "Convert dict to string"
+    fstats.samflags= samflag2str(samflags)
     fstats.mapq= [ x[1] for x in cumdist(fstats.mapq, LIMITS_MAPQ) ]
     fstats.nreads_nm= [ x[1] for x in hist(fstats.nreads_nm, nm_bins) ]
     fstats.perc_aln= round((float(fstats.nreads_aln) / fstats.nreads_tot )* 100, 2)
@@ -556,6 +584,6 @@ def dict2vect(mydict):
     rvect= rvect.strip(', ') + ')'
     return(rvect)
 
-print('\t'.join(sorted(File_Stats().__dict__)))
+print('\t'.join(sorted(FileStats().__dict__)))
 
 
