@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 import re
 import sys
@@ -10,14 +10,14 @@ parser = argparse.ArgumentParser(description="""
 
 DESCRIPTION
     
-    Search for matches to a regex in a fasta file and return a bed file with the
+    Search a fasta file for matches to a regex and return a bed file with the
     coordinates of the match and the matched sequence itself. 
     
-    With defaults, fastaRegexFinder.py searches for putative quadruplexes on forward
+    By default, fastaRegexFinder.py searches for putative G-quadruplexes on forward
     and reverse strand using the quadruplex rule described at
     http://en.wikipedia.org/wiki/G-quadruplex#Quadruplex_prediction_techniques.
     
-    The defualt regex is '([gG]{3}\w{1,7}){3,}[gG]{3}' and along with its
+    The default regex is '([gG]{3}\w{1,7}){3,}[gG]{3}' and along with its
     complement they produce the same output as in
     http://www.quadruplex.org/?view=quadbaseDownload
     
@@ -28,10 +28,14 @@ DESCRIPTION
     4. ID of the match
     5. Length of the match
     6. Strand 
-    7. Matched sequence
+    7. Matched sequence as it appears on the forward strand
+    
+    For matches on the reverse strand it is reported the start and end position on the
+    forward strand and the matched string on the forward strand (so the G4 'GGGAGGGT'
+    present on the reverse strand is reported as ACCCTCCC).
     
     Note: Fasta sequences are read in memory one at a time. Also the bed file
-    of of the matches are kept in memeory.
+    of the matches are kept in memeory.
 
 EXAMPLE:
     ## Test data:
@@ -42,14 +46,11 @@ EXAMPLE:
         mychr	0	4	mychr_0_4_for	4	+	ACTG
         mychr	5	9	mychr_5_9_for	4	+	ACTG
         mychr	10	14	mychr_10_14_for	4	+	ACTG
-        mychr	15	19	mychr_15_19_rev	4	-	TGAC
 
     fastaRegexFinder.py -f /tmp/mychr.fa -r 'ACTG' --maxstr 3
         mychr	0	4	mychr_0_4_for	4	+	ACT[3,4]
         mychr	5	9	mychr_5_9_for	4	+	ACT[3,4]
         mychr	10	14	mychr_10_14_for	4	+	ACT[3,4]
-        mychr	15	19	mychr_15_19_rev	4	-	TGA[3,4]
-
     
     less /tmp/mychr.fa | fastaRegexFinder.py -f - -r 'A\w\wGn'
         mychr	0	5	mychr_0_5_for	5	+	ACTGn
@@ -59,73 +60,63 @@ EXAMPLE:
 DOWNLOAD
     fastaRegexFinder.py is hosted at http://code.google.com/p/bioinformatics-misc/
 
-TODO
-
-    - Better handling of forward and reverse matches (i.e. other than complementing
-      the forward regex?). Reverse complement the fasta sequence NOT the regexp
     """, formatter_class= argparse.RawTextHelpFormatter)
-
-
-parser.add_argument('--regex', '-r',
-                   type= str,
-                   help='''Regex to be searched in the fasta input.
-Matches to this regex will have + strand. This string passed to python
-re.compile(). The default regex is '([gG]{3}\w{1,7}){3,}[gG]{3}' which searches
-for G-quadruplexes.
-                                   
-                   ''',
-                   default= '([gG]{3,}\w{1,7}){3,}[gG]{3,}')
-
-parser.add_argument('--regexrev', '-R',
-                   type= str,
-                   help='''The second regex to be searched in fasta input.
-Matches to this regex will have - strand.
-By default (None), --regexrev will be --regex complemented by replacing
-'actguACTGU' with 'tgacaTGACA'. NB: This means that [a-zA-Z] will be translated
-to [t-zT-Z] and proteins are not correctly translated. 
-                                   
-                   ''',
-                   default= None)
-
 
 parser.add_argument('--fasta', '-f',
                    type= str,
-                   help='''Input file in fasta format containing one or more
-sequences. Use '-' to get the name of the file from stdin
+                   help='''Input fasta file to search. Use '-' to read the file from stdin.
                                    
                    ''',
                    required= True)
 
+parser.add_argument('--regex', '-r',
+                   type= str,
+                   help='''Regex to be searched in the fasta input.
+Matches to the reverse complement will have - strand.
+The default regex is '([gG]{3}\w{1,7}){3,}[gG]{3}' which searches
+for G-quadruplexes.                                   
+                   ''',
+                   default= '([gG]{3,}\w{1,7}){3,}[gG]{3,}')
+
+parser.add_argument('--matchcase', '-m',
+                   action= 'store_true',
+                   help='''Match case while searching for matches. Default is
+to ignore case (I.e. 'ACTG' will match 'actg').
+                   ''')
+
 parser.add_argument('--noreverse',
                    action= 'store_true',
-                   help='''Do not search the reverse (-) strand. I.e. do not use
-the complemented regex (or --regexrev/-R). Use this flag to search protein
-sequences.
-                                   
+                   help='''Do not search the reverse complement of the input fasta.
+Use this flag to search protein sequences.                                   
                    ''')
 
 parser.add_argument('--maxstr',
                    type= int,
                    required= False,
-                   default= None,
-                   help='''Maximum length of the reported match. By defualt, the
-7th column of the output reports the *whole* matched regexp. Set --maxstr to some
-int to trim the match to at most this many characters
-                                   
+                   default= 10000,
+                   help='''Maximum length of the match to report in the 7th column of the output.
+Default is to report up to 10000nt.
+Truncated matches are reported as <ACTG...ACTG>[<maxstr>,<tot length>]
                    ''')
+
+parser.add_argument('--seqnames', '-s',
+                   type= str,
+                   nargs= '+',
+                   default= [None],
+                   help='''List of fasta sequences in --fasta to
+search. E.g. use --seqnames chr1 chr2 chrM to search only these crhomosomes.
+Default is to search all the sequences in input.
+                   ''',
+                   required= False)
 
 args = parser.parse_args()
 
-" --------------------------[ Check and pare arguments ]---------------------- "
+" --------------------------[ Check and parse arguments ]---------------------- "
 
-""" Reverse forward match """
-intab=  'actguACTGU'
-outtab= 'tgacaTGACA'
-if args.regexrev is None:
-    transtab = string.maketrans(intab, outtab)
-    regexrev= args.regex.translate(transtab)
+if args.matchcase:
+    flag= 0
 else:
-    regexrev= args.regex
+    flag= re.IGNORECASE
 
 " ------------------------------[  Functions ]--------------------------------- "
 
@@ -158,11 +149,53 @@ def trimMatch(x, n):
     else:
         m= x
     return(m)
+
+def revcomp(x):
+    """Reverse complement string x. Ambiguity codes are handled and case conserved.
+    
+    Test
+    x= 'ACGTRYSWKMBDHVNacgtryswkmbdhvn'
+    revcomp(x)
+    """
+    compdict=  {'A':'T',
+                'C':'G',
+                'G':'C',
+                'T':'A',
+                'R':'Y',
+                'Y':'R',
+                'S':'W',
+                'W':'S',
+                'K':'M',
+                'M':'K',
+                'B':'V',
+                'D':'H',
+                'H':'D',
+                'V':'B',
+                'N':'N',
+                'a':'t',
+                'c':'g',
+                'g':'c',
+                't':'a',
+                'r':'y',
+                'y':'r',
+                's':'w',
+                'w':'s',
+                'k':'m',
+                'm':'k',
+                'b':'v',
+                'd':'h',
+                'h':'d',
+                'v':'b',
+                'n':'n'}
+    xrc= []
+    for n in x:
+        xrc.append(compdict[n])
+    xrc= ''.join(xrc)[::-1]
+    return(xrc)
 # -----------------------------------------------------------------------------
 
-
-psq_re_f= re.compile(args.regex)
-psq_re_r= re.compile(regexrev)
+psq_re_f= re.compile(args.regex, flags= flag)
+## psq_re_r= re.compile(regexrev)
 
 if args.fasta != '-':
     ref_seq_fh= open(args.fasta)
@@ -181,15 +214,20 @@ while True:
         if line == '':
             break
     ref_seq= ''.join(ref_seq)
-    for m in re.finditer(psq_re_f, ref_seq):
-        matchstr= trimMatch(m.group(0), args.maxstr)
-        quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_for'
-        gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '+', matchstr])
-    if args.noreverse is False:
-        for m in re.finditer(psq_re_r, ref_seq):
+    if args.seqnames == [None] or chr in args.seqnames:
+        for m in re.finditer(psq_re_f, ref_seq):
             matchstr= trimMatch(m.group(0), args.maxstr)
-            quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_rev'
-            gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '-', matchstr])
+            quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_for'
+            gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '+', matchstr])
+        if args.noreverse is False:
+            ref_seq= revcomp(ref_seq)
+            seqlen= len(ref_seq)
+            for m in re.finditer(psq_re_f, ref_seq):
+                matchstr= trimMatch(revcomp(m.group(0)), args.maxstr)
+                mstart= seqlen - m.end()
+                mend= seqlen - m.start()
+                quad_id= str(chr) + '_' + str(mstart) + '_' + str(mend) + '_rev'
+                gquad_list.append([chr, mstart, mend, quad_id, len(m.group(0)), '-', matchstr])
     chr= re.sub('^>', '', line)
     ref_seq= []
     line= (ref_seq_fh.readline()).strip()
