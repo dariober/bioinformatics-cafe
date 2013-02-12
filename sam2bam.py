@@ -9,6 +9,12 @@ DESCRIPTION
 Convert a SAM file to BAM, sort and index.
 NB: Input *.sam is replaced by *.bam
 
+This is what is executed:
+-------------------------
+samtools view -S -u %(sam)s | samtools sort - %(bname)s &&
+samtools index %(bname)s.bam &&
+rm %(sam)s
+
 USAGE
 sam2bam.py <input.sam>
 
