@@ -34,8 +34,10 @@ DESCRIPTION
     forward strand and the matched string on the forward strand (so the G4 'GGGAGGGT'
     present on the reverse strand is reported as ACCCTCCC).
     
-    Note: Fasta sequences are read in memory one at a time. Also the bed file
-    of the matches are kept in memeory.
+    Note: Fasta sequences (chroms) are read in memory one at a time along with the
+    matches for that chromosome.
+    The order of the output is: chroms as they are found in the inut fasta, matches
+    sorted within chroms by positions.
 
 EXAMPLE:
     ## Test data:
@@ -228,15 +230,20 @@ while True:
                 mend= seqlen - m.start()
                 quad_id= str(chr) + '_' + str(mstart) + '_' + str(mend) + '_rev'
                 gquad_list.append([chr, mstart, mend, quad_id, len(m.group(0)), '-', matchstr])
+        gquad_sorted= sort_table(gquad_list, (1,2,3))
+        gquad_list= []
+        for xline in gquad_sorted:
+            xline= '\t'.join([str(x) for x in xline])
+            print(xline)
     chr= re.sub('^>', '', line)
     ref_seq= []
     line= (ref_seq_fh.readline()).strip()
     if line == '':
         break
 
-gquad_sorted= sort_table(gquad_list, (0,1,2,3))
-
-for line in gquad_sorted:
-    line= '\t'.join([str(x) for x in line])
-    print(line)
+#gquad_sorted= sort_table(gquad_list, (0,1,2,3))
+#
+#for line in gquad_sorted:
+#    line= '\t'.join([str(x) for x in line])
+#    print(line)
 sys.exit()
