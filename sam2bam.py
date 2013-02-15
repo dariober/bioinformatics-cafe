@@ -35,7 +35,7 @@ unsortedbam= bname + ''
 
 ## NB: could use -u option but it throws and error (bug)
 
-cmd= """samtools view -S -u %(sam)s | samtools sort - %(bname)s &&
+cmd= """samtools view -S -b %(sam)s | samtools sort - %(bname)s &&
 samtools index %(bname)s.bam &&
 rm %(sam)s
 """ %{'sam': sam, 'bname': bname}
