@@ -110,7 +110,7 @@ if (len(set(sampleNames)) != len(sampleNames)) or (len(set(sampleNames)) != len(
     sys.exit('Invalid sample names (not unique and/or not of the same length as input)')
 
 ## Prepare output. Each file will be input for BSseq()
-tmpdir= '/tmp/bismark2BSseq_Ip4nrD' ##?tempfile.mkdtemp(prefix= 'bismark2BSseq_')
+tmpdir= tempfile.mkdtemp(prefix= 'bismark2BSseq_')
 print('\nTemporary dir set to: %s' %(tmpdir))
 
 covfile= open(os.path.join(tmpdir, 'coverageMatrix.txt'), 'w')
@@ -151,12 +151,12 @@ rcmd= """#!/usr/bin/env Rscript
 suppressPackageStartupMessages(library(bsseq))
 tmpdir<- '%s'
 outfile<- '%s'
+nameList<- read.table(file.path(tmpdir, 'nameList.txt'), sep= '\t', colClasses= 'character', stringsAsFactors= FALSE)
 coverageMatrix<- read.table(file.path(tmpdir, 'coverageMatrix.txt'), sep= '\t', colClasses= 'integer', stringsAsFactors= FALSE)
 MethylationMatrix<- read.table(file.path(tmpdir, 'MethylationMatrix.txt'), sep= '\t', colClasses= 'integer', stringsAsFactors= FALSE)
 chromPosTable<- read.table(file.path(tmpdir, 'chromPosTable.txt'), sep= '\t', colClasses= c('character', 'integer'), stringsAsFactors= FALSE, col.names= c('chrom', 'pos'))
-nameList<- read.table(file.path(tmpdir, 'nameList.txt'), sep= '\t', colClasses= 'character', stringsAsFactors= FALSE)
 
-bsseq<- BSseq(M= as.matrix(MethylationMatrix), Cov= as.matrix(coverageMatrix), pos= chromPosTable$pos, chr= chromPosTable$chrom)
+bsseq<- BSseq(M= as.matrix(MethylationMatrix), Cov= as.matrix(coverageMatrix), pos= chromPosTable$pos, chr= chromPosTable$chrom, sampleNames= as.matrix(nameList)[,1])
 save(bsseq, file= outfile)
 quit(save= 'no')
 """ %(tmpdir, args.outfile)
@@ -177,4 +177,4 @@ if not args.keeptmp:
 
 sys.exit()
 
-## ls /lustre/sblab/berald01/repository/bismark_out/bismark-*/*.genome-wide_CX_report.txt | 
+## ls /lustre/sblab/berald01/repository/bismark_out/bismark-*/*.genome-wide_CX_report.txt | bismark2BSseq.py -i - -o bsseq.Rdata -s '\..*'
