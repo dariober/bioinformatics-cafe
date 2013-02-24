@@ -87,22 +87,24 @@ else:
         sys.exit('Requested tmp dir %s is a file' %(tmpdir))
     else:
         pass        
+
+basename= os.path.split(args.input)[1]
         
 cmd= """
 ## 1. Get extremes of each chrom
-groupBy -g 1 -c 2,3 -o min,max -i %(inputBed)s > %(tmpdir)s/%(inputBed)s.chromSize &&
+groupBy -g 1 -c 2,3 -o min,max -i %(inputBed)s > %(tmpdir)s/%(basename)s.chromSize &&
 
 ## 2. Divide each chrom in wndows
-bedtools makewindows -b %(tmpdir)s/%(inputBed)s.chromSize -w %(w)s -s %(s)s > %(tmpdir)s/%(inputBed)s.windows &&
+bedtools makewindows -b %(tmpdir)s/%(basename)s.chromSize -w %(w)s -s %(s)s > %(tmpdir)s/%(basename)s.windows &&
 
 ## 3. Assign bed features to windows
-intersectBed -a %(tmpdir)s/%(inputBed)s.windows -b %(inputBed)s -wa -wb > %(tmpdir)s/%(inputBed)s.intsct && 
+intersectBed -a %(tmpdir)s/%(basename)s.windows -b %(inputBed)s -wa -wb > %(tmpdir)s/%(basename)s.intsct && 
 
 ## 4. Summarize windows
-groupBy -g 1,2,3 -c 8 -o %(ops)s -i %(tmpdir)s/%(inputBed)s.intsct
-""" %{'tmpdir': tmpdir, 'inputBed': args.input, 'w':args.window_size, 's': args.step_size, 'ops': args.ops}
+groupBy -g 1,2,3 -c 8 -o %(ops)s -i %(tmpdir)s/%(basename)s.intsct
+""" %{'tmpdir': tmpdir, 'inputBed': args.input, 'basename': basename, 'w':args.window_size, 's': args.step_size, 'ops': args.ops}
 
-fsh= open(os.path.join(tmpdir, args.input) + '.sh', 'w')
+fsh= open(os.path.join(tmpdir, basename) + '.sh', 'w')
 fsh.write(cmd)
 fsh.close()
 
