@@ -6,6 +6,7 @@ import tempfile
 import sys
 import shutil
 import os
+import pybedtools
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -16,6 +17,9 @@ DESCRIPTION
     
         <chrom>  <window_start>  <window_end>  <groupedby_score>
 
+    Input must be sorted, first three columns must be chrom, start, end. Additional
+    columns other than the score column are ignored.
+
 EXAMPLE    
     You have a bed file with position of CpGs (one per row), the score column is
     the percentage of Cs methylated. You want to summarize % methylation in windows
@@ -23,16 +27,21 @@ EXAMPLE
 
     compressBedByWindows.py -i methylation.bed -w 10000 -s 1000
     
-TODO:
-    Use pybedtools, it would allow to read from stdin which is not possible
-    at the moment.
-
 """, formatter_class= argparse.RawTextHelpFormatter)
 
 parser.add_argument('--input', '-i',
                    required= True,
-                   help='''BED file to compress. The 5th is the score column,
-i.e. the numeric column to be summarized. input must be SORTED by position, without header.
+                   help='''BED file to compress or - to read from stdin.
+Input must be SORTED by position, without header.
+
+''')
+
+parser.add_argument('--scoreColumn', '-c',
+                   required= False,
+                   default= 5,
+                   type= int,
+                   help='''Column index with the score to be summarized.
+Default is 5, suitable for bed files. Use 4 for bedGraph files.
 
 ''')
 
@@ -89,28 +98,35 @@ else:
         pass        
 
 basename= os.path.split(args.input)[1]
-        
-cmd= """
-## 1. Get extremes of each chrom
-groupBy -g 1 -c 2,3 -o min,max -i %(inputBed)s > %(tmpdir)s/%(basename)s.chromSize &&
 
-## 2. Divide each chrom in wndows
-bedtools makewindows -b %(tmpdir)s/%(basename)s.chromSize -w %(w)s -s %(s)s > %(tmpdir)s/%(basename)s.windows &&
+if args.input == '-':
+    "Need to write stream to file since we need it twice"
+    inputBed= os.path.join(tmpdir, 'streamInput.bed')
+    fout= open(inputBed, 'w')
+    for line in sys.stdin:
+        fout.write(line)
+    fout.close()
+else:
+    inputBed= args.input
+
+inbed= pybedtools.BedTool(inputBed)
+
+## 1. Get extremes of each chrom
+grp= inbed.groupby(g= [1], c= [2,3], ops= ['min', 'max'], stream= False)
+
+## 2. Divide each chrom in windows
+windows= grp.window_maker(b= grp.fn, w= args.window_size, s= args.step_size, stream= True)
 
 ## 3. Assign bed features to windows
-intersectBed -a %(tmpdir)s/%(basename)s.windows -b %(inputBed)s -wa -wb > %(tmpdir)s/%(basename)s.intsct && 
+intsct= windows.intersect(b= inbed, wa= True, wb= True, stream= True)
 
 ## 4. Summarize windows
-groupBy -g 1,2,3 -c 8 -o %(ops)s -i %(tmpdir)s/%(basename)s.intsct
-""" %{'tmpdir': tmpdir, 'inputBed': args.input, 'basename': basename, 'w':args.window_size, 's': args.step_size, 'ops': args.ops}
+summWinds= intsct.groupby(g= [1,2,3], c= 3 + args.scoreColumn, o= args.ops, stream= True)
 
-fsh= open(os.path.join(tmpdir, basename) + '.sh', 'w')
-fsh.write(cmd)
-fsh.close()
-
-p= subprocess.Popen(cmd, shell= True)
-p.communicate()
+for line in summWinds:
+    print('\t'.join([line.chrom, str(line.start), str(line.end), str(line[3])]))
 
 if args.tmpdir is None:
     shutil.rmtree(tmpdir)
+
 sys.exit()
