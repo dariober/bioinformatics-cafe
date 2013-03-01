@@ -135,7 +135,7 @@ for read in samfile:
     xm= read.tags[xmidx][1]
     cntDict= countMethylation(xm)
     cntXH= cntDict['X'] + cntDict['H']
-    print(cntDict, cntXH)
+##    print(cntDict, cntXH)
     if isint:
         if cntXH <= int(args.filter):
             outfile.write(read)
