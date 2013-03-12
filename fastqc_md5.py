@@ -46,8 +46,6 @@ parser.add_argument('--fastqc_path', '-p',
 path.
                    ''')
 
-args = parser.parse_args()
-
 ## ----------------------------------------------------------------------------
 
 ## {{{ http://code.activestate.com/recipes/266486/ (r1)
@@ -88,69 +86,86 @@ def add_md5_fastqc(fastqc_data_file, md5):
             n += 1
     fastqc_data.insert(n, 'md5sum\t%s\n' %(md5))
     return(fastqc_data)
+
+def getFastqcOutdir(fastqccmd):
+    """ Parse fastqc cmd option to get output dir.
+    fastqccmd is a list of parameters and arguments typically retuned
+    by shlex.split.
+    """
+    if '-o' in fastqccmd and '--outdir' in fastqccmd:
+        sys.exit('Invalid commands passed to fastqc: "%s".' %(args.fastqc))
+    elif '-o' in fastqccmd:
+        outd= os.path.abspath(fastqccmd[fastqccmd.index('-o') + 1])
+    elif '--outdir' in fastqccmd:
+        outd= os.path.abspath(fastqccmd[fastqccmd.index('--outdir') + 1])
+    else:
+        outd= None
+    return(outd)
+
 # -----------------------------------------------------------------------------
 
-# Parse fastqc cmd option to get output dir:
-fastqccmd= shlex.split(args.fastqc)
-if '-o' in fastqccmd and '--outdir' in fastqccmd:
-    sys.exit('Invalid commands passed to fastqc: "%s".' %(args.fastqc))
-elif '-o' in fastqccmd:
-    outd= os.path.abspath(fastqccmd[fastqccmd.index('-o') + 1])
-elif '--outdir' in fastqccmd:
-    outd= os.path.abspath(fastqccmd[fastqccmd.index('--outdir') + 1])
-else:
-    outd= None
-
-## Remove possible duplicates
-fastq= [os.path.abspath(x) for x in args.fastq]
-fastq= sorted(set(fastq))
-
-n= 0
-for f in fastq:
-    try:
-        fh= open(f)
-        fh.close()
-    except:
-        print('Skipping file %s: File not found' %(f))
-        del fastq[n]
-    n += 1
-if fastq == []:
-    sys.exit('\nNo file found- Nothing to be done!\n')
+def main():
+    args = parser.parse_args()
     
-fastqccmd= os.path.join(args.fastqc_path, 'fastqc') + args.fastqc + ' ' + ' '.join(fastq)
-print(fastqccmd)
-p= subprocess.Popen(fastqccmd, shell= True)
-p.wait()
+    fastqccmd= shlex.split(args.fastqc)
+    outd= getFastqcOutdir(fastqccmd)
+    
+    ## Remove possible duplicates
+    fastq= [os.path.abspath(x) for x in args.fastq]
+    fastq= sorted(set(fastq))
+    
+    n= 0
+    for f in fastq:
+        try:
+            fh= open(f)
+            fh.close()
+        except:
+            print('Skipping file %s: File not found' %(f))
+            del fastq[n]
+        n += 1
+    if fastq == []:
+        sys.exit('\nNo file found- Nothing to be done!\n')
+        
+    fastqc_args= args.fastqc.replace('--noextract', '')
+   
+    fastqccmd= os.path.join(args.fastqc_path, 'fastqc') + fastqc_args + ' ' + ' '.join(fastq)
+    print(fastqccmd)
+    p= subprocess.Popen(fastqccmd, shell= True)
+    p.wait()
+    
+    for fq in fastq:
+        "get md5sums"
+        if outd is None:
+            """fqdir is where the output files from fastqc should be found. This is
+            the same dir where inputs are if --outdir was not specified"""
+            fqdir= os.path.split(fq)[0]
+            if fqdir == '':
+                fqdir= './'
+        else:
+            "Output fastqc files are where --outdir was set"
+            fqdir= outd
+        print('Computing md5sum for: %s' %(fq))
+        md5s= md5sum(fq)
+        fastqc_dir= os.path.join(fqdir, os.path.split(sblab.get_fastqc_dir(fq))[1])
+        cmd= 'rm %(fastqc_dir)s.zip' %{'fastqc_dir':fastqc_dir}
+        print(cmd)
+        p= subprocess.Popen(cmd, shell= True)
+        p.wait()
+        fastqc_data_file= os.path.join(fastqc_dir, 'fastqc_data.txt')
+        fastqc_data= add_md5_fastqc(fastqc_data_file, md5s)
+        fastqc_data_out= open(os.path.join(fastqc_dir, 'fastqc_data.txt'), 'w')
+        for line in fastqc_data:
+            "Replace original file"
+            fastqc_data_out.write(line)
+        fastqc_data_out.close()
+        fastqcBaseDir, fastqcDirName= os.path.split(fastqc_dir) ## This is the directory, unzipped created by fastqc, without path
+        cmd= 'cd %(fastqcBaseDir)s && zip -q -r %(fastqcDirName)s.zip %(fastqcDirName)s' %{'fastqcBaseDir':fastqcBaseDir, 'fastqcDirName':fastqcDirName}
+        print(cmd)
+        p= subprocess.Popen(cmd, shell= True)
+        p.wait()
+        if ' --noextract ' in args.fastqc:
+            shutil.rmtree(fastqc_dir)
 
-for fq in fastq:
-    "get md5sums"
-    if outd is None:
-        """fqdir is where the output files from fastqc should be found. This is
-        the same dir where inputs are if --outdir was not specified"""
-        fqdir= os.path.split(fq)[0]
-        if fqdir == '':
-            fqdir= './'
-    else:
-        "Output fastqc files are where --outdir was set"
-        fqdir= outd
-    print('Computing md5sum for: %s' %(fq))
-    md5s= md5sum(fq)
-    fastqc_dir= os.path.join(fqdir, os.path.split(sblab.get_fastqc_dir(fq))[1])
-    cmd= 'unzip -q -o -d %s %s.zip' %(fqdir, fastqc_dir)
-    print(cmd)
-    p= subprocess.Popen(cmd, shell= True)
-    p.wait()
-    fastqc_data_file= os.path.join(fastqc_dir, 'fastqc_data.txt')
-    fastqc_data= add_md5_fastqc(fastqc_data_file, md5s)
-    fastqc_data_out= open(os.path.join(fastqc_dir, 'fastqc_data.txt'), 'w')
-    for line in fastqc_data:
-        "Replace original file"
-        fastqc_data_out.write(line)
-    fastqc_data_out.close()
-    cmd= 'zip -q %s.zip %s' %(fastqc_dir, fastqc_dir)
-    print(cmd)
-    p= subprocess.Popen(cmd, shell= True)
-    p.wait()
-    if ' --noextract ' in args.fastqc:
-        shutil.rmtree(fastqc_dir)
-sys.exit()
+if __name__ == '__main__':
+    main()
+    sys.exit()
