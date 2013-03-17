@@ -9,6 +9,7 @@ import sblab
 import os
 import shutil
 import shlex
+from distutils import spawn
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -102,10 +103,28 @@ def getFastqcOutdir(fastqccmd):
         outd= None
     return(outd)
 
+def fastqc_available(fastqc_path= ''):
+    """Check fastqc can actually be found an executed
+    """
+    if fastqc_path == '':
+        path_to_fastqc= spawn.find_executable('fastqc')
+        if path_to_fastqc is None:
+            return(False)
+            sys.exit('fastqc is not on your PATH')
+    else:
+        path_to_fastqc= fastqc_path
+        fastqc= os.path.exists(os.path.join(path_to_fastqc, 'fastqc'))
+        if not fastqc:
+            return(False)
+    return(True)
+    
 # -----------------------------------------------------------------------------
 
 def main():
     args = parser.parse_args()
+    
+    if not fastqc_available(args.fastqc_path):
+        sys.exit('Cannot find fastqc executable')
     
     fastqccmd= shlex.split(args.fastqc)
     outd= getFastqcOutdir(fastqccmd)
