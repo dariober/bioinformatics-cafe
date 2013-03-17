@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import os
 import shutil
+from distutils import spawn
 
 def test_getFastqcOutdir():
     fastqccmd= shlex.split('-t 8 --noextract -o /test/dir')    
@@ -22,6 +23,14 @@ def test_add_md5_fastqc():
     shutil.copyfile('fastqc_data.txt', tmpf.name)
     fastqcList= fastqc_md5.add_md5_fastqc(tmpf.name, 'd41d8cd98f00b204e9800998ecf8427e')
     assert 'md5sum\td41d8cd98f00b204e9800998ecf8427e\n' in fastqcList
+
+def test_false_if_fastqc_not_available():
+    fastqc= fastqc_md5.fastqc_available('non/existant/path')
+    assert fastqc is False
+
+def test_fastqc_on_path():
+    fastq_on_path= spawn.find_executable('fastqc')
+    assert fastq_on_path is not None
 
 def test_run():
     cmd= "./fastqc_md5.py -i db001.test.fq.gz --fastqc ' --noextract ' "
