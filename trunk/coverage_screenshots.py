@@ -38,6 +38,9 @@ REQUIREMENTS:
     pybedtools
     PyPDF2 (optional: Used to concatenate PDFs in a single one)
     R on $PATH
+
+TODO:
+    Error if regions do not exist (or have zero coverage?).
     """, formatter_class= argparse.RawTextHelpFormatter)
 
 parser.add_argument('--ibam', '-i',
@@ -239,9 +242,18 @@ def pileupBaseCallsToNucs(bases, refbase):
         nuc_counts= {}
         ## Remove the char after '^' since this is mapping quality not base.
         refbase= refbase.upper()
-        qscore= [i+1 for i, ltr in enumerate(bases) if ltr == '^']
-        calls= [bases[i] for i in range(0, len(bases)) if i not in qscore]
-        calls= bases.upper()        
+        callDict= {'A': 0, 'C': 0, 'G': 0, 'T': 0, 'N': 0, '.': 0, ',': 0}
+        calls= []
+        skip= False
+        for x in bases:
+            if x  == '^':
+                skip= True
+            elif skip:
+                skip= False
+            else:
+                # callDict[x] += 1
+                calls.append(x.upper())
+        calls= ''.join(calls)
         a= calls.count('A')
         c= calls.count('C')
         g= calls.count('G')
