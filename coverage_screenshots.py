@@ -54,7 +54,7 @@ parser.add_argument('--bed', '-b',
                    ''')
 
 parser.add_argument('--fasta', '-f',
-                   help='''Fasta file of the reference genome. If given high
+                   help='''Fasta file of the reference genome. If given, high
 resolution plots will show the reference bases at each position.
                    ''')
 
@@ -84,12 +84,31 @@ parser.add_argument('--rpm',
 sizes. Default is to use raw counts. 
                    ''')
 
+parser.add_argument('--ylim', '-y',
+                    default= 'max',
+                    type= str,
+                    help='''How the maximum value for the y-axis should be set.
+Options are: 'max' (default) all y-axes set to the maximum value of all the plots.
+'indiv': Scale each plot individually to its maximum
+<float>: Set all the plots to this maximum (E.g. 1000).
+The lower limit of the y-axis is always 0.
+                   ''')
+
+
 parser.add_argument('--max_nuc', '-m',
                     default= 100,
                     type= int,
                     help='''The maximum width of the region (bp) to plot each nucleotide in
 different colour. Default 100 (i.e. regions smaller than 100 bp will be printed with colour
 coded nucleotides). 
+                   ''')
+
+parser.add_argument('--max_fa', '-M',
+                    default= 100,
+                    type= int,
+                    help='''The maximum width of the region (bp) to plot each nucleotide at the
+bottome of the lower plot. Default 100 (i.e. regions smaller than 100 bp will have the refence
+sequence shown). Ignored if --fasta is not given 
                    ''')
 
 parser.add_argument('--pheight', '-H',
@@ -343,7 +362,6 @@ makeTransparent<-function(someColor, alpha=100){
     blue=curcoldata[3],alpha=alpha, maxColorValue=255)})
 }
 
-## Graphical parameters
 lwd= 4 ## Line width
 colList<- list(
     colA= makeTransparent('green', 95),
@@ -392,10 +410,18 @@ if(region_size > %(max_nuc)s) {
 
 xpos<- rowMeans(mcov[, c('start', 'end')]) + 0.5
 nplots<- %(nplots)s
-ylim<- c(0, max(mcov[, 4:ncol(mcov)]))
+
+## Set y-limit
+if('%(ylim)s' == 'max'){
+    ylim<- max(mcov[, 4:ncol(mcov)])
+} else if('%(ylim)s' == 'indiv'){
+    ylim<- TRUE
+} else {
+    ylim= FALSE
+}
 
 pdf('%(pdffile)s', width= %(pwidth)s/2.54, height= (%(pheight)s*nplots)/2.54, pointsize= %(psize)s)
-par(mfrow= c(nplots, 1), las= 1, mar= c(0.5, 4, 0.5, 1), oma= c(3, 1, 3, 0), bty= 'l', mgp= c(3, 0.7, 0))
+par(mfrow= c(nplots, 1), las= 1, mar= c(0.5, 4, 0.5, 1), oma= c(3, 1, 3, 1), bty= 'l', mgp= c(3, 0.7, 0))
 for(p in seq(1, nplots)){
     libname<- sub('\\\.bam\\\.depth', '', names(mcov)[p+3], perl= TRUE)
     Z<- mcov[, count_pos$cnt_Z[p]]
@@ -403,7 +429,17 @@ for(p in seq(1, nplots)){
     C<- mcov[, count_pos$cnt_C[p]] + A
     G<- mcov[, count_pos$cnt_G[p]] + C
     T<- mcov[, count_pos$cnt_T[p]] + G
-    plot(xpos, Z, type= 'n', xlab= '', ylab= '', xaxt= 'n', ylim= ylim, lwd= lwd, xlim= c(%(xlim1)s, %(xlim2)s))
+
+    ## Set maximum for y-axt
+    if('%(ylim)s' == 'max'){
+        ylim<- max(mcov[, 4:ncol(mcov)])
+    } else if('%(ylim)s' == 'indiv'){
+        ylim<- max(Z)
+    } else {
+        ylim<- as.numeric('%(ylim)s')
+    }
+    
+    plot(xpos, Z, type= 'n', xlab= '', ylab= '', xaxt= 'n', ylim= c(0, ylim), lwd= lwd, xlim= c(%(xlim1)s, %(xlim2)s))
     rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= "grey95", border= 'transparent')
     grid(col= 'darkgrey')
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= Z, col= colList$colZ, border= 'transparent')
@@ -427,8 +463,7 @@ for(p in seq(1, nplots)){
 }
 x<- axis(side= 1, labels= FALSE)
 axis(labels= formatC(x, format= 'd', big.mark= ','), side= 1, at= x)
-#mtext(text= '%(plotname)s', cex= 1, outer= TRUE, side= 3, xpd= NULL)
-mtext(text= '%(plotname)s', cex= 0.95, outer= TRUE, side= 2, las= 0, line= -0.2, adj= 1, col= 'grey50')
+mtext(text= '%(plotname)s', cex= 0.95, outer= TRUE, side= 4, las= 0, line= 0, col= 'grey50')
 mtext(text= '%(ylab)s', cex= 0.95, outer= TRUE, side= 2, las= 0, line= -0.2)
 if(nrow(refbases) > 0){
     mtext(at= refbases$pos, side= 1, text= refbases$base, line= 2, cex= ifelse(nplots > 3, 0.66, 0.75), adj= 1, font= 11)
@@ -450,6 +485,7 @@ def catPdf(in_pdf, out_pdf):
     See also:
         http://www.blog.pythonlibrary.org/2010/05/15/manipulating-pdfs-with-python-and-pypdf/
     """
+    import PyPDF2
     output = PyPDF2.PdfFileWriter()
     for pdf in in_pdf:
         pdfOne = PyPDF2.PdfFileReader(file(pdf, "rb"))
@@ -497,6 +533,7 @@ NWINDS= 1000 ## Number of windows to divide each bed region. Regions smaller tha
 def main():
     args = parser.parse_args()
     bamlist= getFileList(args.ibam)
+    print('\nFiles to analyze (%s found):\n%s\n' %(len(bamlist), ', '.join(bamlist)))
     # Output settings
     # ---------------
     if (args.outdir is not None) and (args.onefile is not None):
@@ -557,7 +594,7 @@ def main():
         fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
         region_seq= open(fasta_seq_name, 'w')
         region_seq.write('\t'.join(['chrom', 'pos', 'base']) + '\n')
-        if ((region.end - region.start) <= 100) and args.fasta:
+        if ((region.end - region.start) <= args.max_fa) and args.fasta:
             fasta_seq= getRefSequence(args.fasta, region)
             for line in fasta_seq:
                 region_seq.write('\t'.join([str(x) for x in line]) + '\n')
@@ -620,7 +657,8 @@ def main():
               xlim1= region.start,
               xlim2= region.end,
               gtf= annot_file,
-              max_nuc= args.max_nuc)
+              max_nuc= args.max_nuc,
+              ylim= args.ylim)
         if rgraph['stderr'] != '':
             print('\nExpection in executing R script "%s"\n' %(rscript))
             print(rgraph['stdout'])
