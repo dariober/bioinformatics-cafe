@@ -39,8 +39,6 @@ REQUIREMENTS:
     PyPDF2 (optional: Used to concatenate PDFs in a single one)
     R on $PATH
 
-TODO:
-    Error if regions do not exist (or have zero coverage?).
     """, formatter_class= argparse.RawTextHelpFormatter)
 
 parser.add_argument('--ibam', '-i',
@@ -243,39 +241,24 @@ def pileupBaseCallsToNucs(bases, refbase):
         ## Remove the char after '^' since this is mapping quality not base.
         refbase= refbase.upper()
         callDict= {'A': 0, 'C': 0, 'G': 0, 'T': 0, 'N': 0, '.': 0, ',': 0}
-        calls= []
+        keys= tuple(callDict.keys())
         skip= False
         for x in bases:
             if x  == '^':
                 skip= True
             elif skip:
                 skip= False
+            elif x in keys:
+                callDict[x] += 1
             else:
-                # callDict[x] += 1
-                calls.append(x.upper())
-        calls= ''.join(calls)
-        a= calls.count('A')
-        c= calls.count('C')
-        g= calls.count('G')
-        t= calls.count('T')
-        n= calls.count('N')
-        r= calls.count('.') + calls.count(',')
-        if refbase == 'A':
-            a += r
-        elif refbase == 'C':
-            c += r
-        elif refbase == 'G':
-            g += r
-        elif refbase == 'T':
-            t += r
-        else:
-            n += r
-        nuc_counts['cnt_A']= a
-        nuc_counts['cnt_C']= c
-        nuc_counts['cnt_G']= g
-        nuc_counts['cnt_T']= t
-        nuc_counts['cnt_N']= n
-        nuc_counts['cnt_Z']= a + c + g + t + n
+                pass
+        callDict[refbase] += (callDict['.'] + callDict[','])
+        nuc_counts['cnt_A']= callDict['A']
+        nuc_counts['cnt_C']= callDict['C']
+        nuc_counts['cnt_G']= callDict['G']
+        nuc_counts['cnt_T']= callDict['T']
+        nuc_counts['cnt_N']= callDict['N']
+        nuc_counts['cnt_Z']= sum((callDict[x] for x in ('A', 'C', 'G', 'T', 'N')))
         return(nuc_counts)
         
 def parse_pileup(pileup_line, bams):
@@ -536,6 +519,23 @@ def prepare_annotation(gtf_file, bedinterval, outfile):
         pline.extend([feature_graph[ftype]['col'], feature_graph[ftype]['lwd']])
         outf.write('\t'.join([str(x) for x in pline]) + '\n')
     outf.close()
+
+def make_dummy_mpileup(chrom, start, end, nbams):
+    """Create an empty line from mpileup to be used for regions w/o any reads in
+    any library. mpileup skips such regions altogheter and they wouldn't b plotted
+    otherwise.
+    Output will look like below with columns after the 6th with 0:
+    ['lambda_gi9626243', 9, 10, 'N', '.', '.', 327, 1, 0, 0, 326, 0, 327]
+    Each library occupies 7 columns
+    chrom, start, end:
+        Chrom and position to fill with zeros
+    nbams:
+        Number of bam files that would be present
+    """
+    zeros= [0] * 7 * nbams
+    bedline= [chrom, start, end, 'N', '.', '.'] + zeros
+    return(bedline)
+    
 # -----------------------------------------------------------------------------
 NWINDS= 1000 ## Number of windows to divide each bed region. Regions smaller than
              ## this will be plotted at base resolution. Larger regions will be
@@ -569,7 +569,7 @@ def main():
             
     ## Temp dir to dump intermediate files.
     ## -------------------------------------------------------------------------
-    if args.tmpdir is None:   
+    if args.tmpdir is None:
         tmpdir= tempfile.mkdtemp(suffix= '_coverageViewer')
     else:
         tmpdir= args.tmpdir
@@ -630,6 +630,11 @@ def main():
                 bedline= bedline[0:6] + rpm(bedline[6:], libsizes)
             mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
         mpileup_bed.close()
+        if os.stat(mpileup_name).st_size == 0:
+            mpileup_bed= open(mpileup_name, 'w')
+            bedline= make_dummy_mpileup(region.chrom, region.start, region.end, len(bamlist))
+            mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
+            mpileup_bed.close()
         ## Divide interval in this many regions. No difference if region span < NWINDS
         ## --------------------------------------------------------------------
         w= makeWindows(region, NWINDS) 
