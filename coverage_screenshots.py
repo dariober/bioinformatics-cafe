@@ -33,6 +33,11 @@ parser.add_argument('--fasta', '-f',
 resolution plots will show the reference bases at each position.
                    ''')
 
+parser.add_argument('--gtf', '-g',
+                   help='''GTF file to fetch annotation from. E.g. gene.gtf in
+iGenomes. Can be gzip compressed.
+                   ''')
+
 parser.add_argument('--outdir', '-d',
                    required= False,
                    default= None,
@@ -68,9 +73,10 @@ parser.add_argument('--pwidth', '-W',
                    ''')
 
 parser.add_argument('--psize', '-p',
-                    default= 9,
+                    default= 10,
                     type= float,
-                    help='''Pointsize for R pdf() function.
+                    help='''Pointsize for R pdf() function. Sizes
+between 9 and 12 should suite most cases.
                    ''')
 
 parser.add_argument('--tmpdir', '-t',
@@ -322,7 +328,15 @@ colList<- list(
 tgrey<- makeTransparent('blue', 80)
 
 ## INPUT
-mcov<- read.table('%(mcov)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE)
+## First read header line only as data to remove paths
+header<- read.table('%(mcov)s', header= FALSE, sep= '\t', stringsAsFactors= FALSE, nrows= 1)
+header<- sapply(header[1,], basename)
+
+## Data: Do not read header. It will be added.
+mcov<- read.table('%(mcov)s', header= FALSE, sep= '\t', stringsAsFactors= FALSE, skip= 1)
+names(mcov)<- header
+
+## Reference bases
 refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE)
 
 ## Column indexes of the counts
@@ -399,6 +413,33 @@ def catPdf(in_pdf, out_pdf):
 #    except:
 #        return(False)
 
+def prepare_annotation(gtf_file, bedinterval, outfile):
+    """Output an annotation file suitable for R plotting.
+    gtf_file:
+        Annotation file in gtf format. E.g. gene.gtf for hg19 in iGenomes.
+    bedinterval:
+        A pybedtools.Interval to intersect to the gtf. Intersected feature will be
+        sent to output
+    outfile:
+        Name for output file
+    """
+    outf= open(outfile, 'w')
+    header= '\t'.join(['chrom', 'start', 'end', 'name', 'type', 'strand', 'col', 'lwd'])
+    outf.write(header + '\n')
+    gtf= pybedtools.BedTool(gtf_file)
+    bedinterval= bedinterval.saveas()
+    region_gtf= gtf.intersect(bedinterval) ## BedInterval has to be convetred to BedTool
+    feature_graph= {'CDS':{'col': 'blue', 'lwd': 6},
+                    'exon':{'col': 'blue', 'lwd': 4},
+                    'start_codon':{'col': 'blue', 'lwd': 4},
+                    'stop_codon':{'col': 'blue', 'lwd': 4}
+    }
+    for line in region_gtf:
+        ftype= line.fields[2]
+        pline= [line.chrom, line.start, line.end, line.name, ftype, line.strand]
+        pline.extend([feature_graph[ftype]['col'], feature_graph[ftype]['lwd']])
+        outf.write('\t'.join([str(x) for x in pline]) + '\n')
+    outf.close()
 # -----------------------------------------------------------------------------
 
 bamlist= getFileList(args.ibam)
@@ -452,7 +493,7 @@ if args.rpm:
 inbed= pybedtools.BedTool(args.bed)
 for region in inbed:
     regname= region.chrom + '_' + str(region.start) + '_' + str(region.end)
-    ## File with reference sequence. OPen it even if it is going to be header only.
+    ## File with reference sequence. Open it even if it is going to be header only.
     fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
     region_seq= open(fasta_seq_name, 'w')
     region_seq.write('\t'.join(['chrom', 'pos', 'base']) + '\n')
@@ -461,6 +502,11 @@ for region in inbed:
         for line in fasta_seq:
             region_seq.write('\t'.join([str(x) for x in line]) + '\n')
     region_seq.close()
+    ## Get annotation:
+    if args.gtf:
+        annot_file= os.path.join(tmpdir, regname + '.annot.txt')
+        prepare_annotation(args.gtf, region, annot_file)
+        sys.exit()
     ## Pileup
     print('Processing: %s' %(str(region).strip()))
     r= '-r ' + region.chrom + ':' + str(region.start) + '-' + str(region.end)
