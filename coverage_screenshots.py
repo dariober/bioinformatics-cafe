@@ -12,7 +12,32 @@ import glob
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
+    Produce coverage plots for one or more bam files at the positons specified in
+    a bed file. Plots are written in pdf format, one per region or concatenated in
+    a single file.
     
+    Plots can be annotated according to a GTF file and decorated with the individual
+    nucleotides if a corresponding refernce FASTA file is provided.
+    
+    Intermediate output files, including the R script, can be saved for future inspection.
+
+EXAMPLE:
+    ## Plot coverage of all the bam files in current dir in the region(s) in file actb.bed
+    ## Annotate plot given a GTF file.
+    coverage_screenshots.py --ibam *.bam --gtf genes.gtf.gz --bed actb.bed
+
+    ## Keep intermediate files:
+    coverage_screenshots.py --ibam ds05*.bam --gtf genes.gtf.gz --bed actb.bed --tmpdir actb
+
+    cat actb.bed
+    >chr7	5566757	5566829
+    
+REQUIREMENTS:
+    python 2.7 (2.6 should do, 3.x not sure)
+    pysam
+    pybedtools
+    PyPDF2 (optional: Used to concatenate PDFs in a single one)
+    R on $PATH
     """, formatter_class= argparse.RawTextHelpFormatter)
 
 parser.add_argument('--ibam', '-i',
@@ -49,7 +74,6 @@ NB: Not to be confused with --tmpdir where temp file go.
 parser.add_argument('--onefile', '-o',
                    required= False,
                    default= None,
-                   nargs= 1,
                    help='''Concatenate the output PDF files into a single one
 passed as argument.
                    ''')
@@ -60,23 +84,31 @@ parser.add_argument('--rpm',
 sizes. Default is to use raw counts. 
                    ''')
 
+parser.add_argument('--max_nuc', '-m',
+                    default= 100,
+                    type= int,
+                    help='''The maximum width of the region (bp) to plot each nucleotide in
+different colour. Default 100 (i.e. regions smaller than 100 bp will be printed with colour
+coded nucleotides). 
+                   ''')
+
 parser.add_argument('--pheight', '-H',
                     default= 6,
                     type= float,
-                    help='''Height of *each* plot in cm.
+                    help='''Height of *each* plot in cm. Default 6
                    ''')
 
 parser.add_argument('--pwidth', '-W',
                     default= 24,
                     type= float,
-                    help='''Width of the plots in cm.
+                    help='''Width of the plots in cm. Default 24
                    ''')
 
 parser.add_argument('--psize', '-p',
                     default= 10,
                     type= float,
                     help='''Pointsize for R pdf() function. Sizes
-between 9 and 12 should suite most cases.
+between 9 and 12 should suite most cases. Default 10.
                    ''')
 
 parser.add_argument('--tmpdir', '-t',
@@ -86,12 +118,7 @@ python will find one which will be deleted at the end of the execution.
 If set it will not be deleted.
                    ''')
 
-
-args = parser.parse_args()
-
 # -----------------------------------------------------------------------------
-NWINDS= 1000 ## Number of windows to divide each bed region
-
 def getFileList(files):
     """Expand the list of files using glob. Return a list of unique files.
     """
@@ -329,15 +356,24 @@ tgrey<- makeTransparent('blue', 80)
 
 ## INPUT
 ## First read header line only as data to remove paths
-header<- read.table('%(mcov)s', header= FALSE, sep= '\t', stringsAsFactors= FALSE, nrows= 1)
+header<- read.table('%(mcov)s', header= FALSE, sep= '\t', stringsAsFactors= FALSE, nrows= 1, comment.char= '')
 header<- sapply(header[1,], basename)
 
 ## Data: Do not read header. It will be added.
-mcov<- read.table('%(mcov)s', header= FALSE, sep= '\t', stringsAsFactors= FALSE, skip= 1)
+mcov<- read.table('%(mcov)s', header= FALSE, sep= '\t', stringsAsFactors= FALSE, skip= 1, comment.char= '')
 names(mcov)<- header
 
 ## Reference bases
-refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE)
+refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')
+
+## GTF file
+do.gtf<- FALSE
+if('%(gtf)s' != ''){
+    gtf<- read.table('%(gtf)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')
+    if(nrow(gtf) > 0){
+        do.gtf<- TRUE
+    }
+}
 
 ## Column indexes of the counts
 count_pos<- list(
@@ -350,7 +386,7 @@ count_pos<- list(
 
 ## If the range is too wide, use only one colour:
 region_size<- max(mcov$end) - min(mcov$start)
-if(region_size > 100) {
+if(region_size > %(max_nuc)s) {
     colList<- lapply(colList, function(x) return('grey'))
 }
 
@@ -359,7 +395,7 @@ nplots<- %(nplots)s
 ylim<- c(0, max(mcov[, 4:ncol(mcov)]))
 
 pdf('%(pdffile)s', width= %(pwidth)s/2.54, height= (%(pheight)s*nplots)/2.54, pointsize= %(psize)s)
-par(mfrow= c(nplots, 1), las= 1, mar= c(0.5, 4, 0.5, 1), oma= c(3, 1, 2, 0), bty= 'l', mgp= c(3, 0.7, 0))
+par(mfrow= c(nplots, 1), las= 1, mar= c(0.5, 4, 0.5, 1), oma= c(3, 1, 3, 0), bty= 'l', mgp= c(3, 0.7, 0))
 for(p in seq(1, nplots)){
     libname<- sub('\\\.bam\\\.depth', '', names(mcov)[p+3], perl= TRUE)
     Z<- mcov[, count_pos$cnt_Z[p]]
@@ -376,8 +412,21 @@ for(p in seq(1, nplots)){
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= C, col= colList$colC, border= 'transparent')
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= A, col= colList$colA, border= 'transparent')
     mtext(side= 3, text= libname, adj= 0.02, line= -1, col= tgrey, cex= 0.9)
+    if(p == 1){
+        if(do.gtf){
+            yTop= par('usr')[4]
+            y0 <- yTop * 1.05
+            arrows(x0= gtf$start, y0= y0, x1= gtf$end, y1= y0,
+                col= 'firebrick4', ## ifelse(gtf$type == 'CDS', 'firebrick4', gtf$col),
+                lwd= ifelse(gtf$type == 'CDS', 4, 1),
+                length= 0.05,
+                code= ifelse(gtf$strand == '+', 2, ifelse(gtf$strand == '-', 1, 0)), xpd= NA)
+            text(labels= gtf$name, x= gtf$start, y= yTop * 1.1, ifelse(nplots > 3, 0.7, 0.8), col= 'darkgrey', xpd= NA)
+        }
+    }
 }
-axis(side= 1)
+x<- axis(side= 1, labels= FALSE)
+axis(labels= formatC(x, format= 'd', big.mark= ','), side= 1, at= x)
 #mtext(text= '%(plotname)s', cex= 1, outer= TRUE, side= 3, xpd= NULL)
 mtext(text= '%(plotname)s', cex= 0.95, outer= TRUE, side= 2, las= 0, line= -0.2, adj= 1, col= 'grey50')
 mtext(text= '%(ylab)s', cex= 0.95, outer= TRUE, side= 2, las= 0, line= -0.2)
@@ -401,7 +450,6 @@ def catPdf(in_pdf, out_pdf):
     See also:
         http://www.blog.pythonlibrary.org/2010/05/15/manipulating-pdfs-with-python-and-pypdf/
     """
-#    try:
     output = PyPDF2.PdfFileWriter()
     for pdf in in_pdf:
         pdfOne = PyPDF2.PdfFileReader(file(pdf, "rb"))
@@ -409,9 +457,6 @@ def catPdf(in_pdf, out_pdf):
     outputStream = file(out_pdf, "wb")
     output.write(outputStream)
     outputStream.close()
-#        return(True)
-#    except:
-#        return(False)
 
 def prepare_annotation(gtf_file, bedinterval, outfile):
     """Output an annotation file suitable for R plotting.
@@ -427,10 +472,13 @@ def prepare_annotation(gtf_file, bedinterval, outfile):
     header= '\t'.join(['chrom', 'start', 'end', 'name', 'type', 'strand', 'col', 'lwd'])
     outf.write(header + '\n')
     gtf= pybedtools.BedTool(gtf_file)
-    bedinterval= bedinterval.saveas()
-    region_gtf= gtf.intersect(bedinterval) ## BedInterval has to be convetred to BedTool
-    feature_graph= {'CDS':{'col': 'blue', 'lwd': 6},
-                    'exon':{'col': 'blue', 'lwd': 4},
+    tmp= tempfile.NamedTemporaryFile(delete= False, suffix= '.bed.txt', prefix= 'gtf_')
+    tmp.write(str(bedinterval))
+    tmp.close()
+    region_gtf= gtf.intersect(pybedtools.BedTool(tmp.name)) ## BedInterval has to be convetred to BedTool
+    os.remove(tmp.name)
+    feature_graph= {'CDS':{'col': 'red', 'lwd': 4},
+                    'exon':{'col': 'blue', 'lwd': 2},
                     'start_codon':{'col': 'blue', 'lwd': 4},
                     'stop_codon':{'col': 'blue', 'lwd': 4}
     }
@@ -441,128 +489,149 @@ def prepare_annotation(gtf_file, bedinterval, outfile):
         outf.write('\t'.join([str(x) for x in pline]) + '\n')
     outf.close()
 # -----------------------------------------------------------------------------
+NWINDS= 1000 ## Number of windows to divide each bed region. Regions smaller than
+             ## this will be plotted at base resolution. Larger regions will be
+             ## divided in ~1000 equally sized windows and the counts from mpileup
+             ## averaged.
 
-bamlist= getFileList(args.ibam)
-
-# Output settings -------------------------------------------------------------
-if (args.outdir is not None) and (args.onefile is not None):
-    sys.exit('''\nSpecify either --outdir (for one file for each bed region) OR
+def main():
+    args = parser.parse_args()
+    bamlist= getFileList(args.ibam)
+    # Output settings
+    # ---------------
+    if (args.outdir is not None) and (args.onefile is not None):
+        sys.exit('''\nSpecify either --outdir (for one file for each bed region) OR
 --onefile (for one single concatenated file).\n''')
-
-onefile= False
-if args.outdir is None and (args.onefile is None):
-    outdir= os.getcwd()
-elif args.onefile is None:
-    outdir= args.outdir
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-else:
-    onefile= True
-    try:
-        import PyPDF2
-    except ImportError:
-        sys.exit('''\nModule PyPDF2 could not be imported. Eiher installed it
-(see https://pypi.python.org/pypi/PyPDF2 ) or avoid using the --onefile option.\n''')
-        
     
-if args.tmpdir is None:   
-    tmpdir= tempfile.mkdtemp(suffix= '_coverageViewer')
-else:
-    tmpdir= args.tmpdir
-    if not os.path.exists(tmpdir):
-        os.makedirs(tmpdir)
-
-## Make header for grouped bed files
-header= ['chrom', 'start', 'end']
-header.extend([x + '.depth' for x in bamlist])
-header.extend([x + '.cnt_A' for x in bamlist])
-header.extend([x + '.cnt_C' for x in bamlist])
-header.extend([x + '.cnt_G' for x in bamlist])
-header.extend([x + '.cnt_T' for x in bamlist])
-header.extend([x + '.cnt_N' for x in bamlist])
-header.extend([x + '.cnt_Z' for x in bamlist])
-header= '\t'.join(header)
-
-outputPDF= []
-if args.rpm:
-    sys.stdout.write('Getting library sizes... ')
-    libsizes_dict= getLibrarySizes(bamlist)
-    libsizes= [libsizes_dict[x] for x in bamlist]
-    print(', '.join([str(x) for x in libsizes]))
-
-inbed= pybedtools.BedTool(args.bed)
-for region in inbed:
-    regname= region.chrom + '_' + str(region.start) + '_' + str(region.end)
-    ## File with reference sequence. Open it even if it is going to be header only.
-    fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
-    region_seq= open(fasta_seq_name, 'w')
-    region_seq.write('\t'.join(['chrom', 'pos', 'base']) + '\n')
-    if (region.end - region.start) <= 100:
-        fasta_seq= getRefSequence(args.fasta, region)
-        for line in fasta_seq:
-            region_seq.write('\t'.join([str(x) for x in line]) + '\n')
-    region_seq.close()
-    ## Get annotation:
-    if args.gtf:
-        annot_file= os.path.join(tmpdir, regname + '.annot.txt')
-        prepare_annotation(args.gtf, region, annot_file)
-        sys.exit()
-    ## Pileup
-    print('Processing: %s' %(str(region).strip()))
-    r= '-r ' + region.chrom + ':' + str(region.start) + '-' + str(region.end)
-    mpile_cmd= compile_mpileup(bamlist, '-BQ0', '-d1000000', r)
-    mpileup_name= os.path.join(tmpdir, regname) + '.mpileup.bed.txt'
-    mpileup_bed= open(mpileup_name, 'w')
-    for p in eval(mpile_cmd):
-        pd= parse_pileup(p, bamlist)
-        bedline= pileupToBed(pd, bamlist)
-        if args.rpm:
-            bedline= bedline[0:6] + rpm(bedline[6:], libsizes)
-        mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
-    mpileup_bed.close()
-    ## Divide interval in this many regions
-    w= makeWindows(region, NWINDS) 
-    ## Assign to each pileup position its window
-    mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(w, wb= True)
-    ## Aggregate counts in each position by window:
-    pile_cols= range(7, len(bedline)+1) ## Indexes of columns with counts
-    wind_idx= [len(bedline)+1, len(bedline)+2, len(bedline)+3] ## These are the indexes of the columns containing the windows
-    mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= ['mean'] * len(pile_cols), stream= False) ## .saveas('winds.bed')
-    mpileup_grp_name= os.path.join(tmpdir, regname) + '.grp.bed.txt'
-    mpileup_grp_fout= open(mpileup_grp_name, 'w')
-    mpileup_grp_fout.write(header + '\n')
-    for line in mpileup_grp:
-        mpileup_grp_fout.write(str(line))
-    mpileup_grp_fout.close()
-    # ----------------------- Plotting ----------------------------------------
-    pdffile= os.path.join(tmpdir, regname + '.pdf')
-    outputPDF.append(pdffile)
-    rscript= os.path.join(tmpdir, regname + '.R')
-    if args.rpm:
-        ylab= 'Reads per million'
+    onefile= False
+    if args.outdir is None and (args.onefile is None):
+        outdir= os.getcwd()
+    elif args.onefile is None:
+        outdir= args.outdir
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
     else:
-        ylab= 'Read count'
-    rgraph= RPlot(pdffile= pdffile,
-          rscript= rscript,
-          plotname= regname,
-          mcov= mpileup_grp_name,
-          refbases= fasta_seq_name,
-          nplots= len(bamlist),
-          pheight= args.pheight,
-          pwidth= args.pwidth,
-          psize= args.psize,
-          ylab= ylab,
-          xlim1= region.start,
-          xlim2= region.end)
-    if rgraph['stderr'] != '':
-        print('\nExpection in executing R script "%s"\n' %(rscript))
-        print(rgraph['stdout'])
-        sys.exit(rgraph['stderr'])
-    if not onefile:
-        shutil.copyfile(pdffile, os.path.join(outdir, regname + '.pdf'))
-if onefile:
-    catPdf(in_pdf= outputPDF, out_pdf= args.onefile[0])
-if args.tmpdir is None:
-    shutil.rmtree(tmpdir)
-
-sys.exit()
+        onefile= True
+        try:
+            import PyPDF2
+        except ImportError:
+            sys.exit('''\nModule PyPDF2 could not be imported. Eiher installed it
+(see https://pypi.python.org/pypi/PyPDF2 ) or avoid using the --onefile option.\n''')
+            
+    ## Temp dir to dump intermediate files.
+    ## -------------------------------------------------------------------------
+    if args.tmpdir is None:   
+        tmpdir= tempfile.mkdtemp(suffix= '_coverageViewer')
+    else:
+        tmpdir= args.tmpdir
+        if not os.path.exists(tmpdir):
+            os.makedirs(tmpdir)
+    
+    ## Make header line for grouped bed files (*.grp.bed.txt)
+    ## --------------------------------------------------------------------------
+    header= ['chrom', 'start', 'end']
+    header.extend([x + '.depth' for x in bamlist])
+    header.extend([x + '.cnt_A' for x in bamlist])
+    header.extend([x + '.cnt_C' for x in bamlist])
+    header.extend([x + '.cnt_G' for x in bamlist])
+    header.extend([x + '.cnt_T' for x in bamlist])
+    header.extend([x + '.cnt_N' for x in bamlist])
+    header.extend([x + '.cnt_Z' for x in bamlist])
+    header= '\t'.join(header)
+    
+    outputPDF= [] ## List of all the pdf files generated. Used only for --onefile
+    ## -------------------------------------------------------------------------
+    if args.rpm:
+        sys.stdout.write('Getting library sizes... ')
+        libsizes_dict= getLibrarySizes(bamlist)
+        libsizes= [libsizes_dict[x] for x in bamlist]
+        print(', '.join([str(x) for x in libsizes]))
+    
+    inbed= pybedtools.BedTool(args.bed)
+    for region in inbed:
+        print('Processing: %s' %(str(region).strip()))
+        regname= region.chrom + '_' + str(region.start) + '_' + str(region.end)
+        ## Reference  FASTA file
+        ## File with reference sequence. Open it even if it is going to be header only.
+        ## ---------------------------------------------------------------------
+        fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
+        region_seq= open(fasta_seq_name, 'w')
+        region_seq.write('\t'.join(['chrom', 'pos', 'base']) + '\n')
+        if ((region.end - region.start) <= 100) and args.fasta:
+            fasta_seq= getRefSequence(args.fasta, region)
+            for line in fasta_seq:
+                region_seq.write('\t'.join([str(x) for x in line]) + '\n')
+        region_seq.close()
+        ## Get annotation:
+        ## --------------------------------------------------------------------
+        annot_file= ''
+        if args.gtf:
+            annot_file= os.path.join(tmpdir, regname + '.annot.txt')
+            prepare_annotation(args.gtf, region, annot_file)
+        ## Pileup: This is the time consuming part
+        ## --------------------------------------------------------------------
+        r= '-r ' + region.chrom + ':' + str(region.start) + '-' + str(region.end)
+        mpile_cmd= compile_mpileup(bamlist, '-BQ0', '-d1000000', r)
+        mpileup_name= os.path.join(tmpdir, regname) + '.mpileup.bed.txt'
+        mpileup_bed= open(mpileup_name, 'w')
+        for p in eval(mpile_cmd):
+            pd= parse_pileup(p, bamlist)
+            bedline= pileupToBed(pd, bamlist)
+            if args.rpm:
+                bedline= bedline[0:6] + rpm(bedline[6:], libsizes)
+            mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
+        mpileup_bed.close()
+        ## Divide interval in this many regions. No difference if region span < NWINDS
+        ## --------------------------------------------------------------------
+        w= makeWindows(region, NWINDS) 
+        ## Assign to each pileup position its window --------------------------
+        mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(w, wb= True)
+        ## Aggregate counts in each position by window: -----------------------
+        pile_cols= range(7, len(bedline)+1) ## Indexes of columns with counts
+        wind_idx= [len(bedline)+1, len(bedline)+2, len(bedline)+3] ## These are the indexes of the columns containing the windows
+        mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= ['mean'] * len(pile_cols), stream= False)
+        mpileup_grp_name= os.path.join(tmpdir, regname) + '.grp.bed.txt'
+        mpileup_grp_fout= open(mpileup_grp_name, 'w')
+        mpileup_grp_fout.write(header + '\n')
+        for line in mpileup_grp:
+            mpileup_grp_fout.write(str(line))
+        mpileup_grp_fout.close()
+        # ----------------------------------------------------------------------
+        # Plotting 
+        # ----------------------------------------------------------------------
+        pdffile= os.path.join(tmpdir, regname + '.pdf')
+        outputPDF.append(pdffile)
+        rscript= os.path.join(tmpdir, regname + '.R')
+        if args.rpm:
+            ylab= 'Reads per million'
+        else:
+            ylab= 'Read count'
+        ## Memo: All the args passed to RPlot() become part of the R script.
+        rgraph= RPlot(pdffile= pdffile,
+              rscript= rscript,
+              plotname= regname,
+              mcov= mpileup_grp_name,
+              refbases= fasta_seq_name,
+              nplots= len(bamlist),
+              pheight= args.pheight,
+              pwidth= args.pwidth,
+              psize= args.psize,
+              ylab= ylab,
+              xlim1= region.start,
+              xlim2= region.end,
+              gtf= annot_file,
+              max_nuc= args.max_nuc)
+        if rgraph['stderr'] != '':
+            print('\nExpection in executing R script "%s"\n' %(rscript))
+            print(rgraph['stdout'])
+            sys.exit(rgraph['stderr'])
+        if not onefile:
+            ## Copy PDFs from temp dir to output dir. Unless you wnated them in onefile
+            shutil.copyfile(pdffile, os.path.join(outdir, regname + '.pdf'))
+    if onefile:
+        catPdf(in_pdf= outputPDF, out_pdf= args.onefile)
+    if args.tmpdir is None:
+        shutil.rmtree(tmpdir)
+if __name__ == '__main__':
+    main()
+    sys.exit()
