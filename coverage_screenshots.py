@@ -363,7 +363,7 @@ makeTransparent<-function(someColor, alpha=100){
 # Intial settings
 # ------------------------------------------------------------------------------
 lwd= 4
-cex.axis<- ifelse('%(cex_axis)s' < 0, par('cex.axis'), %(cex_axis)s)
+cex.axis<- ifelse(%(cex_axis)s < 0, par('cex.axis'), %(cex_axis)s)
 
 colList<- list(
     colA= makeTransparent('green', 95),
