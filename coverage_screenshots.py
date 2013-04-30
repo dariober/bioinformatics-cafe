@@ -65,6 +65,16 @@ if it doesn't exist. Default to current dir.
 NB: Not to be confused with --tmpdir where temp file go.
                    ''')
 
+parser.add_argument('--replot',
+                   action= 'store_true',
+                   help='''Re-use the output files from a previous execution. Just
+redraw the plots using different graphical parameters.
+This option allows to reformat the plots without going thorugh the time consuming
+steps of generating pileups etc. All but graphical parameters must be the same
+as in the execution that generated the original data (obviously --tmpdir must not
+be None!).
+                   ''')
+
 parser.add_argument('--onefile', '-o',
                    required= False,
                    default= None,
@@ -374,6 +384,7 @@ colList<- list(
 )
 tgrey<- makeTransparent('blue', 80)
 
+
 # ------------------------------------------------------------------------------
 # INPUT
 # ------------------------------------------------------------------------------
@@ -407,6 +418,10 @@ count_pos<- list(
     G= grep('\\\.G$', names(mcov), perl= TRUE),
     T= grep('\\\.T$', names(mcov), perl= TRUE)
 )
+## A check: all the counts above have the same length:
+if(length(unique((sapply(count_pos, length)))) != 1){
+    stop('An error occured while processing the data.')
+}
 
 ## If the range is too wide, use only one colour:
 region_size<- max(mcov$end) - min(mcov$start)
@@ -415,12 +430,18 @@ if(region_size > %(max_nuc)s) {
 }
 
 xpos<- rowMeans(mcov[, c('start', 'end')]) + 0.5
-nplots<- %(nplots)s
+nplots<- length(count_pos[['Z']])
 
 # ------------------------------------------------------------------------------
 # Plotting
 # ------------------------------------------------------------------------------
-pdf('%(pdffile)s', width= %(pwidth)s/2.54, height= (%(pheight)s*nplots)/2.54, pointsize= %(psize)s)
+pwidth<- %(pwidth)s
+pheight<- %(pheight)s
+if(pheight <= 0){
+    #Get sensible default values for height
+    pheight<- (pwidth * 0.35) + ((pwidth/10) / nplots)
+}
+pdf('%(pdffile)s', width= pwidth/2.54, height= (pheight * nplots)/2.54, pointsize= %(psize)s)
 par(mfrow= c(nplots, 1), las= 1, mar= c(0.5, 4, 0.5, 1), oma= c(3, 1.1, 3, 1.1), bty= 'l', mgp= c(3, 0.7, 0))
 for(p in seq(1, nplots)){
     ## For each library:
@@ -479,7 +500,7 @@ if(nrow(refbases) > 0){
     mtext(at= refbases$pos, side= 1, text= refbases$base, line= 2, cex= ifelse(nplots > 3, 0.66, 0.75), adj= 1, font= 11)
 }
 dev.off()
-""" %kwargs ## %{'mcov': tmp.name, 'plotname': plotname + '.pdf', 'nplots': len(bamlist), 'pheight': args.pheight, 'pwidth':args.pwidth, 'psize': args.psize}
+""" %kwargs ## %{'mcov': tmp.name, 'plotname': plotname + '.pdf', 'pheight': args.pheight, 'pwidth':args.pwidth, 'psize': args.psize}
     rout.write(rplot)
     rout.close()
     p= subprocess.Popen('Rscript %s' %(kwargs['rscript']), stdout= subprocess.PIPE, stderr= subprocess.PIPE, shell= True)
@@ -561,7 +582,7 @@ def main():
     args = parser.parse_args()
     bamlist= getFileList(args.ibam)
     print('\nFiles to analyze (%s found):\n%s\n' %(len(bamlist), ', '.join(bamlist)))
-    if len(bamlist) == 0:
+    if len(bamlist) == 0 and not args.replot:
         sys.exit('No file found!\n')
     # Output settings
     # ---------------
@@ -606,11 +627,9 @@ def main():
     header= '\t'.join(header)
     
     outputPDF= [] ## List of all the pdf files generated. Used only for --onefile
-    if args.pheight <= 0:
-        "Get sensible deafault values for height"
-        args.pheight= (args.pwidth * 0.35) + ((args.pwidth/10) /len(bamlist))
+        
     ## -------------------------------------------------------------------------
-    if args.rpm:
+    if args.rpm and not args.replot:
         sys.stdout.write('Getting library sizes... ')
         libsizes_dict= getLibrarySizes(bamlist)
         libsizes= [libsizes_dict[x] for x in bamlist]
@@ -619,63 +638,69 @@ def main():
     inbed= pybedtools.BedTool(args.bed)
     for region in inbed:
         print('Processing: %s' %(str(region).strip()))
-        regname= region.chrom + '_' + str(region.start) + '_' + str(region.end)
-        ## Reference  FASTA file
-        ## File with reference sequence. Open it even if it is going to be header only.
-        ## ---------------------------------------------------------------------
+        regname= '_'.join([str(x) for x in [region.chrom, region.start, region.end]])
+        if region.name != '':
+            regname = regname + '_' + region.name 
+
+        ## Prepare output file names
+        ## --------------------------------------------------------------------
         fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
-        region_seq= open(fasta_seq_name, 'w')
-        region_seq.write('\t'.join(['chrom', 'pos', 'base']) + '\n')
-        if ((region.end - region.start) <= args.max_fa) and args.fasta:
-            fasta_seq= getRefSequence(args.fasta, region)
-            for line in fasta_seq:
-                region_seq.write('\t'.join([str(x) for x in line]) + '\n')
-        region_seq.close()
-        ## Get annotation:
-        ## --------------------------------------------------------------------
-        annot_file= ''
-        if args.gtf:
-            annot_file= os.path.join(tmpdir, regname + '.annot.txt')
-            prepare_annotation(args.gtf, region, annot_file)
-        ## Pileup: This is the time consuming part
-        ## --------------------------------------------------------------------
-        r= '-r ' + region.chrom + ':' + str(region.start) + '-' + str(region.end)
-        mpile_cmd= compile_mpileup(bamlist, '-BQ0', '-d1000000', r)
+        annot_file= os.path.join(tmpdir, regname + '.annot.txt')
         mpileup_name= os.path.join(tmpdir, regname) + '.mpileup.bed.txt'
-        mpileup_bed= open(mpileup_name, 'w')
-        for p in eval(mpile_cmd):
-            pd= parse_pileup(p, bamlist)
-            bedline= pileupToBed(pd, bamlist)
-            if args.rpm:
-                bedline= bedline[0:6] + rpm(bedline[6:], libsizes)
-            mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
-        mpileup_bed.close()
-        if os.stat(mpileup_name).st_size == 0:
-            mpileup_bed= open(mpileup_name, 'w')
-            bedline= make_dummy_mpileup(region.chrom, region.start, region.start + 1, len(bamlist))
-            mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
-            mpileup_bed.close()
-        ## Divide interval in this many regions. No difference if region span < NWINDS
-        ## --------------------------------------------------------------------
-        w= makeWindows(region, NWINDS) 
-        ## Assign to each pileup position its window --------------------------
-        mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(w, wb= True)
-        ## Aggregate counts in each position by window: -----------------------
-        pile_cols= range(7, len(bedline)+1) ## Indexes of columns with counts
-        wind_idx= [len(bedline)+1, len(bedline)+2, len(bedline)+3] ## These are the indexes of the columns containing the windows
-        mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= ['mean'] * len(pile_cols), stream= False)
         mpileup_grp_name= os.path.join(tmpdir, regname) + '.grp.bed.txt'
-        mpileup_grp_fout= open(mpileup_grp_name, 'w')
-        mpileup_grp_fout.write(header + '\n')
-        for line in mpileup_grp:
-            mpileup_grp_fout.write(str(line))
-        mpileup_grp_fout.close()
+        pdffile= os.path.join(tmpdir, regname + '.pdf')
+        rscript= os.path.join(tmpdir, regname + '.R')
+        if not args.replot:
+            ## Reference  FASTA file
+            ## File with reference sequence. Open it even if it is going to be header only.
+            ## ---------------------------------------------------------------------
+            region_seq= open(fasta_seq_name, 'w')
+            region_seq.write('\t'.join(['chrom', 'pos', 'base']) + '\n')
+            if ((region.end - region.start) <= args.max_fa) and args.fasta:
+                fasta_seq= getRefSequence(args.fasta, region)
+                for line in fasta_seq:
+                    region_seq.write('\t'.join([str(x) for x in line]) + '\n')
+            region_seq.close()
+            ## Get annotation:
+            ## --------------------------------------------------------------------
+            #annot_file= ''
+            if args.gtf:
+                prepare_annotation(args.gtf, region, annot_file)
+            ## Pileup: This is the time consuming part
+            ## --------------------------------------------------------------------
+            r= '-r ' + region.chrom + ':' + str(region.start) + '-' + str(region.end)
+            mpile_cmd= compile_mpileup(bamlist, '-BQ0', '-d1000000', r)
+            mpileup_bed= open(mpileup_name, 'w')
+            for p in eval(mpile_cmd):
+                pd= parse_pileup(p, bamlist)
+                bedline= pileupToBed(pd, bamlist)
+                if args.rpm:
+                    bedline= bedline[0:6] + rpm(bedline[6:], libsizes)
+                mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
+            mpileup_bed.close()
+            if os.stat(mpileup_name).st_size == 0:
+                mpileup_bed= open(mpileup_name, 'w')
+                bedline= make_dummy_mpileup(region.chrom, region.start, region.start + 1, len(bamlist))
+                mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
+                mpileup_bed.close()
+            ## Divide interval in this many regions. No difference if region span < NWINDS
+            ## --------------------------------------------------------------------
+            w= makeWindows(region, NWINDS) 
+            ## Assign to each pileup position its window --------------------------
+            mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(w, wb= True)
+            ## Aggregate counts in each position by window: -----------------------
+            pile_cols= range(7, len(bedline)+1) ## Indexes of columns with counts
+            wind_idx= [len(bedline)+1, len(bedline)+2, len(bedline)+3] ## These are the indexes of the columns containing the windows
+            mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= ['mean'] * len(pile_cols), stream= False)
+            mpileup_grp_fout= open(mpileup_grp_name, 'w')
+            mpileup_grp_fout.write(header + '\n')
+            for line in mpileup_grp:
+                mpileup_grp_fout.write(str(line))
+            mpileup_grp_fout.close()
         # ----------------------------------------------------------------------
         # Plotting 
         # ----------------------------------------------------------------------
-        pdffile= os.path.join(tmpdir, regname + '.pdf')
         outputPDF.append(pdffile)
-        rscript= os.path.join(tmpdir, regname + '.R')
         if args.rpm:
             ylab= 'Reads per million'
         else:
@@ -686,7 +711,6 @@ def main():
               plotname= regname,
               mcov= mpileup_grp_name,
               refbases= fasta_seq_name,
-              nplots= len(bamlist),
               pheight= args.pheight,
               pwidth= args.pwidth,
               psize= args.psize,
