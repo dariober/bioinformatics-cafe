@@ -231,8 +231,8 @@ def pileupBaseCallsToNucs(bases, refbase):
         refbase:
             The reference base for this position. This is the 3rd column in mpileup.
         Return:
-            Dictionary with where values are counts and keys cnt_A, cnt_C, cnt_G,
-            cnt_T, cnt_N, cnt_Z (this latter being the sum).
+            Dictionary with where values are counts and keys A, C, G,
+            T, N, Z (this latter being the sum).
         
         See also:
             http://samtools.sourceforge.net/pileup.shtml 
@@ -253,13 +253,8 @@ def pileupBaseCallsToNucs(bases, refbase):
             else:
                 pass
         callDict[refbase] += (callDict['.'] + callDict[','])
-        nuc_counts['cnt_A']= callDict['A']
-        nuc_counts['cnt_C']= callDict['C']
-        nuc_counts['cnt_G']= callDict['G']
-        nuc_counts['cnt_T']= callDict['T']
-        nuc_counts['cnt_N']= callDict['N']
-        nuc_counts['cnt_Z']= sum((callDict[x] for x in ('A', 'C', 'G', 'T', 'N')))
-        return(nuc_counts)
+        callDict['Z']= sum((callDict[x] for x in ('A', 'C', 'G', 'T', 'N')))
+        return(callDict)
         
 def parse_pileup(pileup_line, bams):
     """Parse a pileup line (str) typically returned by pysam.mpileup().
@@ -267,7 +262,7 @@ def parse_pileup(pileup_line, bams):
         List of bam files. Must be in the same order as in mpileup!
     Return:
         Dict with keys: {'chrom': <str>, 'pos': <int>, 'base': <str>,
-            <bam.1>: {'depth': int, 'cnt_A': int, 'cnt_C': int, 'cnt_G': int, 'cnt_T': int, 'cnt_N': int},
+            <bam.1>: {'depth': int, 'A': int, 'C': int, 'G': int, 'T': int, 'N': int},
             <bam.2>: {...}, ...}
     """
     pdict= {}
@@ -293,20 +288,23 @@ def pileupToBed(pdict, bams):
         order as the list used for parse_pileup()
     """
     bedlist= [pdict['chrom'], pdict['pos']-1, pdict['pos'], pdict['base'], '.', '.']
-    for bam in bams:
-        bedlist.append(pdict[bam]['depth'])
-    for bam in bams:
-        bedlist.append(pdict[bam]['cnt_A'])
-    for bam in bams:
-        bedlist.append(pdict[bam]['cnt_C'])
-    for bam in bams:
-        bedlist.append(pdict[bam]['cnt_G'])
-    for bam in bams:
-        bedlist.append(pdict[bam]['cnt_T'])
-    for bam in bams:
-        bedlist.append(pdict[bam]['cnt_N'])
-    for bam in bams:
-        bedlist.append(pdict[bam]['cnt_Z'])
+    for c in ['depth', 'A', 'C', 'G', 'T', 'N', 'Z']:
+        for bam in bams:
+            bedlist.append(pdict[bam][c])
+#    for bam in bams:
+#        bedlist.append(pdict[bam]['depth'])
+#    for bam in bams:
+#        bedlist.append(pdict[bam]['A'])
+#    for bam in bams:
+#        bedlist.append(pdict[bam]['C'])
+#    for bam in bams:
+#        bedlist.append(pdict[bam]['G'])
+#    for bam in bams:
+#        bedlist.append(pdict[bam]['T'])
+#    for bam in bams:
+#        bedlist.append(pdict[bam]['N'])
+#    for bam in bams:
+#        bedlist.append(pdict[bam]['Z'])
     return(bedlist)
 
 def rpm(raw_counts, libsize):
@@ -383,6 +381,7 @@ refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors=
 do.gtf<- FALSE
 if('%(gtf)s' != ''){
     gtf<- read.table('%(gtf)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')
+    gtf<- gtf[which(gtf$type %%in%% c('start_codon', 'stop_codon') == FALSE),] ## Do not annotate start and stop codon
     if(nrow(gtf) > 0){
         do.gtf<- TRUE
     }
@@ -390,11 +389,11 @@ if('%(gtf)s' != ''){
 
 ## Column indexes of the counts
 count_pos<- list(
-    cnt_Z= grep('\\\.cnt_Z$', names(mcov), perl= TRUE), ## Indexes of columns with sum of A+C+G+T
-    cnt_A= grep('\\\.cnt_A$', names(mcov), perl= TRUE),
-    cnt_C= grep('\\\.cnt_C$', names(mcov), perl= TRUE),
-    cnt_G= grep('\\\.cnt_G$', names(mcov), perl= TRUE),
-    cnt_T= grep('\\\.cnt_T$', names(mcov), perl= TRUE)
+    Z= grep('\\\.Z$', names(mcov), perl= TRUE), ## Indexes of columns with sum of A+C+G+T
+    A= grep('\\\.A$', names(mcov), perl= TRUE),
+    C= grep('\\\.C$', names(mcov), perl= TRUE),
+    G= grep('\\\.G$', names(mcov), perl= TRUE),
+    T= grep('\\\.T$', names(mcov), perl= TRUE)
 )
 
 ## If the range is too wide, use only one colour:
@@ -419,11 +418,11 @@ pdf('%(pdffile)s', width= %(pwidth)s/2.54, height= (%(pheight)s*nplots)/2.54, po
 par(mfrow= c(nplots, 1), las= 1, mar= c(0.5, 4, 0.5, 1), oma= c(3, 1, 3, 1), bty= 'l', mgp= c(3, 0.7, 0))
 for(p in seq(1, nplots)){
     libname<- sub('\\\.bam\\\.depth', '', names(mcov)[p+3], perl= TRUE)
-    Z<- mcov[, count_pos$cnt_Z[p]]
-    A<- mcov[, count_pos$cnt_A[p]]
-    C<- mcov[, count_pos$cnt_C[p]] + A
-    G<- mcov[, count_pos$cnt_G[p]] + C
-    T<- mcov[, count_pos$cnt_T[p]] + G
+    Z<- mcov[, count_pos$Z[p]]
+    A<- mcov[, count_pos$A[p]]
+    C<- mcov[, count_pos$C[p]] + A
+    G<- mcov[, count_pos$G[p]] + C
+    T<- mcov[, count_pos$T[p]] + G
 
     ## Set maximum for y-axt
     if('%(ylim)s' == 'max'){
@@ -444,15 +443,20 @@ for(p in seq(1, nplots)){
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= A, col= colList$colA, border= 'transparent')
     mtext(side= 3, text= libname, adj= 0.02, line= -1, col= tgrey, cex= 0.9)
     if(p == 1){
+        ## Plotting of annotation
         if(do.gtf){
             yTop= par('usr')[4]
             y0 <- yTop * 1.05
-            arrows(x0= gtf$start, y0= y0, x1= gtf$end, y1= y0,
-                col= 'firebrick4', ## ifelse(gtf$type == 'CDS', 'firebrick4', gtf$col),
-                lwd= ifelse(gtf$type == 'CDS', 4, 1),
-                length= 0.05,
-                code= ifelse(gtf$strand == '+', 2, ifelse(gtf$strand == '-', 1, 0)), xpd= NA)
-            text(labels= gtf$name, x= gtf$start, y= yTop * 1.1, ifelse(nplots > 3, 0.7, 0.8), col= 'darkgrey', xpd= NA)
+            thick_offset<- y0 * 0.025 ## Amount to add and subtract to y0 to draw thich boxes (CDSs)
+            thin_offset<- y0 * 0.015 ## Amount to add and subtract to y0 to draw thich boxes (CDSs)
+            rect(xleft= gtf$start,
+                        ybottom= y0 - ifelse(gtf$type == 'CDS', thick_offset, thin_offset),
+                        xright= gtf$end,
+                        ytop= y0 + ifelse(gtf$type == 'CDS', thick_offset, thin_offset),
+                        col= 'firebrick4', xpd= NA, border= 'transparent')
+            ## Plotting of gene names with strand
+            gene_strand<- paste(gtf$name, ifelse(gtf$strand %%in%% c('+', '-'), gtf$strand, ''))
+            text(labels= gene_strand, x= rowMeans(gtf[,c('start', 'end')]), y= y0 + thick_offset + thin_offset, cex= ifelse(nplots > 3, 0.7, 0.8), col= 'black', xpd= NA, adj= c(0.5,0))
         }
     }
 }
@@ -580,12 +584,12 @@ def main():
     ## --------------------------------------------------------------------------
     header= ['chrom', 'start', 'end']
     header.extend([x + '.depth' for x in bamlist])
-    header.extend([x + '.cnt_A' for x in bamlist])
-    header.extend([x + '.cnt_C' for x in bamlist])
-    header.extend([x + '.cnt_G' for x in bamlist])
-    header.extend([x + '.cnt_T' for x in bamlist])
-    header.extend([x + '.cnt_N' for x in bamlist])
-    header.extend([x + '.cnt_Z' for x in bamlist])
+    header.extend([x + '.A' for x in bamlist])
+    header.extend([x + '.C' for x in bamlist])
+    header.extend([x + '.G' for x in bamlist])
+    header.extend([x + '.T' for x in bamlist])
+    header.extend([x + '.N' for x in bamlist])
+    header.extend([x + '.Z' for x in bamlist])
     header= '\t'.join(header)
     
     outputPDF= [] ## List of all the pdf files generated. Used only for --onefile
@@ -632,7 +636,7 @@ def main():
         mpileup_bed.close()
         if os.stat(mpileup_name).st_size == 0:
             mpileup_bed= open(mpileup_name, 'w')
-            bedline= make_dummy_mpileup(region.chrom, region.start, region.end, len(bamlist))
+            bedline= make_dummy_mpileup(region.chrom, region.start, region.start + 1, len(bamlist))
             mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
             mpileup_bed.close()
         ## Divide interval in this many regions. No difference if region span < NWINDS
@@ -681,7 +685,7 @@ def main():
             print(rgraph['stdout'])
             sys.exit(rgraph['stderr'])
         if not onefile:
-            ## Copy PDFs from temp dir to output dir. Unless you wnated them in onefile
+            ## Copy PDFs from temp dir to output dir. Unless you want them in onefile
             shutil.copyfile(pdffile, os.path.join(outdir, regname + '.pdf'))
     if onefile:
         catPdf(in_pdf= outputPDF, out_pdf= args.onefile)
