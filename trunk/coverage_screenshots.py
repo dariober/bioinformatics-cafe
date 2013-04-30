@@ -31,13 +31,6 @@ EXAMPLE:
 
     cat actb.bed
     >chr7	5566757	5566829
-    
-REQUIREMENTS:
-    python 2.7 (2.6 should do, 3.x not sure)
-    pysam
-    pybedtools
-    PyPDF2 (optional: Used to concatenate PDFs in a single one)
-    R on $PATH
 
     """, formatter_class= argparse.RawTextHelpFormatter)
 
@@ -95,7 +88,6 @@ Options are: 'max' (default) all y-axes set to the maximum value of all the plot
 The lower limit of the y-axis is always 0.
                    ''')
 
-
 parser.add_argument('--max_nuc', '-m',
                     default= 100,
                     type= int,
@@ -112,14 +104,21 @@ bottome of the lower plot. Default 100 (i.e. regions smaller than 100 bp will ha
 sequence shown). Ignored if --fasta is not given 
                    ''')
 
+parser.add_argument('--cex_axis',
+                    default= -1,
+                    type= float,
+                    help='''Character exapansion for the axis annotation (cex.axis in R). Use
+negative value to set default.
+                   ''')
+
 parser.add_argument('--pheight', '-H',
-                    default= 6,
+                    default= -1,
                     type= float,
                     help='''Height of *each* plot in cm. Default 6
                    ''')
 
 parser.add_argument('--pwidth', '-W',
-                    default= 24,
+                    default= 15,
                     type= float,
                     help='''Width of the plots in cm. Default 24
                    ''')
@@ -159,7 +158,7 @@ def getLibrarySizes(bams):
         Dict as {<bam name>:<tot reads>}    
     """
     libsizes= {}
-    for bam in bamlist:
+    for bam in bams:
         idxstat= pysam.idxstats(bam)
         idxstat= [x.split('\t') for x in idxstat]
         libsize= sum([int(x[2]) for x in idxstat])
@@ -340,6 +339,12 @@ def getRefSequence(fasta, region):
     return(seq_table)
     
 def RPlot(**kwargs):
+    """Write to file the R script to produce the plots and execute it using Rscript
+    kwargs: 
+        Arguments that will be interpolated in the string that make up the script.
+    Return:
+        A dictionary {'stdout': 'stderr':} with the captured output from Rscript.
+    """
     rout= open(kwargs['rscript'], 'w')
     rplot= """#!/usr/bin/env Rscript
 makeTransparent<-function(someColor, alpha=100){
@@ -354,8 +359,12 @@ makeTransparent<-function(someColor, alpha=100){
     apply(newColor, 2, function(curcoldata){rgb(red=curcoldata[1], green=curcoldata[2],
     blue=curcoldata[3],alpha=alpha, maxColorValue=255)})
 }
+# ------------------------------------------------------------------------------
+# Intial settings
+# ------------------------------------------------------------------------------
+lwd= 4
+cex.axis<- ifelse('%(cex_axis)s' < 0, par('cex.axis'), %(cex_axis)s)
 
-lwd= 4 ## Line width
 colList<- list(
     colA= makeTransparent('green', 95),
     colC= makeTransparent('blue', 95),
@@ -365,7 +374,9 @@ colList<- list(
 )
 tgrey<- makeTransparent('blue', 80)
 
-## INPUT
+# ------------------------------------------------------------------------------
+# INPUT
+# ------------------------------------------------------------------------------
 ## First read header line only as data to remove paths
 header<- read.table('%(mcov)s', header= FALSE, sep= '\t', stringsAsFactors= FALSE, nrows= 1, comment.char= '')
 header<- sapply(header[1,], basename)
@@ -387,9 +398,10 @@ if('%(gtf)s' != ''){
     }
 }
 
-## Column indexes of the counts
+# ------------------------------------------------------------------------------
+# Column indexes of the counts
 count_pos<- list(
-    Z= grep('\\\.Z$', names(mcov), perl= TRUE), ## Indexes of columns with sum of A+C+G+T
+    Z= grep('\\\.Z$', names(mcov), perl= TRUE), ## Indexes of columns with sum of A+C+G+T+N
     A= grep('\\\.A$', names(mcov), perl= TRUE),
     C= grep('\\\.C$', names(mcov), perl= TRUE),
     G= grep('\\\.G$', names(mcov), perl= TRUE),
@@ -405,18 +417,14 @@ if(region_size > %(max_nuc)s) {
 xpos<- rowMeans(mcov[, c('start', 'end')]) + 0.5
 nplots<- %(nplots)s
 
-## Set y-limit
-if('%(ylim)s' == 'max'){
-    ylim<- max(mcov[, 4:ncol(mcov)])
-} else if('%(ylim)s' == 'indiv'){
-    ylim<- TRUE
-} else {
-    ylim= FALSE
-}
-
+# ------------------------------------------------------------------------------
+# Plotting
+# ------------------------------------------------------------------------------
 pdf('%(pdffile)s', width= %(pwidth)s/2.54, height= (%(pheight)s*nplots)/2.54, pointsize= %(psize)s)
-par(mfrow= c(nplots, 1), las= 1, mar= c(0.5, 4, 0.5, 1), oma= c(3, 1, 3, 1), bty= 'l', mgp= c(3, 0.7, 0))
+par(mfrow= c(nplots, 1), las= 1, mar= c(0.5, 4, 0.5, 1), oma= c(3, 1.1, 3, 1.1), bty= 'l', mgp= c(3, 0.7, 0))
 for(p in seq(1, nplots)){
+    ## For each library:
+    ## -----------------
     libname<- sub('\\\.bam\\\.depth', '', names(mcov)[p+3], perl= TRUE)
     Z<- mcov[, count_pos$Z[p]]
     A<- mcov[, count_pos$A[p]]
@@ -425,15 +433,16 @@ for(p in seq(1, nplots)){
     T<- mcov[, count_pos$T[p]] + G
 
     ## Set maximum for y-axt
+    ## ---------------------
     if('%(ylim)s' == 'max'){
-        ylim<- max(mcov[, 4:ncol(mcov)])
+        ylim<- max(mcov[, 5:ncol(mcov)])
     } else if('%(ylim)s' == 'indiv'){
         ylim<- max(Z)
     } else {
         ylim<- as.numeric('%(ylim)s')
     }
     
-    plot(xpos, Z, type= 'n', xlab= '', ylab= '', xaxt= 'n', ylim= c(0, ylim), lwd= lwd, xlim= c(%(xlim1)s, %(xlim2)s))
+    plot(xpos, Z, type= 'n', xlab= '', ylab= '', xaxt= 'n', ylim= c(0, ylim), lwd= lwd, xlim= c(%(xlim1)s, %(xlim2)s), cex.axis= cex.axis)
     rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= "grey95", border= 'transparent')
     grid(col= 'darkgrey')
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= Z, col= colList$colZ, border= 'transparent')
@@ -444,6 +453,7 @@ for(p in seq(1, nplots)){
     mtext(side= 3, text= libname, adj= 0.02, line= -1, col= tgrey, cex= 0.9)
     if(p == 1){
         ## Plotting of annotation
+        ## ----------------------
         if(do.gtf){
             yTop= par('usr')[4]
             y0 <- yTop * 1.05
@@ -456,12 +466,13 @@ for(p in seq(1, nplots)){
                         col= 'firebrick4', xpd= NA, border= 'transparent')
             ## Plotting of gene names with strand
             gene_strand<- paste(gtf$name, ifelse(gtf$strand %%in%% c('+', '-'), gtf$strand, ''))
-            text(labels= gene_strand, x= rowMeans(gtf[,c('start', 'end')]), y= y0 + thick_offset + thin_offset, cex= ifelse(nplots > 3, 0.7, 0.8), col= 'black', xpd= NA, adj= c(0.5,0))
+            text(labels= gene_strand, x= rowMeans(gtf[,c('start', 'end')]), y= y0 + thick_offset + thin_offset, cex= cex.axis * 0.9, col= 'black', xpd= NA, adj= c(0.5,0)) ## 
         }
     }
 }
+
 x<- axis(side= 1, labels= FALSE)
-axis(labels= formatC(x, format= 'd', big.mark= ','), side= 1, at= x)
+axis(labels= formatC(x, format= 'd', big.mark= ','), side= 1, at= x, cex.axis= cex.axis)
 mtext(text= '%(plotname)s', cex= 0.95, outer= TRUE, side= 4, las= 0, line= 0, col= 'grey50')
 mtext(text= '%(ylab)s', cex= 0.95, outer= TRUE, side= 2, las= 0, line= -0.2)
 if(nrow(refbases) > 0){
@@ -550,6 +561,8 @@ def main():
     args = parser.parse_args()
     bamlist= getFileList(args.ibam)
     print('\nFiles to analyze (%s found):\n%s\n' %(len(bamlist), ', '.join(bamlist)))
+    if len(bamlist) == 0:
+        sys.exit('No file found!\n')
     # Output settings
     # ---------------
     if (args.outdir is not None) and (args.onefile is not None):
@@ -593,6 +606,9 @@ def main():
     header= '\t'.join(header)
     
     outputPDF= [] ## List of all the pdf files generated. Used only for --onefile
+    if args.pheight <= 0:
+        "Get sensible deafault values for height"
+        args.pheight= (args.pwidth * 0.35) + ((args.pwidth/10) /len(bamlist))
     ## -------------------------------------------------------------------------
     if args.rpm:
         sys.stdout.write('Getting library sizes... ')
@@ -679,13 +695,15 @@ def main():
               xlim2= region.end,
               gtf= annot_file,
               max_nuc= args.max_nuc,
-              ylim= args.ylim)
+              ylim= args.ylim,
+              cex_axis= args.cex_axis)
         if rgraph['stderr'] != '':
             print('\nExpection in executing R script "%s"\n' %(rscript))
             print(rgraph['stdout'])
             sys.exit(rgraph['stderr'])
-        if not onefile:
-            ## Copy PDFs from temp dir to output dir. Unless you want them in onefile
+        if not onefile and tmpdir != outdir:
+            ## Copy PDFs from temp dir to output dir. Unless you want them in onefile or
+            ## if the final destination dir has been set to be also the tempdir
             shutil.copyfile(pdffile, os.path.join(outdir, regname + '.pdf'))
     if onefile:
         catPdf(in_pdf= outputPDF, out_pdf= args.onefile)
