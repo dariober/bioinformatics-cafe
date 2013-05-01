@@ -57,7 +57,7 @@ resolution plots will show the reference bases at each position.
                    ''')
 
 input_args.add_argument('--gtf', '-g',
-                   help='''GTF file to fetch annotation from. E.g. gene.gtf in
+                    help='''GTF file to fetch annotation from. E.g. gene.gtf in
 iGenomes. Can be gzip compressed.
                    ''')
 
@@ -712,7 +712,10 @@ def main():
         ## Prepare output file names
         ## --------------------------------------------------------------------
         fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
-        annot_file= os.path.join(tmpdir, regname + '.annot.txt')
+        if args.gtf:
+            annot_file= os.path.join(tmpdir, regname + '.annot.txt')
+        else:
+            annot_file= ''
         mpileup_name= os.path.join(tmpdir, regname) + '.mpileup.bed.txt'
         mpileup_grp_name= os.path.join(tmpdir, regname) + '.grp.bed.txt'
         pdffile= os.path.join(tmpdir, regname + '.pdf')
