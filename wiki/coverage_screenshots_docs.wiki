@@ -35,19 +35,16 @@ the net.
 == Required python packages ==
 
     * [http://docs.python.org/dev/library/argparse.html argparse]
-        Included in python 2.7 standard library
-    * pysam
-        See http://code.google.com/p/pysam/
-    * pybedtools
-        See http://pythonhosted.org/pybedtools/index.html
-    * PyPDF2
+        Already included in python 2.7 standard library
+    * [http://code.google.com/p/pysam/ pysam]        
+    * [http://pythonhosted.org/pybedtools/ pybedtools]
+    * [https://pypi.python.org/pypi/PyPDF2 PyPDF2]
         _Optional_: Only used to concatenate all PDF files in a single one (`--onefile`).
-        See https://pypi.python.org/pypi/PyPDF2
 
 == Installation ==
 
 Assuming the requirements above are satisfied there isn't really any installation to be done.
-Just download, unzip, and copy `coverage_screenshots.py` to a directory of your covenience
+Just download, unzip, and copy `coverage_screenshots.py` to a directory of your convenience
 {{{
     tar zxvf coverage_screenshots-x.x.x.tar.gz
     cd coverage_screenshots-x.x.x
