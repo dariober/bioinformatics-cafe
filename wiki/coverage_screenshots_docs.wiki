@@ -42,7 +42,7 @@ the net.
 
 == Installation ==
 
-``coverage_screenshots.py`` lives at http://bioinformatics-misc.googlecode.com/svn/trunk/coverage_screenshots.py. A package to download is at [...].
+`coverage_screenshots.py` lives at http://bioinformatics-misc.googlecode.com/svn/trunk/coverage_screenshots.py. A package to download is at [...].
 
 Assuming the requirements above are satisfied there isn't really any installation to be done.
 Just download, unzip, and copy `coverage_screenshots.py` to a directory of your convenience
