@@ -38,7 +38,8 @@ EXAMPLE:
 input_args= parser.add_argument_group('Input options', '')
 
 input_args.add_argument('--ibam', '-i',
-                   required= True,
+                   required= False,
+                   default= [],
                    nargs= '+',
                    help='''List of bam files, sorted and indexed to visualize.
 Metacharacters are expanded by python (`glob`). E.g. to match all the bam files use
@@ -133,9 +134,10 @@ graph_args.add_argument('--cex_axis', default= -1, type= float, help='''Characte
 Use negative value to set default. ''')
 graph_args.add_argument('--cex_range', default= -1, type= float, help='''Character exapansion for the text range of plot''')
 graph_args.add_argument('--cex_seq', default= -1, type= float, help='''Character exapansion for the nucleotide sequence''')
-graph_args.add_argument('--line_range', default= 3, type= float, help='''Distance of range bar from x-axis. In R's line units''')
-graph_args.add_argument('--line_seq', default= 2, type= float, help='''Distance of nucleotide sequence bar from x-axis. In R's line units''')
-graph_args.add_argument('--oma', default= [4, 1.1, 3, 1.1], nargs= 4, type= float, help='''List of 4 floats giving the outer margins of the plot.
+graph_args.add_argument('--line_range', default= 2, type= float, help='''Distance of range bar from x-axis. In R's line units''')
+graph_args.add_argument('--line_seq', default= 3.5, type= float, help='''Distance of nucleotide sequence bar from x-axis. In R's line units''')
+graph_args.add_argument('--col_seq', default= 'black', help='''Colour for the nucleotide sequence''')
+graph_args.add_argument('--oma', default= [5, 1.1, 3, 1.1], nargs= 4, type= float, help='''List of 4 floats giving the outer margins of the plot.
 Default 4 1.1 3 1.1''')
 graph_args.add_argument('--mar', default= [0.5, 4, 0.5, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.
 Default 0.5 4 0.5 1''')
@@ -394,8 +396,6 @@ def quoteStringList(x):
     s= s.strip(', ')
     return(s)
 
-print(quoteStringList(['blue', 'black', 'greeen']))
-    
 def RPlot(**kwargs):
     """Write to file the R script to produce the plots and execute it using Rscript
     kwargs: 
@@ -425,10 +425,10 @@ cex.axis<- ifelse(%(cex_axis)s < 0, par('cex.axis'), %(cex_axis)s)
 
 col_nuc<- c(%(col_nuc)s)
 colList<- list(
-    colA= ifelse(col_nuc != '', col_nuc[1], makeTransparent('green', 95)),
-    colC= ifelse(col_nuc != '', col_nuc[2], makeTransparent('blue', 95)),
-    colG= ifelse(col_nuc != '', col_nuc[3], makeTransparent('orange', 95)),
-    colT= ifelse(col_nuc != '', col_nuc[4], makeTransparent('red', 95)),
+    colA= ifelse(is.null(col_nuc), makeTransparent('green', 95), col_nuc[1]),
+    colC= ifelse(is.null(col_nuc), makeTransparent('blue', 95), col_nuc[2]),
+    colG= ifelse(is.null(col_nuc), makeTransparent('orange', 95), col_nuc[3]),
+    colT= ifelse(is.null(col_nuc), makeTransparent('red', 95), col_nuc[4]),
     colZ= '%(col_cov)s'
 )
 
@@ -547,7 +547,16 @@ axis(labels= formatC(x, format= 'd', big.mark= ','), side= 1, at= x, cex.axis= c
 mtext(text= '%(plotname)s', cex= 0.95, outer= TRUE, side= 4, las= 0, line= 0, col= 'grey50')
 mtext(text= '%(ylab)s', cex= 0.95, outer= TRUE, side= 2, las= 0, line= -0.2)
 if(nrow(refbases) > 0){
-    mtext(at= refbases$pos, side= 1, text= refbases$base, line= %(line_seq)s, cex= ifelse(nplots > 3, 0.66, 0.75), adj= 1, font= 11)
+    cex_seq<- ifelse(%(cex_seq)s <= 0, ifelse(nplots > 3, 0.66, 0.75), %(cex_seq)s)
+    mtext(at= refbases$pos,
+        side= 1,
+        text= refbases$base,
+        line= %(line_seq)s,
+        cex= cex_seq,
+        col= '%(col_seq)s',
+        adj= 1,
+        family= 'mono',
+        font= 1)
 }
 ## Text for range
 wcex_range<- ifelse(%(cex_range)s <= 0, ifelse(nplots > 3, 0.66, 0.7), %(cex_range)s)
@@ -635,8 +644,11 @@ NWINDS= 1000 ## Number of windows to divide each bed region. Regions smaller tha
 
 def main():
     args = parser.parse_args()
+    if args.replot and args.tmpdir is None:
+        sys.exit('\nCannot replot without a working (--tmpdir) directory!\n')
     bamlist= getFileList(args.ibam)
-    print('\nFiles to analyze (%s found):\n%s\n' %(len(bamlist), ', '.join(bamlist)))
+    if not args.replot:
+        print('\nFiles to analyze (%s found):\n%s\n' %(len(bamlist), ', '.join(bamlist)))
     if len(bamlist) == 0 and not args.replot:
         sys.exit('No file found!\n')
     # Output settings
@@ -787,6 +799,7 @@ def main():
               cex_seq= args.cex_seq,
               line_range= args.line_range,
               line_seq= args.line_seq,
+              col_seq= args.col_seq,
               oma= ', '.join([str(x) for x in args.oma]),
               mar= ', '.join([str(x) for x in args.mar]))
         
