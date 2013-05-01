@@ -2,8 +2,6 @@
 
 = Introduction  & Description =
 
-http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566644_5570292_ACTB.jpg
-
 *coverage_screenshots.py* produces coverage plots for one or more bam files at
 the intervals specified in a bed file. Plots are written in pdf format, one per
 region or can be concatenated in a single file.
@@ -77,10 +75,11 @@ postions specified in the bed file `actb.bed`. It will also add the postions of
 exons and CDSs as reported in `genes.gtf.gz`. with `--rpm` coverage is reported as
 _reads per millio_.
 
-.. figure::  figures/chr7_5566644_5570292_ACTB.jpg
-   :align:   center
+----
 
-   Example output from `coverage_screenshots.py` of RNA-Seq data for the ACTB gene.
+http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566644_5570292_ACTB.jpg
+----
+Example output from `coverage_screenshots.py` of RNA-Seq data for the ACTB gene.
 
 = Requirements =
 
