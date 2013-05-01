@@ -37,10 +37,10 @@ The necessary input files are:
  
 _MEMO_ You can sort and index a bam file, assuming you have samtools (http://samtools.sourceforge.net/), with
 
-{{
+{{{
     samtools sort myfile.bam myfile_sort
     samtools index myfile_sort.bam
-}}  
+}}}  
 
 = Description of output =
 
@@ -66,9 +66,9 @@ bed interval:
 files are named according to the bed interval from which they come (`chrom_start_end[_name]` e.g. _chr7_5566644_5570292_ACTB.pdf_).
 
 For example, the following execution
-{{
+{{{
     coverage_screenshots.py --ibam *.bam --gtf genes.gtf.gz --bed actb.bed --rpm 
-}}
+}}}
 
 will plot the coverage of all the bam files in the current directory at the
 postions specified in the bed file `actb.bed`. It will also add the postions of
@@ -108,35 +108,35 @@ the net.
 
 Assuming the requirements above are satisfied there isn't really any installation to be done.
 Just download, unzip, and copy `coverage_screenshots.py` to a directory of your covenience
-{{
+{{{
     tar zxvf coverage_screenshots-x.x.x.tar.gz
     cd coverage_screenshots-x.x.x
     cp  coverage_screenshots.py ~/bin/
-}}
+}}}
 
  =Usage & Examples =
 
 The source directory contains data files for testing and examples
-{{
+{{{
         cd example
         cat actb.bed
             chr7	5566757	5566829	ACTB
             chr7	5566755	5567571	ACTB
             chr7	5566644	5570292	ACTB
-}}
+}}}
 To see all the available options and get help
-{{    
+{{{    
     coverage_screenshots.py -h
-}}
+}}}
 
 == Example 1: Vanilla ==
 
 The minimum necessary to produce coverage plots is bam files *sorted* and *indexed* and
 a bed file of positions to capture. (In fact, bam files are not necessary if you want to re-plot
 existing data, see below)
-{{
+{{{
     coverage_screenshots.py -i bam/ds0*.bam -b actb.bed
-}}
+}}}
 Default settings plot raw read counts scaling each region to the maximum of all the
 files.
 
@@ -144,8 +144,8 @@ files.
 
 Now, rescale coverage to reads per million (RPM) and set the y-axis to 40000 rpm. Also add annotation
 of exons and CDSs in the target intervals and report the underlying nucleotide sequence. Sequence is
-reported if the target region is smaller than `--max_fa` bp. Finally, concatenate the files in a single pdf (requires `PyPDF2 <https://pypi.python.org/pypi/PyPDF2/>`_ package)::
-
+reported if the target region is smaller than `--max_fa` bp. Finally, concatenate the files in a single pdf (requires `PyPDF2 <https://pypi.python.org/pypi/PyPDF2/>`_ package)
+{{{
     coverage_screenshots.py -i bam/ds0*.bam \
         -b actb.bed \
         -g genes.gtf \
@@ -154,7 +154,7 @@ reported if the target region is smaller than `--max_fa` bp. Finally, concatenat
         --rpm \
         --ylim 40000 \
         --tmpdir wdir
-
+}}}
 Intermediate files have been saved for future use under directory `wdir`.
 
 == Example 3: Re-plotting ==
@@ -163,7 +163,7 @@ Since computing coverage can be expensive, we don't need to do it again if all w
 want is to change the graphical output. If we saved the intermediate output files
 from a previous run by seeting `--tmpdir`, we can re-use them with option `--replot`
 and change the graphical settings to our liking.
-{{
+{{{
     coverage_screenshots.py -b actb.bed --tmpdir wdir --rpm \
         --col_cov pink \
         --pwidth 12 \
@@ -172,7 +172,7 @@ and change the graphical settings to our liking.
         --col_seq darkred \
         --onefile actb_pdf/actb-2.pdf \
         --replot
-}}
+}}}
 
 Note that it is no longer necessary to give the bam, gtf, and fasta files. All we need
 to `replot` is the original bed file, possibly with some rows removed if
