@@ -1,4 +1,4 @@
-#UNDER CONSTRUCTION: Documentation for coverage_screenshots.py
+# UNDER CONSTRUCTION: Documentation for coverage_screenshots.py
 
 = Introduction  & Description =
 
