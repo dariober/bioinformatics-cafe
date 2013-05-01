@@ -17,8 +17,8 @@ included in script and pipelines and can be run on enviroments not designed to
 support GUIs (e.g. computer farms).
 
 The heavy duty task of counting nucleotides at each position is performed by `samtools mpileup`
-via `pysam` so it is reasonably fast. Interval operations are executed by `pybedtools`. Plotting
-is done by R.
+via [http://www.cgat.org/~andreas/documentation/pysam/contents.html pysam] so it is reasonably fast. Interval operations are executed by [http://pythonhosted.org/pybedtools/ pybedtools]. Plotting
+is done by the [http://cran.r-project.org/ R] standard library.
 
 = System Requirements & Installation =
 
@@ -27,14 +27,14 @@ the net.
 
     * python 2.7
         2.6 should do, 3.x not sure
-    * R
+    * [http://cran.r-project.org/ R]
         Actually `Rscript` to be found on your `$PATH`
     * Linux/Unix
         Windows might not be supported due to `pysam` incompatibility.
 
 == Required python packages ==
 
-    * argparse
+    * [http://docs.python.org/dev/library/argparse.html argparse]
         Included in python 2.7 standard library
     * pysam
         See http://code.google.com/p/pysam/
