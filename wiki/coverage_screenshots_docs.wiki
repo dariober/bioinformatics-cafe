@@ -2,9 +2,11 @@
 
 <wiki:toc max_depth="2" />
 
-http://bioinformatics-misc.googlecode.com/svn/wiki/images/screenshot.jpg
-
 = Introduction  & Description =
+
+----
+http://bioinformatics-misc.googlecode.com/svn/wiki/images/screenshot.jpg
+----
 
 *coverage_screenshots.py* produces coverage plots for one or more bam files at
 the intervals specified in a bed file. Plots are written in pdf format, one per
@@ -106,7 +108,7 @@ _reads per million_.
 
 http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566757_5566829_ACTB.jpg
 
-Example output from `coverage_screenshots.py` of RNA-Seq data for the ACTB gene (actual output is PDF).
+Example output from `coverage_screenshots.py` with annotation and colour code nucleotide counts.
 ----
 
 = Usage & Examples =
@@ -177,6 +179,5 @@ generated files are  (`--tmpdir`).
 ----
 http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566644_5570292_ACTB.jpg
 
-   Example output from `coverage_screenshots.py` with annotation and colour code nucleotide
-   counts.
+Example output from `coverage_screenshots.py` of RNA-Seq data for the ACTB gene (actual output is PDF).
 ----
