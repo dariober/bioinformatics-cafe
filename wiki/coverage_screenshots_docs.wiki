@@ -2,8 +2,7 @@
 
 = Introduction  & Description =
 
-
-http://code.google.com/p/bioinformatics-misc/source/browse/wiki/images/chr7_5566644_5570292_ACTB.jpg
+http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566644_5570292_ACTB.jpg
 
 *coverage_screenshots.py* produces coverage plots for one or more bam files at
 the intervals specified in a bed file. Plots are written in pdf format, one per
