@@ -2,6 +2,8 @@
 
 <wiki:toc max_depth="2" />
 
+http://bioinformatics-misc.googlecode.com/svn/wiki/images/screenshot.jpg
+
 = Introduction  & Description =
 
 *coverage_screenshots.py* produces coverage plots for one or more bam files at
