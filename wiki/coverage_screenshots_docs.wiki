@@ -11,12 +11,12 @@ region or can be concatenated in a single file.
 Plots can be annotated according to a GTF file and decorated with the individual
 nucleotides if a corresponding reference FASTA file is provided.
 
-In contrast to most genome browsers (IGV. IGB etc.) `coverage_screenshots.py`
-is deliberately designed to be devoid of any graphical user interface so that it can be
-included in script and pipelines and can be run on enviroments not designed to
-support GUIs (e.g. computer farms).
+In contrast to most genome browsers (IGV, IGB etc.) `coverage_screenshots.py`
+is deliberately designed to avoid any graphical user interface so that it can be
+included in scripts and pipelines and can be run on environments not designed to
+support GUIs (e.g. computer farms). The graphical output is customizable to a fairly large extent.
 
-The heavy duty task of counting nucleotides at each position is performed by `samtools mpileup`
+Some implementation details: The heavy duty task of counting nucleotides at each position is performed by `samtools mpileup`
 via [http://www.cgat.org/~andreas/documentation/pysam/contents.html pysam] so it is reasonably fast. Interval operations are executed by [http://pythonhosted.org/pybedtools/ pybedtools]. Plotting
 is done by the [http://cran.r-project.org/ R] standard library.
 
