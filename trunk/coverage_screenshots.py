@@ -34,7 +34,10 @@ EXAMPLE:
 
     """, formatter_class= argparse.RawTextHelpFormatter)
 
-parser.add_argument('--ibam', '-i',
+# -----------------------------------------------------------------------------
+input_args= parser.add_argument_group('Input options', '')
+
+input_args.add_argument('--ibam', '-i',
                    required= True,
                    nargs= '+',
                    help='''List of bam files, sorted and indexed to visualize.
@@ -42,22 +45,25 @@ Metacharacters are expanded by python (`glob`). E.g. to match all the bam files 
 '*.bam'. 
                    ''')
 
-parser.add_argument('--bed', '-b',
+input_args.add_argument('--bed', '-b',
                    required= True,
                    help='''Bed file with regions to plot 
                    ''')
 
-parser.add_argument('--fasta', '-f',
+input_args.add_argument('--fasta', '-f',
                    help='''Fasta file of the reference genome. If given, high
 resolution plots will show the reference bases at each position.
                    ''')
 
-parser.add_argument('--gtf', '-g',
+input_args.add_argument('--gtf', '-g',
                    help='''GTF file to fetch annotation from. E.g. gene.gtf in
 iGenomes. Can be gzip compressed.
                    ''')
 
-parser.add_argument('--outdir', '-d',
+# -----------------------------------------------------------------------------
+output_args = parser.add_argument_group('Output options', '')
+
+output_args.add_argument('--outdir', '-d',
                    required= False,
                    default= None,
                    help='''Output directory for the pdf files. It will be created
@@ -65,7 +71,21 @@ if it doesn't exist. Default to current dir.
 NB: Not to be confused with --tmpdir where temp file go.
                    ''')
 
-parser.add_argument('--replot',
+output_args.add_argument('--onefile', '-o',
+                   required= False,
+                   default= None,
+                   help='''Concatenate the output PDF files into a single one
+passed as argument.
+                   ''')
+
+output_args.add_argument('--tmpdir', '-t',
+                    default= None,
+                    help='''Directory where to dump temporary files. If None (default)
+python will find one which will be deleted at the end of the execution.
+If set it will not be deleted.
+                   ''')
+
+output_args.add_argument('--replot',
                    action= 'store_true',
                    help='''Re-use the output files from a previous execution. Just
 redraw the plots using different graphical parameters.
@@ -75,20 +95,24 @@ as in the execution that generated the original data (obviously --tmpdir must no
 be None!).
                    ''')
 
-parser.add_argument('--onefile', '-o',
-                   required= False,
-                   default= None,
-                   help='''Concatenate the output PDF files into a single one
-passed as argument.
-                   ''')
-
-parser.add_argument('--rpm',
+output_args.add_argument('--rpm',
                    action= 'store_true',
                    help='''Normalize counts by reads per million using library
 sizes. Default is to use raw counts. 
+
                    ''')
 
-parser.add_argument('--ylim', '-y',
+output_args.add_argument('--verbose', '-v',
+                   action= 'store_true',
+                   help='''Print verbose output. Currently this option only adds the
+stdout and stderr from R.
+
+                   ''')
+# -----------------------------------------------------------------------------
+graph_args = parser.add_argument_group('Graphical parameters',
+    '''These options passed to R script''')
+
+graph_args.add_argument('--ylim', '-y',
                     default= 'max',
                     type= str,
                     help='''How the maximum value for the y-axis should be set.
@@ -98,7 +122,25 @@ Options are: 'max' (default) all y-axes set to the maximum value of all the plot
 The lower limit of the y-axis is always 0.
                    ''')
 
-parser.add_argument('--max_nuc', '-m',
+graph_args.add_argument('--col_cov', default= 'grey', help='''Colour for coverage of pooled bases and for N''')
+graph_args.add_argument('--col_nuc', nargs= 4, default= '', help='''List of 4 R colours for bars of A, C, G, and T.''')
+graph_args.add_argument('--bg', default= 'grey95', help='''Colour for plot background''')
+graph_args.add_argument('--nogrid', action= 'store_true', help='''Do not plot grid''')
+graph_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
+graph_args.add_argument('--col_ann', default= 'firebrick4', help='''Colour for annotation bars (exons, CDS etc.)''')
+graph_args.add_argument('--col_name', default= '#0000FF50', help='''Colour for text of the name of each plot. Default makeTransparent('blue', 80)''')
+graph_args.add_argument('--cex_axis', default= -1, type= float, help='''Character exapansion for the axis annotation (cex.axis in R).
+Use negative value to set default. ''')
+graph_args.add_argument('--cex_range', default= -1, type= float, help='''Character exapansion for the text range of plot''')
+graph_args.add_argument('--cex_seq', default= -1, type= float, help='''Character exapansion for the nucleotide sequence''')
+graph_args.add_argument('--line_range', default= 3, type= float, help='''Distance of range bar from x-axis. In R's line units''')
+graph_args.add_argument('--line_seq', default= 2, type= float, help='''Distance of nucleotide sequence bar from x-axis. In R's line units''')
+graph_args.add_argument('--oma', default= [4, 1.1, 3, 1.1], nargs= 4, type= float, help='''List of 4 floats giving the outer margins of the plot.
+Default 4 1.1 3 1.1''')
+graph_args.add_argument('--mar', default= [0.5, 4, 0.5, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.
+Default 0.5 4 0.5 1''')
+
+graph_args.add_argument('--max_nuc', '-m',
                     default= 100,
                     type= int,
                     help='''The maximum width of the region (bp) to plot each nucleotide in
@@ -106,7 +148,7 @@ different colour. Default 100 (i.e. regions smaller than 100 bp will be printed 
 coded nucleotides). 
                    ''')
 
-parser.add_argument('--max_fa', '-M',
+graph_args.add_argument('--max_fa', '-M',
                     default= 100,
                     type= int,
                     help='''The maximum width of the region (bp) to plot each nucleotide at the
@@ -114,37 +156,23 @@ bottome of the lower plot. Default 100 (i.e. regions smaller than 100 bp will ha
 sequence shown). Ignored if --fasta is not given 
                    ''')
 
-parser.add_argument('--cex_axis',
-                    default= -1,
-                    type= float,
-                    help='''Character exapansion for the axis annotation (cex.axis in R). Use
-negative value to set default.
-                   ''')
-
-parser.add_argument('--pheight', '-H',
+graph_args.add_argument('--pheight', '-H',
                     default= -1,
                     type= float,
                     help='''Height of *each* plot in cm. Default 6
                    ''')
 
-parser.add_argument('--pwidth', '-W',
+graph_args.add_argument('--pwidth', '-W',
                     default= 15,
                     type= float,
                     help='''Width of the plots in cm. Default 24
                    ''')
 
-parser.add_argument('--psize', '-p',
+graph_args.add_argument('--psize', '-p',
                     default= 10,
                     type= float,
                     help='''Pointsize for R pdf() function. Sizes
 between 9 and 12 should suite most cases. Default 10.
-                   ''')
-
-parser.add_argument('--tmpdir', '-t',
-                    default= None,
-                    help='''Directory where to dump temporary files. If None (default)
-python will find one which will be deleted at the end of the execution.
-If set it will not be deleted.
                    ''')
 
 # -----------------------------------------------------------------------------
@@ -347,6 +375,26 @@ def getRefSequence(fasta, region):
     seq= open(seq.seqfn).read().split('\t')
     seq_table= zip([region.chrom] * (region.end - region.start), range(region.start+1, region.end+1), list(seq[1].strip()))
     return(seq_table)
+
+def quoteStringList(x):
+    '''Join the list of string x in a string where each element is double quoted and
+    separted by comma & space.
+    Useful to convert python's list of strings to R character vectors
+    E.g. x= ['blue', 'black']
+    quoteStringList(x) >>> '"blue", "black"'
+    NB:
+        Numbers are converted to strings and quoted as well!
+    NB2:
+        This function is not meant to cope well with strings containing double quotes,
+        weird metachars etc.
+    '''
+    s= ''
+    for y in x:
+        s= s + '"' + str(y) + '", '
+    s= s.strip(', ')
+    return(s)
+
+print(quoteStringList(['blue', 'black', 'greeen']))
     
 def RPlot(**kwargs):
     """Write to file the R script to produce the plots and execute it using Rscript
@@ -375,15 +423,14 @@ makeTransparent<-function(someColor, alpha=100){
 lwd= 4
 cex.axis<- ifelse(%(cex_axis)s < 0, par('cex.axis'), %(cex_axis)s)
 
+col_nuc<- c(%(col_nuc)s)
 colList<- list(
-    colA= makeTransparent('green', 95),
-    colC= makeTransparent('blue', 95),
-    colG= makeTransparent('orange', 95),
-    colT= makeTransparent('red', 95),
-    colZ= 'grey'
+    colA= ifelse(col_nuc != '', col_nuc[1], makeTransparent('green', 95)),
+    colC= ifelse(col_nuc != '', col_nuc[2], makeTransparent('blue', 95)),
+    colG= ifelse(col_nuc != '', col_nuc[3], makeTransparent('orange', 95)),
+    colT= ifelse(col_nuc != '', col_nuc[4], makeTransparent('red', 95)),
+    colZ= '%(col_cov)s'
 )
-tgrey<- makeTransparent('blue', 80)
-
 
 # ------------------------------------------------------------------------------
 # INPUT
@@ -426,7 +473,7 @@ if(length(unique((sapply(count_pos, length)))) != 1){
 ## If the range is too wide, use only one colour:
 region_size<- max(mcov$end) - min(mcov$start)
 if(region_size > %(max_nuc)s) {
-    colList<- lapply(colList, function(x) return('grey'))
+    colList<- lapply(colList, function(x) return(colList$colZ))
 }
 
 xpos<- rowMeans(mcov[, c('start', 'end')]) + 0.5
@@ -442,7 +489,7 @@ if(pheight <= 0){
     pheight<- (pwidth * 0.35) + ((pwidth/10) / nplots)
 }
 pdf('%(pdffile)s', width= pwidth/2.54, height= (pheight * nplots)/2.54, pointsize= %(psize)s)
-par(mfrow= c(nplots, 1), las= 1, mar= c(0.5, 4, 0.5, 1), oma= c(3, 1.1, 3, 1.1), bty= 'l', mgp= c(3, 0.7, 0))
+par(mfrow= c(nplots, 1), las= 1, mar= c(%(mar)s), oma= c(%(oma)s), bty= 'l', mgp= c(3, 0.7, 0))
 for(p in seq(1, nplots)){
     ## For each library:
     ## -----------------
@@ -464,15 +511,18 @@ for(p in seq(1, nplots)){
     }
     
     plot(xpos, Z, type= 'n', xlab= '', ylab= '', xaxt= 'n', ylim= c(0, ylim), lwd= lwd, xlim= c(%(xlim1)s, %(xlim2)s), cex.axis= cex.axis)
-    rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= "grey95", border= 'transparent')
-    grid(col= 'darkgrey')
+    rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= "%(bg)s", border= 'transparent')
+    if('%(nogrid)s' == 'False'){
+        grid(col= 'darkgrey')
+    }
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= Z, col= colList$colZ, border= 'transparent')
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= T, col= colList$colT, border= 'transparent')
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= G, col= colList$colG, border= 'transparent')
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= C, col= colList$colC, border= 'transparent')
     rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= A, col= colList$colA, border= 'transparent')
-    mtext(side= 3, text= libname, adj= 0.02, line= -1, col= tgrey, cex= 0.9)
+    mtext(side= 3, text= libname, adj= 0.02, line= -1, col= '%(col_name)s', cex= 0.9)
     if(p == 1){
+makeTransparent('blue', 80)
         ## Plotting of annotation
         ## ----------------------
         if(do.gtf){
@@ -484,10 +534,10 @@ for(p in seq(1, nplots)){
                         ybottom= y0 - ifelse(gtf$type == 'CDS', thick_offset, thin_offset),
                         xright= gtf$end,
                         ytop= y0 + ifelse(gtf$type == 'CDS', thick_offset, thin_offset),
-                        col= 'firebrick4', xpd= NA, border= 'transparent')
+                        col= '%(col_ann)s', xpd= NA, border= 'transparent')
             ## Plotting of gene names with strand
             gene_strand<- paste(gtf$name, ifelse(gtf$strand %%in%% c('+', '-'), gtf$strand, ''))
-            text(labels= gene_strand, x= rowMeans(gtf[,c('start', 'end')]), y= y0 + thick_offset + thin_offset, cex= cex.axis * 0.9, col= 'black', xpd= NA, adj= c(0.5,0)) ## 
+            text(labels= gene_strand, x= rowMeans(gtf[,c('start', 'end')]), y= y0 + thick_offset + thin_offset, cex= cex.axis * 0.9, col= '%(col_text_ann)s', xpd= NA, adj= c(0.5,0)) ## 
         }
     }
 }
@@ -497,8 +547,13 @@ axis(labels= formatC(x, format= 'd', big.mark= ','), side= 1, at= x, cex.axis= c
 mtext(text= '%(plotname)s', cex= 0.95, outer= TRUE, side= 4, las= 0, line= 0, col= 'grey50')
 mtext(text= '%(ylab)s', cex= 0.95, outer= TRUE, side= 2, las= 0, line= -0.2)
 if(nrow(refbases) > 0){
-    mtext(at= refbases$pos, side= 1, text= refbases$base, line= 2, cex= ifelse(nplots > 3, 0.66, 0.75), adj= 1, font= 11)
+    mtext(at= refbases$pos, side= 1, text= refbases$base, line= %(line_seq)s, cex= ifelse(nplots > 3, 0.66, 0.75), adj= 1, font= 11)
 }
+## Text for range
+wcex_range<- ifelse(%(cex_range)s <= 0, ifelse(nplots > 3, 0.66, 0.7), %(cex_range)s)
+xrange<- x[length(x)] - x[1]
+mtext(text= '|', at= c(x[1], x[length(x)]), line= %(line_range)s, side= 1, xpd= NA, cex= wcex_range)
+mtext(text= formatC(paste(xrange, 'bp'), format= 'd', big.mark= ','), line= %(line_range)s, side= 1, xpd= NA, cex= wcex_range)
 dev.off()
 """ %kwargs ## %{'mcov': tmp.name, 'plotname': plotname + '.pdf', 'pheight': args.pheight, 'pwidth':args.pwidth, 'psize': args.psize}
     rout.write(rplot)
@@ -720,11 +775,29 @@ def main():
               gtf= annot_file,
               max_nuc= args.max_nuc,
               ylim= args.ylim,
-              cex_axis= args.cex_axis)
+              cex_axis= args.cex_axis,
+              col_cov= args.col_cov,
+              col_nuc= quoteStringList(args.col_nuc),
+              bg= args.bg,
+              nogrid= args.nogrid,
+              col_text_ann= args.col_text_ann,
+              col_ann= args.col_ann,
+              col_name= args.col_name,
+              cex_range= args.cex_range,
+              cex_seq= args.cex_seq,
+              line_range= args.line_range,
+              line_seq= args.line_seq,
+              oma= ', '.join([str(x) for x in args.oma]),
+              mar= ', '.join([str(x) for x in args.mar]))
+        
+        
         if rgraph['stderr'] != '':
             print('\nExpection in executing R script "%s"\n' %(rscript))
             print(rgraph['stdout'])
             sys.exit(rgraph['stderr'])
+        if args.verbose:
+            print(rgraph['stderr'])
+            print(rgraph['stdout'])
         if not onefile and tmpdir != outdir:
             ## Copy PDFs from temp dir to output dir. Unless you want them in onefile or
             ## if the final destination dir has been set to be also the tempdir
