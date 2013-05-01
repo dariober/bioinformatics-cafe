@@ -125,7 +125,7 @@ cat actb.bed
 }}}
 To see all the available options and get help
 {{{    
-    coverage_screenshots.py -h
+coverage_screenshots.py -h
 }}}
 
 == Example 1: Vanilla ==
