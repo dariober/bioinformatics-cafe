@@ -54,9 +54,9 @@ The necessary input files are:
 
     * A *BED* file of regions to compute and plot coverage for. Bed file should be tab separated and have at least three columns for chrom, start and end position. An addtional column with the feature name might be included and will be part of the output file names. Addtional columns are ignored.
 
-    * _Optional_ GTF or BED file with annotation to be displayed. Such files can be obtained from UCSC, ENSEMBL or custom made. Make sure chromosome names are consistent across files!
+    * _Optional_ *GTF/GFF/BED* file with annotation to be displayed. Such files can be obtained from UCSC, ENSEMBL or custom made. Make sure chromosome names are consistent across files!
 
-    * _Optional_ Fasta file of the refernence sequence used to produce the alignments. Only needed to display the sequence of the interval.
+    * _Optional_ *FASTA* file of the reference sequence used to produce the alignments. Only needed to display the sequence of the interval.
 
 See also [https://genome.ucsc.edu/FAQ/FAQformat.html UCSC] for description if file formats.
  
