@@ -42,7 +42,7 @@ the net.
 
 == Installation ==
 
-The program can be checked out via svn from http://bioinformatics-misc.googlecode.com/svn/coverage_screenshots.py Assuming the requirements above are satisfied there isn't really any installation to be done.
+The program can be checked out via svn from http://bioinformatics-misc.googlecode.com/svn/trunk/coverage_screenshots.py Assuming the requirements above are satisfied there isn't really any installation to be done.
 Just download, unzip, and copy `coverage_screenshots.py` to a directory of your convenience
 {{{
     tar zxvf coverage_screenshots-x.x.x.tar.gz
