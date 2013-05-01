@@ -1,4 +1,6 @@
-# UNDER CONSTRUCTION: Documentation for coverage_screenshots.py
+#summary UNDER CONSTRUCTION: Documentation for coverage_screenshots.py
+
+<wiki:toc max_depth="2" />
 
 = Introduction  & Description =
 
@@ -116,7 +118,7 @@ Just download, unzip, and copy `coverage_screenshots.py` to a directory of your 
     cp  coverage_screenshots.py ~/bin/
 }}}
 
- =Usage & Examples =
+= Usage & Examples =
 
 The source directory contains data files for testing and examples
 {{{
