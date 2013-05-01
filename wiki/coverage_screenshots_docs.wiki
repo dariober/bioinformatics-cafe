@@ -25,21 +25,16 @@ is done by the [http://cran.r-project.org/ R] standard library.
 All the componets that make `coverage_screenshots.py` are freely available from
 the net.
 
-    * python 2.7
-        2.6 should do, 3.x not sure
-    * [http://cran.r-project.org/ R]
-        Actually `Rscript` to be found on your `$PATH`
-    * Linux/Unix
-        Windows might not be supported due to `pysam` incompatibility.
+    * *python 2.7* Version 2.6 should do, 3.x not sure
+    * [http://cran.r-project.org/ R] (Actually `Rscript`) to be found on your `$PATH`
+    * *Linux/Unix* Windows might not be supported due to `pysam` incompatibility.
 
 == Required python packages ==
 
-    * [http://docs.python.org/dev/library/argparse.html argparse]
-        Already included in python 2.7 standard library
+    * [http://docs.python.org/dev/library/argparse.html argparse] Already included in python 2.7 standard library
     * [http://code.google.com/p/pysam/ pysam]        
     * [http://pythonhosted.org/pybedtools/ pybedtools]
-    * [https://pypi.python.org/pypi/PyPDF2 PyPDF2]
-        _Optional_: Only used to concatenate all PDF files in a single one (`--onefile`).
+    * [https://pypi.python.org/pypi/PyPDF2 PyPDF2] _Optional_: Only used to concatenate all PDF files in a single one (`--onefile`).
 
 == Installation ==
 
@@ -57,16 +52,13 @@ The necessary input files are:
 
     *  *BAM* files *sorted* and *indexed*
 
-    * A *BED* file of regions to compute and plot coverage for.
-        Bed file should be tab separated and have at least three columns for chrom,
-        start and end position. An addtional column with the feature name might be included and will be
-        part of the output file names. Addtional columns are ignored.
+    * A *BED* file of regions to compute and plot coverage for. Bed file should be tab separated and have at least three columns for chrom, start and end position. An addtional column with the feature name might be included and will be part of the output file names. Addtional columns are ignored.
 
-    * _Optional_ GTF or BED file with annotation to be displayed. Such files can be obtained
-        from UCSC, ENSEMBL or custom made. Make sure chromosome names are consistent across
-        files!
+    * _Optional_ GTF or BED file with annotation to be displayed. Such files can be obtained from UCSC, ENSEMBL or custom made. Make sure chromosome names are consistent across files!
 
     * _Optional_ Fasta file of the refernence sequence used to produce the alignments. Only needed to display the sequence of the interval.
+
+See also [https://genome.ucsc.edu/FAQ/FAQformat.html UCSC] for description if file formats.
  
 _MEMO_ You can sort and index a bam file, assuming you have samtools (http://samtools.sourceforge.net/), with
 
