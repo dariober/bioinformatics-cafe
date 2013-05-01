@@ -56,12 +56,12 @@ parser.add_argument('--echo', '-e',
 
                    ''')
 
-args= parser.parse_args()
 # -----------------------------------------------------------------------------
 
 def search_file(filename, search_path):
    """Given a search path, find file.
    See http://code.activestate.com/recipes/52224-find-a-file-given-a-search-path/
+   NB: This fun could be replaced by distutils.spawn.find_executable(cmd) 
    """
    file_found = 0
    paths = string.split(search_path, os.pathsep)
@@ -74,49 +74,54 @@ def search_file(filename, search_path):
    else:
       return(None)
 
+def main():
+   args= parser.parse_args()
+   
+   sam= args.input
+   if not sam.endswith('.sam'):
+       sys.exit('Input file "%s" does not have extension .sam' %(sam))
+   
+   ## Create output file names:
+   bname= os.path.splitext(sam)[0]
+   unsortedbam= bname + ''
+   bam= bname + '.bam'
+   
+   if os.path.exists(bam) and not args.force:
+       sys.exit('Bam file "%s" already exists. Use -f to overwrite' %(bam))
+   
+   ## NB: could use -u option but it throws and error (bug)
+   sortedBam= bname + '.bam'
+   cmd_bam= """\nsamtools view -S -b %(sam)s | samtools sort - %(bname)s &&""" %{'sam': sam, 'bname': bname}
+   cmd_idx= """samtools index %(sortedBam)s &&"""  %{'sortedBam': sortedBam}
+   cmd_rm= """rm %(sam)s\n""" %{'sam': sam}
+   
+   # Picard 
+   # -----------------------------------------------------------------------------
+   mdBam= bname + '.tmp.bam'
+   metricsFile= bname + '.markDuplicates.txt'
+   
+   if args.markdup:
+       markdup= search_file('MarkDuplicates.jar', os.environ['PATH'])
+       if markdup is None:
+           sys.exit('Cannot find MarkDuplicates.jar on your PATH')
+       cmd_md= '\njava -Xmx2g -jar ' + markdup + ' INPUT="' + sortedBam + '" OUTPUT="' + mdBam + '" METRICS_FILE="' + metricsFile + '" ASSUME_SORTED=true VALIDATION_STRINGENCY=SILENT && \n' + 'mv "' + mdBam + '" "' + sortedBam + '" &&'
+   else:
+       cmd_md= ''
+   cmd_bam += cmd_md
+   # -----------------------------------------------------------------------------
+   
+   if args.noidx:
+       cmd= '\n'.join([cmd_bam, cmd_rm])
+   else:
+       cmd= '\n'.join([cmd_bam, cmd_idx, cmd_rm])
+   
+   print(cmd)
+   if not args.echo:
+       p= subprocess.Popen(cmd, stdout= subprocess.PIPE, stderr= subprocess.PIPE, shell= True)
+       p.wait()
+       print(p.stderr.read())
+   sys.exit()
 
-sam= args.input
-if not sam.endswith('.sam'):
-    sys.exit('Input file "%s" does not have extension .sam' %(sam))
-
-## Create output file names:
-bname= os.path.splitext(sam)[0]
-unsortedbam= bname + ''
-bam= bname + '.bam'
-
-if os.path.exists(bam) and not args.force:
-    sys.exit('Bam file "%s" already exists. Use -f to overwrite' %(bam))
-
-## NB: could use -u option but it throws and error (bug)
-sortedBam= bname + '.bam'
-cmd_bam= """\nsamtools view -S -b %(sam)s | samtools sort - %(bname)s &&""" %{'sam': sam, 'bname': bname}
-cmd_idx= """samtools index %(sortedBam)s &&"""  %{'sortedBam': sortedBam}
-cmd_rm= """rm %(sam)s\n""" %{'sam': sam}
-
-# Picard 
-# -----------------------------------------------------------------------------
-mdBam= bname + '.tmp.bam'
-metricsFile= bname + '.markDuplicates.txt'
-
-if args.markdup:
-    markdup= search_file('MarkDuplicates.jar', os.environ['PATH'])
-    if markdup is None :
-        sys.exit('Cannot find MarkDuplicates.jar on your PATH')
-    cmd_md= '\njava -Xmx2g -jar ' + markdup + ' INPUT="' + sortedBam + '" OUTPUT="' + mdBam + '" METRICS_FILE="' + metricsFile + '" ASSUME_SORTED=true VALIDATION_STRINGENCY=SILENT && \n' + 'mv "' + mdBam + '" "' + sortedBam + '" &&'
-else:
-    cmd_md= ''
-cmd_bam += cmd_md
-# -----------------------------------------------------------------------------
-
-if args.noidx:
-    cmd= '\n'.join([cmd_bam, cmd_rm])
-else:
-    cmd= '\n'.join([cmd_bam, cmd_idx, cmd_rm])
-
-print(cmd)
-if not args.echo:
-    p= subprocess.Popen(cmd, stdout= subprocess.PIPE, stderr= subprocess.PIPE, shell= True)
-    p.wait()
-    print(p.stderr.read())
-
-sys.exit()
+if __name__ == '__main__':
+   main()
+   
