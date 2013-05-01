@@ -73,11 +73,11 @@ For example, the following execution
 will plot the coverage of all the bam files in the current directory at the
 postions specified in the bed file `actb.bed`. It will also add the postions of
 exons and CDSs as reported in `genes.gtf.gz`. with `--rpm` coverage is reported as
-_reads per millio_.
+_reads per million_.
 
 ----
 
-http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566644_5570292_ACTB.jpg
+http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566757_5566829_ACTB.jpg
 
 Example output from `coverage_screenshots.py` of RNA-Seq data for the ACTB gene (actual output is PDF).
 ----
@@ -181,8 +181,9 @@ to `replot` is the original bed file, possibly with some rows removed if
 we don't want them anymore, and the working directory where the previously
 generated files are  (`--tmpdir`).
 
-.. figure::  figures/chr7_5566757_5566829_ACTB.jpg
-   :align:   center
+----
+http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566644_5570292_ACTB.jpg
 
    Example output from `coverage_screenshots.py` with annotation and colour code nucleotide
    counts.
+----
