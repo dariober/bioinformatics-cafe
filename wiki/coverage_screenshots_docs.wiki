@@ -26,7 +26,10 @@ is done by the [http://cran.r-project.org/ R] standard library.
 
 = System Requirements & Installation =
 
-All the componets that make `coverage_screenshots.py` are freely available from
+
+`coverage_screenshots.py` lives at http://bioinformatics-misc.googlecode.com/svn/trunk/coverage_screenshots.py. A package to download is at [_in prep_].
+
+All the components that make `coverage_screenshots.py` are freely available from
 the net.
 
     * *python 2.7* Version 2.6 should do, 3.x not sure
@@ -41,8 +44,6 @@ the net.
     * [https://pypi.python.org/pypi/PyPDF2 PyPDF2] _Optional_: Only used to concatenate all PDF files in a single one (`--onefile`).
 
 == Installation ==
-
-`coverage_screenshots.py` lives at http://bioinformatics-misc.googlecode.com/svn/trunk/coverage_screenshots.py. A package to download is at [...].
 
 Assuming the requirements above are satisfied there isn't really any installation to be done.
 Just download, unzip, and copy `coverage_screenshots.py` to a directory of your convenience
