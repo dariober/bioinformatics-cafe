@@ -209,3 +209,7 @@ makeTransparent('red', 50) >>> '#FF000032'
 === Converting PDF ===
 
 To convert PDF images to jpg yu can use the [http://www.imagemagick.org/script/convert.php convert] tool from [http://www.imagemagick.org/script/index.php ImageMagick]
+like this:
+{{{
+convert -density 300 chr7_5566757_5566829_ACTB.pdf ~/Tritume/chr7_5566757_5566829_ACTB.jpg
+}}}
