@@ -182,3 +182,24 @@ http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566644_5570292_A
 
 Example output from `coverage_screenshots.py` of RNA-Seq data for the ACTB gene (actual output is PDF).
 ----
+
+= Some tips =
+
+The colours passed to `coverage_screenshots.py` are in turn passed to R verbatim,
+therefore any R colour name or format is valid. R understands most English names of
+colours (red, lightblue etc.) as well as the RGB representation (e.g. '#0000FF', '00255').
+See this nice [http://research.stowers-institute.org/efg/R/Color/Chart/ColorChart.pdf chart]
+for many colour options.
+
+Transparent colours often show up better in graphics. To add transperncy to an R colour, use
+this function (credit [http://stackoverflow.com/questions/8047668/transparent-equivalent-of-given-color stackoverflow])
+
+{{{
+makeTransparent<-function(someColor, alpha=100){
+    newColor<-col2rgb(someColor)
+    apply(newColor, 2, function(curcoldata){rgb(red=curcoldata[1], green=curcoldata[2],
+    blue=curcoldata[3],alpha=alpha, maxColorValue=255)})
+}
+makeTransparent('red', 50) >>> '#FF000032'
+}}}
+
