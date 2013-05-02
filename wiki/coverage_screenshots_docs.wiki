@@ -114,7 +114,7 @@ postions specified in the bed file `actb.bed`. It will also add the postions of
 exons and CDSs as reported in `genes.gtf.gz`. with `--rpm` coverage is reported as
 _reads per million_.
 
-Keep in mind that each interval (row) in the input bed file produces 5 or 6 files.
+Keep in mind that *each* interval (row) in the input bed file produces 5 or 6 files.
 Consider this before passing the whole of human refseq to coverge_sscreenshots. 
 
 ----
