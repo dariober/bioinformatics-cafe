@@ -191,7 +191,8 @@ generated files are  (`--tmpdir`).
 ----
 http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566644_5570292_ACTB.jpg
 
-Example output from `coverage_screenshots.py` of RNA-Seq data for the ACTB gene (actual output is PDF).
+Example of RNA-Seq data for the ACTB gene with colour coded samples (`--bg` opt)
+and coarse resolution (`--nwinds` opt).
 ----
 
 = Some tips =
