@@ -5,7 +5,6 @@ import sys
 import pybedtools
 import os
 import tempfile
-import pysam
 import subprocess
 import shutil
 import glob
@@ -29,8 +28,9 @@ EXAMPLE:
     ## Keep intermediate files:
     coverage_screenshots.py --ibam ds05*.bam --gtf genes.gtf.gz --bed actb.bed --tmpdir actb
 
-    cat actb.bed
-    >chr7	5566757	5566829
+SEE ALSO:
+    Documentation at
+    http://code.google.com/p/bioinformatics-misc/wiki/coverage_screenshots_docs
 
     """, formatter_class= argparse.RawTextHelpFormatter)
 
@@ -42,13 +42,13 @@ input_args.add_argument('--ibam', '-i',
                    default= [],
                    nargs= '+',
                    help='''List of bam files, sorted and indexed to visualize.
-Metacharacters are expanded by python (`glob`). E.g. to match all the bam files use
-'*.bam'. 
+Metacharacters are expanded by python (`glob`). E.g. to match all the bam files
+use '*.bam'. 
                    ''')
 
 input_args.add_argument('--bed', '-b',
                    required= True,
-                   help='''Bed file with regions to plot 
+                   help='''Bed file with regions to plot. 
                    ''')
 
 input_args.add_argument('--fasta', '-f',
@@ -61,29 +61,33 @@ input_args.add_argument('--gtf', '-g',
 iGenomes. Can be gzip compressed.
                    ''')
 
+input_args.add_argument('--samtools',
+                    default= '',
+                    help='''Path to samtools. Default is '' which assumes it is
+on PATH''')
+
 # -----------------------------------------------------------------------------
 output_args = parser.add_argument_group('Output options', '')
 
 output_args.add_argument('--outdir', '-d',
                    required= False,
                    default= None,
-                   help='''Output directory for the pdf files. It will be created
-if it doesn't exist. Default to current dir.
-NB: Not to be confused with --tmpdir where temp file go.
+                   help='''Output directory for the pdf files. Default to current
+dir. NB: Not to be confused with --tmpdir where temp file go.
                    ''')
 
 output_args.add_argument('--onefile', '-o',
                    required= False,
                    default= None,
                    help='''Concatenate the output PDF files into a single one
-passed as argument.
+passed as argument (requires PyPDF2 package). 
                    ''')
 
 output_args.add_argument('--tmpdir', '-t',
                     default= None,
-                    help='''Directory where to dump temporary files. If None (default)
-python will find one which will be deleted at the end of the execution.
-If set it will not be deleted.
+                    help='''Directory where to dump temporary files. By default
+python will find one which will be deleted at the end of the execution. If set
+it will *not* be deleted.
                    ''')
 
 output_args.add_argument('--replot',
@@ -91,86 +95,91 @@ output_args.add_argument('--replot',
                    help='''Re-use the output files from a previous execution. Just
 redraw the plots using different graphical parameters.
 This option allows to reformat the plots without going thorugh the time consuming
-steps of generating pileups etc. All but graphical parameters must be the same
-as in the execution that generated the original data (obviously --tmpdir must not
-be None!).
-                   ''')
+steps of generating pileups etc.
+''')
 
 output_args.add_argument('--rpm',
                    action= 'store_true',
                    help='''Normalize counts by reads per million using library
 sizes. Default is to use raw counts. 
-
-                   ''')
+''')
 
 output_args.add_argument('--verbose', '-v',
                    action= 'store_true',
-                   help='''Print verbose output. Currently this option only adds the
-stdout and stderr from R.
-
-                   ''')
+                   help='''Print verbose output. Currently this option only adds
+the stdout and stderr from R. Only useful for debugging.
+''')
 # -----------------------------------------------------------------------------
-graph_args = parser.add_argument_group('Graphical parameters',
-    '''These options passed to R script''')
+plot_coverage= parser.add_argument_group('Plot of coverage', '')
 
-graph_args.add_argument('--ylim', '-y',
+plot_coverage.add_argument('--col_nuc', nargs= 4, default= '', help='''List of 4 R colours for bars of A, C, G, and T.''')
+plot_coverage.add_argument('--col_cov', default= 'grey', help='''Colour for coverage of pooled bases and for N''')
+plot_coverage.add_argument('--col_all', '-c',
+                    action= 'store_true',
+                    help='''Paint each bar with the colours given in --col_nuc
+even if the base matches the reference. Default is to paint only mismatching bases.
+Irrelvant if --maxres is exceeded or a reference genome is not provided with --fasta.
+                   ''')
+
+plot_coverage.add_argument('--maxres', '-m',
+                    default= 100,
+                    type= int,
+                    help='''The maximum width of the region (bp) to print bases
+and to plot each nucleotide in different colour. Default 100 (i.e. regions smaller
+than 100 bp will be printed with colour coded nucleotides and the sequence will
+be shown).''')
+
+# -----------------------------------------------------------------------------
+annotation_args= parser.add_argument_group('Format of annotation', '')
+
+annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
+annotation_args.add_argument('--col_ann', default= 'firebrick4', help='''Colour for annotation bars (exons, CDS etc.)''')
+annotation_args.add_argument('--col_name', default= '#0000FF50', help='''Colour for text of the name of each plot. Default makeTransparent('blue', 80)''')
+annotation_args.add_argument('--cex_range', default= -1, type= float, help='''Character exapansion for the text range of plot''')
+annotation_args.add_argument('--line_range', default= 2, type= float, help='''Distance of range bar from x-axis. In R's line units''')
+annotation_args.add_argument('--cex_seq', default= -1, type= float, help='''Character exapansion for the nucleotide sequence''')
+annotation_args.add_argument('--line_seq', default= 3.5, type= float, help='''Distance of nucleotide sequence bar from x-axis. In R's line units''')
+annotation_args.add_argument('--col_seq', default= 'black', help='''Colour for the nucleotide sequence.''')
+
+# -----------------------------------------------------------------------------
+plot_layout= parser.add_argument_group('Plot layout', '')
+
+plot_layout.add_argument('--ylim', '-y',
                     default= 'max',
                     type= str,
                     help='''How the maximum value for the y-axis should be set.
-Options are: 'max' (default) all y-axes set to the maximum value of all the plots.
-'indiv': Scale each plot individually to its maximum
+The lower limit of the y-axis is always 0. Options are:
+'max' (default) all y-axes set to the maximum value of all the plots.
+'indiv': Scale each plot individually to its maximum.
 <float>: Set all the plots to this maximum (E.g. 1000).
-The lower limit of the y-axis is always 0.
                    ''')
 
-graph_args.add_argument('--col_cov', default= 'grey', help='''Colour for coverage of pooled bases and for N''')
-graph_args.add_argument('--col_nuc', nargs= 4, default= '', help='''List of 4 R colours for bars of A, C, G, and T.''')
-graph_args.add_argument('--bg', default= 'grey95', help='''Colour for plot background''')
-graph_args.add_argument('--nogrid', action= 'store_true', help='''Do not plot grid''')
-graph_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
-graph_args.add_argument('--col_ann', default= 'firebrick4', help='''Colour for annotation bars (exons, CDS etc.)''')
-graph_args.add_argument('--col_name', default= '#0000FF50', help='''Colour for text of the name of each plot. Default makeTransparent('blue', 80)''')
-graph_args.add_argument('--cex_axis', default= -1, type= float, help='''Character exapansion for the axis annotation (cex.axis in R).
-Use negative value to set default. ''')
-graph_args.add_argument('--cex_range', default= -1, type= float, help='''Character exapansion for the text range of plot''')
-graph_args.add_argument('--cex_seq', default= -1, type= float, help='''Character exapansion for the nucleotide sequence''')
-graph_args.add_argument('--line_range', default= 2, type= float, help='''Distance of range bar from x-axis. In R's line units''')
-graph_args.add_argument('--line_seq', default= 3.5, type= float, help='''Distance of nucleotide sequence bar from x-axis. In R's line units''')
-graph_args.add_argument('--col_seq', default= 'black', help='''Colour for the nucleotide sequence''')
-graph_args.add_argument('--oma', default= [5, 1.1, 3, 1.1], nargs= 4, type= float, help='''List of 4 floats giving the outer margins of the plot.
+plot_layout.add_argument('--cex_axis', default= -1, type= float, help='''Character exapansion for the axis annotation (cex.axis in R).
+Use negative value to set default.''')
+
+plot_layout.add_argument('--bg', default= 'grey95', help='''Colour for plot background''')
+plot_layout.add_argument('--nogrid', action= 'store_true', help='''Do not plot grid''')
+plot_layout.add_argument('--oma', default= [5, 1.1, 3, 1.1], nargs= 4, type= float, help='''List of 4 floats giving the outer margins of the plot.
 Default 4 1.1 3 1.1''')
-graph_args.add_argument('--mar', default= [0.5, 4, 0.5, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.
+plot_layout.add_argument('--mar', default= [0.5, 4, 0.5, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.
 Default 0.5 4 0.5 1''')
 
-graph_args.add_argument('--max_nuc', '-m',
-                    default= 100,
-                    type= int,
-                    help='''The maximum width of the region (bp) to plot each nucleotide in
-different colour. Default 100 (i.e. regions smaller than 100 bp will be printed with colour
-coded nucleotides). 
-                   ''')
+# -----------------------------------------------------------------------------
+figure_size_args= parser.add_argument_group('Figure and font size', '')
 
-graph_args.add_argument('--max_fa', '-M',
-                    default= 100,
-                    type= int,
-                    help='''The maximum width of the region (bp) to plot each nucleotide at the
-bottome of the lower plot. Default 100 (i.e. regions smaller than 100 bp will have the refence
-sequence shown). Ignored if --fasta is not given 
-                   ''')
-
-graph_args.add_argument('--pheight', '-H',
+figure_size_args.add_argument('--pheight', '-H',
                     default= -1,
                     type= float,
                     help='''Height of *each* plot in cm. Default 6
                    ''')
 
-graph_args.add_argument('--pwidth', '-W',
+figure_size_args.add_argument('--pwidth', '-W',
                     default= 15,
                     type= float,
                     help='''Width of the plots in cm. Default 24
                    ''')
 
-graph_args.add_argument('--psize', '-p',
+figure_size_args.add_argument('--psize', '-p',
                     default= 10,
                     type= float,
                     help='''Pointsize for R pdf() function. Sizes
@@ -190,16 +199,20 @@ def getFileList(files):
             bamlist.append(bam)
     return(bamlist)
 
-def getLibrarySizes(bams):
+def getLibrarySizes(bams, samtools_path= ''):
     """Get the number of reads for each bam file (library sizes)
     bams:
         List of bams for which to get lib sizes
     Returns:
         Dict as {<bam name>:<tot reads>}    
     """
+    samtools_idx= os.path.join(samtools_path, 'samtools idxstats')
     libsizes= {}
     for bam in bams:
-        idxstat= pysam.idxstats(bam)
+        cmd= samtools_idx + ' ' + bam
+        proc= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
+        idxstat, idxerr= proc.communicate()
+        idxstat= idxstat.strip().split('\n')
         idxstat= [x.split('\t') for x in idxstat]
         libsize= sum([int(x[2]) for x in idxstat])
         libsizes[bam]= libsize
@@ -247,7 +260,7 @@ def mergePDF(filenames, output_filename):
     outputstream.close()
 
 def compile_mpileup(bams, *args):
-    """Compile a string suitable for eval() to execute pysam.mpileup().
+    """DEPRECATED: Compile a string suitable for eval() to execute pysam.mpileup().
     Note: syntax `pysam.mpileup(['bam1', 'bam2']) is not supported!`
     bams:
         List of bam names
@@ -264,6 +277,28 @@ def compile_mpileup(bams, *args):
     mpile += ')' 
     return(mpile)
 
+def mpileup_cmd(bamlist, region, fasta= None, mpileup= 'samtools mpileup'):
+    """Compile a command string to execute samtools mpileup
+    bamlist:
+        List of input bams
+    region:
+        Pybedtools interval to get chrom start, end position
+    f:
+        FASTA file to get sequence from. If file is not indexed.
+    mpileup:
+        String with the full path to mpileup or just samtools mpileup
+        if the rogram is opn path
+    Return:
+        String
+    """
+    r= '-r ' + region.chrom + ':' + str(region.start) + '-' + str(region.end)
+    if fasta:
+        f= '-f %s' %(fasta)
+    else:
+        f= ''        
+    cmd= '%(mpileup)s %(f)s -BQ0 -d10000000 %(r)s %(bamlist)s' %{'mpileup': mpileup, 'f': f, 'r': r, 'bamlist': ' '.join(bamlist)}
+    return(cmd)
+                
 def pileupBaseCallsToNucs(bases, refbase):
         """Parses the string of read bases from mpileup output to return the count
         of A, C, T, G, N and sum of them. Strandess ignored.
@@ -296,7 +331,8 @@ def pileupBaseCallsToNucs(bases, refbase):
         return(callDict)
         
 def parse_pileup(pileup_line, bams):
-    """Parse a pileup line (str) typically returned by pysam.mpileup().
+    """Parse a pileup line (str) typically returned by pysam.mpileup() or
+    mpileup via subprocess.
     bams:
         List of bam files. Must be in the same order as in mpileup!
     Return:
@@ -417,6 +453,14 @@ makeTransparent<-function(someColor, alpha=100){
     apply(newColor, 2, function(curcoldata){rgb(red=curcoldata[1], green=curcoldata[2],
     blue=curcoldata[3],alpha=alpha, maxColorValue=255)})
 }
+
+change_colour<- function(x, ref_idx, up_colour= '%(col_cov)s'){
+    ## Function to pass to apply to reset colour 
+    to_update<- as.numeric(x[ref_idx])
+    x[to_update]<- up_colour
+    return(x)
+}
+
 # ------------------------------------------------------------------------------
 # Intial settings
 # ------------------------------------------------------------------------------
@@ -424,13 +468,6 @@ lwd= 4
 cex.axis<- ifelse(%(cex_axis)s < 0, par('cex.axis'), %(cex_axis)s)
 
 col_nuc<- c(%(col_nuc)s)
-colList<- list(
-    colA= ifelse(is.null(col_nuc), makeTransparent('green', 95), col_nuc[1]),
-    colC= ifelse(is.null(col_nuc), makeTransparent('blue', 95), col_nuc[2]),
-    colG= ifelse(is.null(col_nuc), makeTransparent('orange', 95), col_nuc[3]),
-    colT= ifelse(is.null(col_nuc), makeTransparent('red', 95), col_nuc[4]),
-    colZ= '%(col_cov)s'
-)
 
 # ------------------------------------------------------------------------------
 # INPUT
@@ -443,8 +480,56 @@ header<- sapply(header[1,], basename)
 mcov<- read.table('%(mcov)s', header= FALSE, sep= '\t', stringsAsFactors= FALSE, skip= 1, comment.char= '')
 names(mcov)<- header
 
+## For each position/interval in mcov (grouped coverage) assign a colour to each
+## base
+col_df<- data.frame(
+    mcov[, c('chrom', 'start', 'end')],
+    colA= rep(ifelse(is.null(col_nuc), makeTransparent('green', 95), col_nuc[1]), nrow(mcov)),
+    colC= rep(ifelse(is.null(col_nuc), makeTransparent('blue', 95), col_nuc[2]), nrow(mcov)),
+    colG= rep(ifelse(is.null(col_nuc), makeTransparent('orange', 95), col_nuc[3]), nrow(mcov)),
+    colT= rep(ifelse(is.null(col_nuc), makeTransparent('red', 95), col_nuc[4]), nrow(mcov)),
+    colZ= rep('%(col_cov)s', nrow(mcov)),
+    stringsAsFactors= FALSE
+    )
+## If the range is too wide, use only one colour:
+region_size<- max(mcov$end) - min(mcov$start)
+if(region_size > %(maxres)s) {
+    col_df[,c('colA', 'colC', 'colG', 'colT', 'colZ')]<- '%(col_cov)s'
+}
+
 ## Reference bases
+## ---------------
 refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')
+
+## Update colour dataframe according to sequence. Where read nuc == reference set
+## colour to 'grey' (or something)
+## If refbases has no rows there will be no difference.
+## ------------------------------------------------------------------------------
+if('%(col_all)s' == 'False' && (max(col_df$end - col_df$start) == 1)){
+    ## See if intervals have single base resolution. If not, you can't
+    ## distinguidh nucleotides anyway:
+    col_df<- merge(col_df, refbases, by.x= c('chrom', 'end'), by.y= c('chrom', 'pos'), all.x= TRUE)
+    ## Now, update colour where reference == base
+    cols_idx<- match(c('colA', 'colC', 'colG', 'colT'), colnames(col_df)) ## Positions of colour columns
+    ## Add a column which says which column index should be updated
+    col_df$up_idx<- ifelse(col_df$base == 'A', cols_idx[1],
+                ifelse(col_df$base == 'C', cols_idx[2],
+                    ifelse(col_df$base == 'G', cols_idx[3],
+                       ifelse(col_df$base == 'T', cols_idx[4], NA
+                        )
+                    )
+                )       
+            )
+    ## Position of the newly added column
+    ref_idx<- which(names(col_df) == 'up_idx')
+    ## Reset colour to N where sequenced base matches reference base
+    newcolours<- t(apply(col_df, 1, change_colour, ref_idx))
+    col_df<- data.frame(newcolours, stringsAsFactors= FALSE)
+    col_df$start<- as.integer(col_df$start)
+    col_df$end<- as.integer(col_df$end)
+} else {
+    col_df$base<- NA ## Add this column even if you don't have refbases.
+}
 
 ## GTF file
 do.gtf<- FALSE
@@ -468,12 +553,6 @@ count_pos<- list(
 ## A check: all the counts above have the same length:
 if(length(unique((sapply(count_pos, length)))) != 1){
     stop('An error occured while processing the data.')
-}
-
-## If the range is too wide, use only one colour:
-region_size<- max(mcov$end) - min(mcov$start)
-if(region_size > %(max_nuc)s) {
-    colList<- lapply(colList, function(x) return(colList$colZ))
 }
 
 xpos<- rowMeans(mcov[, c('start', 'end')]) + 0.5
@@ -509,20 +588,18 @@ for(p in seq(1, nplots)){
     } else {
         ylim<- as.numeric('%(ylim)s')
     }
-    
     plot(xpos, Z, type= 'n', xlab= '', ylab= '', xaxt= 'n', ylim= c(0, ylim), lwd= lwd, xlim= c(%(xlim1)s, %(xlim2)s), cex.axis= cex.axis)
     rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= "%(bg)s", border= 'transparent')
     if('%(nogrid)s' == 'False'){
         grid(col= 'darkgrey')
     }
-    rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= Z, col= colList$colZ, border= 'transparent')
-    rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= T, col= colList$colT, border= 'transparent')
-    rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= G, col= colList$colG, border= 'transparent')
-    rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= C, col= colList$colC, border= 'transparent')
-    rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= A, col= colList$colA, border= 'transparent')
+    rect(xleft= mcov$start, ybottom= rep(0, length(xpos)), xright= mcov$end, ytop= A, col= col_df$colA, border= 'transparent')
+    rect(xleft= mcov$start, ybottom= A,                    xright= mcov$end, ytop= C, col= col_df$colC, border= 'transparent')
+    rect(xleft= mcov$start, ybottom= C,                    xright= mcov$end, ytop= G, col= col_df$colG, border= 'transparent')
+    rect(xleft= mcov$start, ybottom= G,                    xright= mcov$end, ytop= T, col= col_df$colT, border= 'transparent')
+    rect(xleft= mcov$start, ybottom= T,                    xright= mcov$end, ytop= Z, col= col_df$colZ, border= 'transparent')
     mtext(side= 3, text= libname, adj= 0.02, line= -1, col= '%(col_name)s', cex= 0.9)
     if(p == 1){
-makeTransparent('blue', 80)
         ## Plotting of annotation
         ## ----------------------
         if(do.gtf){
@@ -541,7 +618,6 @@ makeTransparent('blue', 80)
         }
     }
 }
-
 x<- axis(side= 1, labels= FALSE)
 axis(labels= formatC(x, format= 'd', big.mark= ','), side= 1, at= x, cex.axis= cex.axis)
 mtext(text= '%(plotname)s', cex= 0.95, outer= TRUE, side= 4, las= 0, line= 0, col= 'grey50')
@@ -637,13 +713,15 @@ def make_dummy_mpileup(chrom, start, end, nbams):
     return(bedline)
     
 # -----------------------------------------------------------------------------
-NWINDS= 1000 ## Number of windows to divide each bed region. Regions smaller than
+def main():
+    args = parser.parse_args()
+
+    nwinds= 1000 ## Number of windows to divide each bed region. Regions smaller than
              ## this will be plotted at base resolution. Larger regions will be
              ## divided in ~1000 equally sized windows and the counts from mpileup
              ## averaged.
-
-def main():
-    args = parser.parse_args()
+    if nwinds < args.maxres:
+        nwinds= args.maxres
     if args.replot and args.tmpdir is None:
         sys.exit('\nCannot replot without a working (--tmpdir) directory!\n')
     bamlist= getFileList(args.ibam)
@@ -698,10 +776,9 @@ def main():
     ## -------------------------------------------------------------------------
     if args.rpm and not args.replot:
         sys.stdout.write('Getting library sizes... ')
-        libsizes_dict= getLibrarySizes(bamlist)
+        libsizes_dict= getLibrarySizes(bamlist, args.samtools)
         libsizes= [libsizes_dict[x] for x in bamlist]
         print(', '.join([str(x) for x in libsizes]))
-    
     inbed= pybedtools.BedTool(args.bed)
     for region in inbed:
         print('Processing: %s' %(str(region).strip()))
@@ -726,7 +803,7 @@ def main():
             ## ---------------------------------------------------------------------
             region_seq= open(fasta_seq_name, 'w')
             region_seq.write('\t'.join(['chrom', 'pos', 'base']) + '\n')
-            if ((region.end - region.start) <= args.max_fa) and args.fasta:
+            if ((region.end - region.start) <= args.maxres) and args.fasta:
                 fasta_seq= getRefSequence(args.fasta, region)
                 for line in fasta_seq:
                     region_seq.write('\t'.join([str(x) for x in line]) + '\n')
@@ -738,24 +815,41 @@ def main():
                 prepare_annotation(args.gtf, region, annot_file)
             ## Pileup: This is the time consuming part
             ## --------------------------------------------------------------------
-            r= '-r ' + region.chrom + ':' + str(region.start) + '-' + str(region.end)
-            mpile_cmd= compile_mpileup(bamlist, '-BQ0', '-d1000000', r)
             mpileup_bed= open(mpileup_name, 'w')
-            for p in eval(mpile_cmd):
-                pd= parse_pileup(p, bamlist)
+            cmd= mpileup_cmd(bamlist= bamlist, region= region, fasta= args.fasta, mpileup= os.path.join(args.samtools, 'samtools mpileup'))
+            proc= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE, stderr= subprocess.PIPE)
+            while True:
+                ## Use this while loop to avoid reading in memory all the output of mpileup.
+                ## See also http://stackoverflow.com/questions/2804543/read-subprocess-stdout-line-by-line
+                line= proc.stdout.readline()
+                sys.stdout.flush()
+                if not line:
+                    break
+                pd= parse_pileup(line, bamlist)
                 bedline= pileupToBed(pd, bamlist)
                 if args.rpm:
                     bedline= bedline[0:6] + rpm(bedline[6:], libsizes)
                 mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
             mpileup_bed.close()
+
+#            r= '-r ' + region.chrom + ':' + str(region.start) + '-' + str(region.end)
+#            mpile_cmd= compile_mpileup(bamlist, '-BQ0', '-d1000000', r)
+#            mpileup_bed= open(mpileup_name, 'w')
+#            for p in eval(mpile_cmd):
+#                pd= parse_pileup(p, bamlist)
+#                bedline= pileupToBed(pd, bamlist)
+#                if args.rpm:
+#                    bedline= bedline[0:6] + rpm(bedline[6:], libsizes)
+#                mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
+#            mpileup_bed.close()
             if os.stat(mpileup_name).st_size == 0:
                 mpileup_bed= open(mpileup_name, 'w')
                 bedline= make_dummy_mpileup(region.chrom, region.start, region.start + 1, len(bamlist))
                 mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
                 mpileup_bed.close()
-            ## Divide interval in this many regions. No difference if region span < NWINDS
+            ## Divide interval in this many regions. No difference if region span < nwinds
             ## --------------------------------------------------------------------
-            w= makeWindows(region, NWINDS) 
+            w= makeWindows(region, nwinds) 
             ## Assign to each pileup position its window --------------------------
             mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(w, wb= True)
             ## Aggregate counts in each position by window: -----------------------
@@ -788,7 +882,7 @@ def main():
               xlim1= region.start,
               xlim2= region.end,
               gtf= annot_file,
-              max_nuc= args.max_nuc,
+              maxres= args.maxres,
               ylim= args.ylim,
               cex_axis= args.cex_axis,
               col_cov= args.col_cov,
@@ -804,7 +898,9 @@ def main():
               line_seq= args.line_seq,
               col_seq= args.col_seq,
               oma= ', '.join([str(x) for x in args.oma]),
-              mar= ', '.join([str(x) for x in args.mar]))
+              mar= ', '.join([str(x) for x in args.mar]),
+              col_all= args.col_all
+              )
         
         
         if rgraph['stderr'] != '':
