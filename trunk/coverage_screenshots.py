@@ -109,6 +109,16 @@ output_args.add_argument('--verbose', '-v',
                    help='''Print verbose output. Currently this option only adds
 the stdout and stderr from R. Only useful for debugging.
 ''')
+
+output_args.add_argument('--nwinds', '-w',
+                   type= int,
+                   default= 1000,
+                   help='''Maximum number of data-points to plot. If the bed interval
+is larger than --nwinds it will be divided into equally sized windows and counts
+averaged by window. Small value give a coarse resolution while larger values more
+jagged profile. Default 1000. If nwinds < maxres,  nwinds is reset to maxres.  
+''')
+
 # -----------------------------------------------------------------------------
 plot_coverage= parser.add_argument_group('Plot of coverage', '')
 
@@ -129,22 +139,14 @@ and to plot each nucleotide in different colour. Default 100 (i.e. regions small
 than 100 bp will be printed with colour coded nucleotides and the sequence will
 be shown).''')
 
-output_args.add_argument('--nwinds', '-w',
-                   type= int,
-                   default= 1000,
-                   help='''Maximum number of data-points to plot. If the bed interval
-is larger than --nwinds it will be divided into equally sized windows and counts
-averaged by window. Small value give a course resolution while larger values more
-jagged profile. Default 1000. If nwinds < maxres,  nwinds is reset to maxres.  
-''')
-
 # -----------------------------------------------------------------------------
 annotation_args= parser.add_argument_group('Format of annotation', '')
 
 annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
 annotation_args.add_argument('--col_ann', default= 'firebrick4', help='''Colour for annotation bars (exons, CDS etc.)''')
+annotation_args.add_argument('--cex_names', default= 0.9, type= float, help='''Character exapansion for the names of the samples''')
 annotation_args.add_argument('--col_names', default= ['#0000FF50'], nargs= '+',
-    help='''List of colours for the name of each library. Colours recycled as necessary.
+    help='''List of colours for the name of each samples. Colours recycled as necessary.
 Useful to colour-code samples according to experimemtal design.''')
 annotation_args.add_argument('--cex_range', default= -1, type= float, help='''Character exapansion for the text range of plot''')
 annotation_args.add_argument('--line_range', default= 2, type= float, help='''Distance of range bar from x-axis. In R's line units''')
@@ -168,7 +170,8 @@ The lower limit of the y-axis is always 0. Options are:
 plot_layout.add_argument('--cex_axis', default= -1, type= float, help='''Character exapansion for the axis annotation (cex.axis in R).
 Use negative value to set default.''')
 
-plot_layout.add_argument('--bg', default= 'grey95', help='''Colour for plot background''')
+plot_layout.add_argument('--bg', nargs= '+', default= ['grey95'], help='''List of colours for the plot backgrounds. Recycled as necessary.
+Useful to colour code samples sharing the same conditions''')
 plot_layout.add_argument('--nogrid', action= 'store_true', help='''Do not plot grid''')
 plot_layout.add_argument('--oma', default= [5, 1.1, 3, 1.1], nargs= 4, type= float, help='''List of 4 floats giving the outer margins of the plot.
 Default 4 1.1 3 1.1''')
@@ -480,6 +483,7 @@ cex.axis<- ifelse(%(cex_axis)s < 0, par('cex.axis'), %(cex_axis)s)
 
 col_nuc<- c(%(col_nuc)s)
 col_names<- c(%(col_names)s)
+bg<- c(%(bg)s)
 # ------------------------------------------------------------------------------
 # INPUT
 # ------------------------------------------------------------------------------
@@ -580,11 +584,16 @@ if(pheight <= 0){
 }
 pdf('%(pdffile)s', width= pwidth/2.54, height= (pheight * nplots)/2.54, pointsize= %(psize)s)
 par(mfrow= c(nplots, 1), las= 1, mar= c(%(mar)s), oma= c(%(oma)s), bty= 'l', mgp= c(3, 0.7, 0))
-i<- 0
+col_names_i<- 0
+bg_i<- 0
 for(p in seq(1, nplots)){
-    i<- i + 1
-    if(i > length(col_names)){
-        i<- 1
+    col_names_i<- col_names_i + 1
+    if(col_names_i > length(col_names)){
+        col_names_i<- 1
+    }
+    bg_i<- bg_i + 1
+    if(bg_i > length(bg)){
+        bg_i<- 1
     }
     ## For each library:
     ## -----------------
@@ -605,7 +614,7 @@ for(p in seq(1, nplots)){
         ylim<- as.numeric('%(ylim)s')
     }
     plot(xpos, Z, type= 'n', xlab= '', ylab= '', xaxt= 'n', ylim= c(0, ylim), lwd= lwd, xlim= c(%(xlim1)s, %(xlim2)s), cex.axis= cex.axis)
-    rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= "%(bg)s", border= 'transparent')
+    rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[bg_i], border= 'transparent')
     if('%(nogrid)s' == 'False'){
         grid(col= 'darkgrey')
     }
@@ -614,7 +623,7 @@ for(p in seq(1, nplots)){
     rect(xleft= mcov$start, ybottom= C,                    xright= mcov$end, ytop= G, col= col_df$colG, border= 'transparent')
     rect(xleft= mcov$start, ybottom= G,                    xright= mcov$end, ytop= T, col= col_df$colT, border= 'transparent')
     rect(xleft= mcov$start, ybottom= T,                    xright= mcov$end, ytop= Z, col= col_df$colZ, border= 'transparent')
-    mtext(side= 3, text= libname, adj= 0.02, line= -1, col= col_names[i], cex= 0.9)
+    mtext(side= 3, text= libname, adj= 0.02, line= -1, col= col_names[col_names_i], cex= %(cex_names)s)
     if(p == 1){
         ## Plotting of annotation
         ## ----------------------
@@ -901,11 +910,12 @@ def main():
               cex_axis= args.cex_axis,
               col_cov= args.col_cov,
               col_nuc= quoteStringList(args.col_nuc),
-              bg= args.bg,
+              bg= quoteStringList(args.bg),
               nogrid= args.nogrid,
               col_text_ann= args.col_text_ann,
               col_ann= args.col_ann,
               col_names= quoteStringList(args.col_names),
+              cex_names= args.cex_names,
               cex_range= args.cex_range,
               cex_seq= args.cex_seq,
               line_range= args.line_range,
