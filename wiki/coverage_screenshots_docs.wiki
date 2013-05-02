@@ -25,7 +25,7 @@ Some implementation details: The heavy duty task of counting nucleotides at each
 position is performed by `samtools mpileup`so it is reasonably fast. Interval
 operations are executed by [http://pythonhosted.org/pybedtools/ pybedtools]. If
 the size of the interval exceeds a set limit (`--nwinds`), the interval is divided
-in equally sized windows and the nucleotide counts averaged by window (See coverage_screenshots_docs#Example 3.).
+in equally sized windows and the nucleotide counts averaged by window (See coverage_screenshots_docs#Example_3:_Re-plotting).
 
 Plotting is done by the [http://cran.r-project.org/ R] standard library.
 
@@ -44,6 +44,7 @@ the net.
     * [http://samtools.sourceforge.net/ samtools 0.1.18] other reasonably new versions should do.
     * [http://cran.r-project.org/ R] (Actually `Rscript`) to be found on your `$PATH`
     * *Linux/Unix* Windows might be working via Cygwin (see also [http://pythonhosted.org/pybedtools/main.html pybedtools]).
+
 == Required python packages ==
 
     * [http://docs.python.org/dev/library/argparse.html argparse] Already included in python 2.7 standard library
@@ -112,6 +113,9 @@ will plot the coverage of all the bam files in the current directory at the
 postions specified in the bed file `actb.bed`. It will also add the postions of
 exons and CDSs as reported in `genes.gtf.gz`. with `--rpm` coverage is reported as
 _reads per million_.
+
+Keep in mind that each interval (row) in the input bed file produces 5 or 6 files.
+Consider this before passing the whole of human refseq to coverge_sscreenshots. 
 
 ----
 http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566757_5566829_ACTB.jpg
