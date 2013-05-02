@@ -8,8 +8,8 @@
 http://bioinformatics-misc.googlecode.com/svn/wiki/images/screenshot.jpg
 ----
 
-*coverage_screenshots.py* produces coverage plots for one or more bam files at
-the intervals specified in a bed file. Plots are written in pdf format, one per
+*coverage_screenshots.py* produces coverage files and plots for one or more bam
+files at the intervals specified in a bed file. Plots are written in pdf format, one per
 region or they can be concatenated in a single file.
 
 Plots can be annotated according to a GTF file and decorated with the individual
@@ -28,7 +28,8 @@ Plotting is done by the [http://cran.r-project.org/ R] standard library.
 
 = System Requirements & Installation =
 
-`coverage_screenshots.py` lives at http://bioinformatics-misc.googlecode.com/svn/trunk/coverage_screenshots.py. A package to download is at [_in prep_].
+`coverage_screenshots.py` lives at http://bioinformatics-misc.googlecode.com/svn/trunk/coverage_screenshots.py.
+A package to download is at [_in prep_].
 
 All the components that make `coverage_screenshots.py` are freely available from
 the net.
@@ -57,9 +58,9 @@ cp coverage_screenshots.py ~/bin/
 
 The necessary input files are:
 
-    *  *BAM* files *sorted* and *indexed* (see above how to)
+    * *BAM* files *sorted* and *indexed* (see above how to)
 
-    * A *BED* file of regions to compute and plot coverage for. Bed file should be tab separated and have at least three columns for chrom, start and end position. An addtional column with the feature name might be included and will be part of the output file names. Addtional columns are ignored.
+    * *BED* file of regions to compute and plot coverage for. Bed file should be tab separated and have at least three columns for chrom, start and end position. An addtional column with the feature name might be included and will be part of the output file names. Addtional columns are ignored.
 
     * _Optional_ *GTF/GFF/BED* file with annotation to be displayed. Such files can be obtained from UCSC, ENSEMBL or custom made. Make sure chromosome names are consistent across files!
  
@@ -187,7 +188,7 @@ Example output from `coverage_screenshots.py` of RNA-Seq data for the ACTB gene 
 
 The colours passed to `coverage_screenshots.py` are in turn passed to R verbatim,
 therefore any R colour name or format is valid. R understands most English names of
-colours (red, lightblue etc.) as well as the RGB representation (e.g. '#0000FF', '00255').
+colours (_red_, _lightblue_ etc.) as well as the RGB representation (e.g. `#0000FF`, `00255`).
 See this nice [http://research.stowers-institute.org/efg/R/Color/Chart/ColorChart.pdf chart]
 for many colour options.
 
