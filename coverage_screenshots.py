@@ -129,12 +129,23 @@ and to plot each nucleotide in different colour. Default 100 (i.e. regions small
 than 100 bp will be printed with colour coded nucleotides and the sequence will
 be shown).''')
 
+output_args.add_argument('--nwinds', '-w',
+                   type= int,
+                   default= 1000,
+                   help='''Maximum number of data-points to plot. If the bed interval
+is larger than --nwinds it will be divided into equally sized windows and counts
+averaged by window. Small value give a course resolution while larger values more
+jagged profile. Default 1000. If nwinds < maxres,  nwinds is reset to maxres.  
+''')
+
 # -----------------------------------------------------------------------------
 annotation_args= parser.add_argument_group('Format of annotation', '')
 
 annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
 annotation_args.add_argument('--col_ann', default= 'firebrick4', help='''Colour for annotation bars (exons, CDS etc.)''')
-annotation_args.add_argument('--col_name', default= '#0000FF50', help='''Colour for text of the name of each plot. Default makeTransparent('blue', 80)''')
+annotation_args.add_argument('--col_names', default= ['#0000FF50'], nargs= '+',
+    help='''List of colours for the name of each library. Colours recycled as necessary.
+Useful to colour-code samples according to experimemtal design.''')
 annotation_args.add_argument('--cex_range', default= -1, type= float, help='''Character exapansion for the text range of plot''')
 annotation_args.add_argument('--line_range', default= 2, type= float, help='''Distance of range bar from x-axis. In R's line units''')
 annotation_args.add_argument('--cex_seq', default= -1, type= float, help='''Character exapansion for the nucleotide sequence''')
@@ -468,7 +479,7 @@ lwd= 4
 cex.axis<- ifelse(%(cex_axis)s < 0, par('cex.axis'), %(cex_axis)s)
 
 col_nuc<- c(%(col_nuc)s)
-
+col_names<- c(%(col_names)s)
 # ------------------------------------------------------------------------------
 # INPUT
 # ------------------------------------------------------------------------------
@@ -569,7 +580,12 @@ if(pheight <= 0){
 }
 pdf('%(pdffile)s', width= pwidth/2.54, height= (pheight * nplots)/2.54, pointsize= %(psize)s)
 par(mfrow= c(nplots, 1), las= 1, mar= c(%(mar)s), oma= c(%(oma)s), bty= 'l', mgp= c(3, 0.7, 0))
+i<- 0
 for(p in seq(1, nplots)){
+    i<- i + 1
+    if(i > length(col_names)){
+        i<- 1
+    }
     ## For each library:
     ## -----------------
     libname<- sub('\\\.bam\\\.depth', '', names(mcov)[p+3], perl= TRUE)
@@ -598,7 +614,7 @@ for(p in seq(1, nplots)){
     rect(xleft= mcov$start, ybottom= C,                    xright= mcov$end, ytop= G, col= col_df$colG, border= 'transparent')
     rect(xleft= mcov$start, ybottom= G,                    xright= mcov$end, ytop= T, col= col_df$colT, border= 'transparent')
     rect(xleft= mcov$start, ybottom= T,                    xright= mcov$end, ytop= Z, col= col_df$colZ, border= 'transparent')
-    mtext(side= 3, text= libname, adj= 0.02, line= -1, col= '%(col_name)s', cex= 0.9)
+    mtext(side= 3, text= libname, adj= 0.02, line= -1, col= col_names[i], cex= 0.9)
     if(p == 1){
         ## Plotting of annotation
         ## ----------------------
@@ -716,12 +732,10 @@ def make_dummy_mpileup(chrom, start, end, nbams):
 def main():
     args = parser.parse_args()
 
-    nwinds= 1000 ## Number of windows to divide each bed region. Regions smaller than
-             ## this will be plotted at base resolution. Larger regions will be
-             ## divided in ~1000 equally sized windows and the counts from mpileup
-             ## averaged.
-    if nwinds < args.maxres:
+    if args.nwinds < args.maxres:
         nwinds= args.maxres
+    else:
+        nwinds= args.nwinds
     if args.replot and args.tmpdir is None:
         sys.exit('\nCannot replot without a working (--tmpdir) directory!\n')
     bamlist= getFileList(args.ibam)
@@ -891,7 +905,7 @@ def main():
               nogrid= args.nogrid,
               col_text_ann= args.col_text_ann,
               col_ann= args.col_ann,
-              col_name= args.col_name,
+              col_names= quoteStringList(args.col_names),
               cex_range= args.cex_range,
               cex_seq= args.cex_seq,
               line_range= args.line_range,
