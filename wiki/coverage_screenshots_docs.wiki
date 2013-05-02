@@ -22,9 +22,15 @@ support GUIs (e.g. computer farms). The graphical output can be customized via
 several options passed to R.
 
 Some implementation details: The heavy duty task of counting nucleotides at each
-position is performed by `samtools mpileup`so it is reasonably fast.
-Interval operations are executed by [http://pythonhosted.org/pybedtools/ pybedtools].
+position is performed by `samtools mpileup`so it is reasonably fast. Interval
+operations are executed by [http://pythonhosted.org/pybedtools/ pybedtools]. If
+the size of the interval exceeds a set limit (`--nwinds`), the interval is divided
+in equally sized windows and the nucleotide counts averaged by window (See coverage_screenshots_docs#Example 3.).
+
 Plotting is done by the [http://cran.r-project.org/ R] standard library.
+
+*Remember* If you save the intermediate output directory (`--tmpdir`), you can replot
+the data without going through the expensive operation of counting depth and bases.
 
 = System Requirements & Installation =
 
