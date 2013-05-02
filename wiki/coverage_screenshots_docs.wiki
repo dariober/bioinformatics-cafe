@@ -35,7 +35,7 @@ All the components that make `coverage_screenshots.py` are freely available from
 the net.
 
     * *python 2.7* Version 2.5+ should do, 3.x not yet.
-    * [http://samtools.sourceforge.net/ *samtools 0.1.18*] other reasonably new versions should do.
+    * [http://samtools.sourceforge.net/ samtools 0.1.18] other reasonably new versions should do.
     * [http://cran.r-project.org/ R] (Actually `Rscript`) to be found on your `$PATH`
     * *Linux/Unix* Windows might be working via Cygwin (see also [http://pythonhosted.org/pybedtools/main.html pybedtools]).
 == Required python packages ==
