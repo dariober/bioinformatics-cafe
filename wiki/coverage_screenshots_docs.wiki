@@ -74,7 +74,7 @@ The necessary input files are:
     * _Optional_ *FASTA* file of the reference sequence used to produce the alignments. Only needed to display the sequence of the interval.
 
 See also [https://genome.ucsc.edu/FAQ/FAQformat.html UCSC] for description if file formats.
- 
+
 _MEMO_ You can sort and index a bam file, assuming you have samtools (http://samtools.sourceforge.net/), with
 
 {{{
