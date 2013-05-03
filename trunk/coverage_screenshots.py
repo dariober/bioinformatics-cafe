@@ -144,6 +144,8 @@ annotation_args= parser.add_argument_group('Format of annotation', '')
 
 annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
 annotation_args.add_argument('--col_ann', default= 'firebrick4', help='''Colour for annotation bars (exons, CDS etc.)''')
+annotation_args.add_argument('--names', default= '', nargs= '+', help='''List of names for the samples. Default ('') is to use the names of the
+bam files with path and .bam extension stripped. Recycled as necessary.''')
 annotation_args.add_argument('--cex_names', default= 0.9, type= float, help='''Character exapansion for the names of the samples''')
 annotation_args.add_argument('--col_names', default= ['#0000FF50'], nargs= '+',
     help='''List of colours for the name of each samples. Colours recycled as necessary.
@@ -482,8 +484,13 @@ lwd= 4
 cex.axis<- ifelse(%(cex_axis)s < 0, par('cex.axis'), %(cex_axis)s)
 
 col_nuc<- c(%(col_nuc)s)
+snames<- c(%(names)s) ## c() evaluates to NULL.
+print(snames)
 col_names<- c(%(col_names)s)
 bg<- c(%(bg)s)
+
+print(is.null(snames))
+
 # ------------------------------------------------------------------------------
 # INPUT
 # ------------------------------------------------------------------------------
@@ -576,6 +583,11 @@ nplots<- length(count_pos[['Z']])
 # ------------------------------------------------------------------------------
 # Plotting
 # ------------------------------------------------------------------------------
+## Vector indexes to iterate thourgh names colours etc. to features
+names_i<- 0
+col_names_i<- 0
+bg_i<- 0
+
 pwidth<- %(pwidth)s
 pheight<- %(pheight)s
 if(pheight <= 0){
@@ -584,20 +596,17 @@ if(pheight <= 0){
 }
 pdf('%(pdffile)s', width= pwidth/2.54, height= (pheight * nplots)/2.54, pointsize= %(psize)s)
 par(mfrow= c(nplots, 1), las= 1, mar= c(%(mar)s), oma= c(%(oma)s), bty= 'l', mgp= c(3, 0.7, 0))
-col_names_i<- 0
-bg_i<- 0
 for(p in seq(1, nplots)){
-    col_names_i<- col_names_i + 1
-    if(col_names_i > length(col_names)){
-        col_names_i<- 1
-    }
-    bg_i<- bg_i + 1
-    if(bg_i > length(bg)){
-        bg_i<- 1
-    }
+    names_i<- ifelse(names_i > length(names), 1, names_i + 1)
+    col_names_i<- ifelse(col_names_i > length(col_names), 1, col_names_i + 1)
+    bg_i<- ifelse(bg_i > length(bg), 1, bg_i + 1)
     ## For each library:
     ## -----------------
-    libname<- sub('\\\.bam\\\.depth', '', names(mcov)[p+3], perl= TRUE)
+    if(is.null(snames)){
+        libname<- sub('\\\.bam\\\.depth', '', names(mcov)[p+3], perl= TRUE)
+    } else {
+        libname<- snames[names_i]
+    }
     Z<- mcov[, count_pos$Z[p]]
     A<- mcov[, count_pos$A[p]]
     C<- mcov[, count_pos$C[p]] + A
@@ -914,6 +923,7 @@ def main():
               nogrid= args.nogrid,
               col_text_ann= args.col_text_ann,
               col_ann= args.col_ann,
+              names= quoteStringList(args.names),
               col_names= quoteStringList(args.col_names),
               cex_names= args.cex_names,
               cex_range= args.cex_range,
