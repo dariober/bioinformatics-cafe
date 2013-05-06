@@ -6,7 +6,9 @@ import os
 import tempfile
 import subprocess
 import shutil
+import glob
 from pycoverage import *
+from validate_args import *
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -22,10 +24,10 @@ DESCRIPTION
 EXAMPLE:
     ## Plot coverage of all the bam files in current dir in the region(s) in file actb.bed
     ## Annotate plot given a GTF file.
-    coverage_screenshots.py --ibam *.bam --gtf genes.gtf.gz --bed actb.bed
+    coverage_screenshots.py --ibam *.bam --bed actb.bed
 
     ## Keep intermediate files:
-    coverage_screenshots.py --ibam ds05*.bam --gtf genes.gtf.gz --bed actb.bed --tmpdir actb
+    coverage_screenshots.py --ibam ds05*.bam --bed actb.bed --tmpdir actb
 
 SEE ALSO:
     Documentation at
@@ -53,11 +55,6 @@ input_args.add_argument('--bed', '-b',
 input_args.add_argument('--fasta', '-f',
                    help='''Fasta file of the reference genome. If given, high
 resolution plots will show the reference bases at each position.
-                   ''')
-
-input_args.add_argument('--gtf', '-g',
-                    help='''GTF file to fetch annotation from. E.g. gene.gtf in
-iGenomes. Can be gzip compressed.
                    ''')
 
 input_args.add_argument('--samtools',
@@ -122,7 +119,6 @@ jagged profile. Default 1000. If nwinds < maxres,  nwinds is reset to maxres.
 plot_coverage= parser.add_argument_group('Plot of coverage', '')
 
 plot_coverage.add_argument('--col_nuc', nargs= 4, default= '', help='''List of 4 R colours for bars of A, C, G, and T.''')
-plot_coverage.add_argument('--col_cov', default= 'grey', help='''Colour for coverage of pooled bases and for N''')
 plot_coverage.add_argument('--col_all', '-c',
                     action= 'store_true',
                     help='''Paint each bar with the colours given in --col_nuc
@@ -130,7 +126,69 @@ even if the base matches the reference. Default is to paint only mismatching bas
 Irrelvant if --maxres is exceeded or a reference genome is not provided with --fasta.
                    ''')
 
-plot_coverage.add_argument('--maxres', '-m',
+# -----------------------------------------------------------------------------
+annotation_args= parser.add_argument_group('Track options',
+    'Graphical options for the individual tracks.')
+
+annotation_args.add_argument('--cex', default= 1, type= float, help='''Character expansion for all text. All the other cex parameters will be based on this''')
+annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
+annotation_args.add_argument('--cex_ann', default= 0.8, type= float, help='''Character exapansion for the names of the annotation tracks''')
+annotation_args.add_argument('--col_track', default= [''], nargs= '+', help='''Colour for coverage and annotation tracks and for N base.
+Default will assigne grey to coverage and firebrick4 to annotation''')
+
+# -----------------------------------------------------------------------------
+xaxis_args= parser.add_argument_group('Annotation of x-axis',
+    'Affect x-axis labelling, range and sequence of interval')
+
+xaxis_args.add_argument('--cex_axis', default= 1, type= float, help='''Character exapansion for the axis annotation.''')
+xaxis_args.add_argument('--cex_range', default= 1, type= float, help='''Character exapansion for the range of the x-axis''')
+xaxis_args.add_argument('--cex_seq', default= 1, type= float, help='''Character exapansion for the nucleotide sequence''')
+xaxis_args.add_argument('--col_seq', default= 'black', help='''Colour for the nucleotide sequence.''')
+
+# -----------------------------------------------------------------------------
+plot_layout= parser.add_argument_group('Plot layout', '')
+
+plot_layout.add_argument('--ymax', '-Y',
+                    default= ['max'],
+                    type= str,
+                    nargs= '+',
+                    help='''Maximum limit of y-axis. Options are:
+'max' (default) all y-axes set to the maximum value of all the coverage plots.
+'indiv': Scale each plot individually to its maximum.
+<float>: Set all the plots to this maximum.
+'max' cannot be combined with other choices.
+                   ''')
+
+plot_layout.add_argument('--ymin', '-y',
+                    default= ['min'],
+                    type= str,
+                    nargs= '+',
+                    help='''Minimum limit of y-axis. Options are:
+'min' (default) all y-axes set to 0 or the minimum value of all the coverage plots.
+<float>: Set all the plots to this minimum.''')
+
+plot_layout.add_argument('--vheights',
+                    default= [''],
+                    type= str,
+                    nargs= '+',
+                    help='''List of proportional heights to be passed to R layout(). Recycled.
+E.g. if `4 2 1` will make the 1st track twice the size of the 2nd and 4 times the height of 3rd.''')
+
+plot_layout.add_argument('--names', default= None, nargs= '+', help='''List of names for the samples. Default ('') is to use the names of the
+bam files with path and .bam extension stripped. Recycled as necessary.''')
+plot_layout.add_argument('--cex_names', default= 1, type= float, help='''Character exapansion for the names of the samples''')
+plot_layout.add_argument('--col_names', default= ['#0000FF50'], nargs= '+',
+    help='''List of colours for the name of each samples. Colours recycled as necessary.
+Useful to colour-code samples according to experimemtal design.''')
+
+plot_layout.add_argument('--bg', nargs= '+', default= ['grey95'], help='''List of colours for the plot backgrounds. Recycled as necessary.
+Useful to colour code samples sharing the same conditions''')
+
+# -----------------------------------------------------------------------------
+figure_size_args= parser.add_argument_group('Global graphical optons',
+    'These options affect all the tracks or the figure as a whole')
+
+figure_size_args.add_argument('--maxres', '-m',
                     default= 100,
                     type= int,
                     help='''The maximum width of the region (bp) to print bases
@@ -138,60 +196,20 @@ and to plot each nucleotide in different colour. Default 100 (i.e. regions small
 than 100 bp will be printed with colour coded nucleotides and the sequence will
 be shown).''')
 
-# -----------------------------------------------------------------------------
-annotation_args= parser.add_argument_group('Format of annotation', '')
+figure_size_args.add_argument('--mar', default= [0, 4, 0.2, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.''')
 
-annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
-annotation_args.add_argument('--col_ann', default= 'firebrick4', help='''Colour for annotation bars (exons, CDS etc.)''')
-annotation_args.add_argument('--names', default= '', nargs= '+', help='''List of names for the samples. Default ('') is to use the names of the
-bam files with path and .bam extension stripped. Recycled as necessary.''')
-annotation_args.add_argument('--cex_names', default= 0.9, type= float, help='''Character exapansion for the names of the samples''')
-annotation_args.add_argument('--col_names', default= ['#0000FF50'], nargs= '+',
-    help='''List of colours for the name of each samples. Colours recycled as necessary.
-Useful to colour-code samples according to experimemtal design.''')
-annotation_args.add_argument('--cex_range', default= -1, type= float, help='''Character exapansion for the text range of plot''')
-annotation_args.add_argument('--line_range', default= 2, type= float, help='''Distance of range bar from x-axis. In R's line units''')
-annotation_args.add_argument('--cex_seq', default= -1, type= float, help='''Character exapansion for the nucleotide sequence''')
-annotation_args.add_argument('--line_seq', default= 3.5, type= float, help='''Distance of nucleotide sequence bar from x-axis. In R's line units''')
-annotation_args.add_argument('--col_seq', default= 'black', help='''Colour for the nucleotide sequence.''')
-
-# -----------------------------------------------------------------------------
-plot_layout= parser.add_argument_group('Plot layout', '')
-
-plot_layout.add_argument('--ylim', '-y',
-                    default= 'max',
-                    type= str,
-                    help='''How the maximum value for the y-axis should be set.
-The lower limit of the y-axis is always 0. Options are:
-'max' (default) all y-axes set to the maximum value of all the plots.
-'indiv': Scale each plot individually to its maximum.
-<float>: Set all the plots to this maximum (E.g. 1000).
-                   ''')
-
-plot_layout.add_argument('--cex_axis', default= -1, type= float, help='''Character exapansion for the axis annotation (cex.axis in R).
-Use negative value to set default.''')
-
-plot_layout.add_argument('--bg', nargs= '+', default= ['grey95'], help='''List of colours for the plot backgrounds. Recycled as necessary.
-Useful to colour code samples sharing the same conditions''')
-plot_layout.add_argument('--nogrid', action= 'store_true', help='''Do not plot grid''')
-plot_layout.add_argument('--oma', default= [5, 1.1, 3, 1.1], nargs= 4, type= float, help='''List of 4 floats giving the outer margins of the plot.
-Default 4 1.1 3 1.1''')
-plot_layout.add_argument('--mar', default= [0.5, 4, 0.5, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.
-Default 0.5 4 0.5 1''')
-
-# -----------------------------------------------------------------------------
-figure_size_args= parser.add_argument_group('Figure and font size', '')
-
-figure_size_args.add_argument('--pheight', '-H',
-                    default= -1,
-                    type= float,
-                    help='''Height of *each* plot in cm. Default 6
-                   ''')
+figure_size_args.add_argument('--nogrid', action= 'store_true', help='''Do not plot grid''')
 
 figure_size_args.add_argument('--pwidth', '-W',
                     default= 15,
                     type= float,
                     help='''Width of the plots in cm. Default 24
+                   ''')
+
+figure_size_args.add_argument('--pheight', '-H',
+                    default= False,
+                    type= float,
+                    help='''Height of the figure in cm
                    ''')
 
 figure_size_args.add_argument('--psize', '-p',
@@ -206,7 +224,12 @@ between 9 and 12 should suite most cases. Default 10.
 # -----------------------------------------------------------------------------
 def main():
     args = parser.parse_args()
-
+    try:
+        assert validate_ymax(args.ymax)
+        assert validate_ymin(args.ymin)
+    except AssertionError:
+        print('''Invalid arguments passed to ymax or ymin.''')
+        sys.exit(1)
     if args.nwinds < args.maxres:
         nwinds= args.maxres
     else:
@@ -214,12 +237,18 @@ def main():
     if args.replot and args.tmpdir is None:
         sys.exit('\nCannot replot without a working (--tmpdir) directory!\n')
     inputlist= getFileList(args.ibam)
+    inputlist_all= getFileList(args.ibam, keepdups= True)
     bamlist= [x for x in inputlist if x.endswith('.bam')]
     nonbamlist= [x for x in inputlist if not x.endswith('.bam')]
+    names= parse_names(args.names, inputlist_all)
     if not args.replot:
         print('\nFiles to analyze (%s found):\n%s\n' %(len(inputlist), ', '.join(inputlist)))
     if len(inputlist) == 0 and not args.replot:
         sys.exit('No file found!\n')
+    if not args.pheight:
+        pheight= args.pwidth/5 + (args.pwidth/4 * len(bamlist)) + (args.pwidth/8 * len(nonbamlist))
+    else:
+        pheight= args.pheight
     # Output settings
     # ---------------
     if (args.outdir is not None) and (args.onefile is not None):
@@ -266,13 +295,17 @@ def main():
             regname = regname + '_' + region.name 
         ## --------------------[ Prepare output file names ]-------------------
         fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
-        if args.gtf:
-            annot_file= os.path.join(tmpdir, regname + '.annot.txt')
+
+        if bamlist != []:
+            mpileup_name= os.path.join(tmpdir, regname) + '.mpileup.bed.txt'
+            mpileup_grp_name= os.path.join(tmpdir, regname) + '.grp.bed.txt'
         else:
-            annot_file= ''
-        mpileup_name= os.path.join(tmpdir, regname) + '.mpileup.bed.txt'
-        mpileup_grp_name= os.path.join(tmpdir, regname) + '.grp.bed.txt'
-        non_bam_name= os.path.join(tmpdir, regname) + '.nonbam.bed.txt'
+            mpileup_name= ''
+            mpileup_grp_name= ''
+        if nonbamlist != []:
+            non_bam_name= os.path.join(tmpdir, regname) + '.nonbam.bed.txt'
+        else:
+            non_bam_name= ''
         pdffile= os.path.join(tmpdir, regname + '.pdf')
         rscript= os.path.join(tmpdir, regname + '.R')
         if not args.replot:
@@ -310,38 +343,37 @@ def main():
             ylab= 'Read count'
         ## Memo: All the args passed to RPlot() become part of the R script.
         rgraph= RPlot(
-              inputlist= quoteStringList(args.ibam),
+              inputlist= quoteStringList(inputlist_all),
               pdffile= pdffile,
               rscript= rscript,
               plotname= regname,
               mcov= mpileup_grp_name,
               nonbam= non_bam_name,
               refbases= fasta_seq_name,
-              pheight= args.pheight,
+              pheight= pheight,
               pwidth= args.pwidth,
               psize= args.psize,
               ylab= ylab,
               xlim1= region.start,
               xlim2= region.end,
-              gtf= annot_file,
               maxres= args.maxres,
-              ylim= args.ylim,
+              ymax= quoteStringList(args.ymax),
+              ymin= quoteStringList(args.ymin),
+              vheights= quoteStringList(args.vheights),
+              cex= args.cex,
               cex_axis= args.cex_axis,
-              col_cov= args.col_cov,
+              col_track= quoteStringList(args.col_track),
               col_nuc= quoteStringList(args.col_nuc),
               bg= quoteStringList(args.bg),
               nogrid= args.nogrid,
               col_text_ann= args.col_text_ann,
-              col_ann= args.col_ann,
-              names= quoteStringList(args.names),
+              cex_ann= args.cex_ann,
+              names= quoteStringList(names),
               col_names= quoteStringList(args.col_names),
               cex_names= args.cex_names,
               cex_range= args.cex_range,
               cex_seq= args.cex_seq,
-              line_range= args.line_range,
-              line_seq= args.line_seq,
               col_seq= args.col_seq,
-              oma= ', '.join([str(x) for x in args.oma]),
               mar= ', '.join([str(x) for x in args.mar]),
               col_all= args.col_all
               )
