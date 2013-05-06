@@ -2,7 +2,26 @@
 
 # -----------------------------------------------------------------------------
 # This script template read by pycoverage.RPlot
+#
+# TODO:
+# - Window compression to potentially large bed coverage files.
+# - Y-axis labelling
+# - Read args from config file.
 # -----------------------------------------------------------------------------
+
+recycle<- function(x, y){
+    ## Recycles or trim vector y to be of the same length of x
+    if(is.null(y)){
+        yext<- rep(NA, length(x))
+        return(yext)
+    }
+    if(length(y) >= length(x)){
+        return(y[1:length(x)])
+    } else{
+        yext<- c(rep(y, times= floor(length(x) / length(y))), y[1:(length(x) %%%% length(y))] )
+        return(yext)
+    }
+}
 
 makeTransparent<-function(someColor, alpha=100){
     "Given a colour name (e.g. 'red'), make it transparent.
@@ -17,7 +36,7 @@ makeTransparent<-function(someColor, alpha=100){
     blue=curcoldata[3],alpha=alpha, maxColorValue=255)})
 }
 
-change_colour<- function(x, ref_idx, up_colour= '%(col_cov)s'){
+change_colour<- function(x, ref_idx, up_colour){
     ## Function to pass to apply to reset colour 
     to_update<- as.numeric(x[ref_idx])
     x[to_update]<- up_colour
@@ -52,7 +71,7 @@ reshape_mcov<- function(mcov){
     return(mcov_long)
 }
 
-make_colour_df<- function(mcov_long, col_nuc){
+make_colour_df<- function(mcov_long, col_nuc, col_track){
     ## Produce a colour dataframe on the basis of mcov_long and colour vector in col_nuc
     col_df<- data.frame(
         mcov_long[, c('chrom', 'start', 'end')],
@@ -60,26 +79,25 @@ make_colour_df<- function(mcov_long, col_nuc){
         colC= rep(ifelse(is.null(col_nuc), makeTransparent('blue', 95), col_nuc[2]), nrow(mcov_long)),
         colG= rep(ifelse(is.null(col_nuc), makeTransparent('orange', 95), col_nuc[3]), nrow(mcov_long)),
         colT= rep(ifelse(is.null(col_nuc), makeTransparent('red', 95), col_nuc[4]), nrow(mcov_long)),
-        colZ= rep('%(col_cov)s', nrow(mcov_long)),
+        colZ= rep(col_track, nrow(mcov_long)),
         stringsAsFactors= FALSE
         )
     ## If the range is too wide, use only one colour:
     region_size<- max(mcov_long$end) - min(mcov_long$start)
     if(region_size > %(maxres)s) {
-        col_df[,c('colA', 'colC', 'colG', 'colT', 'colZ')]<- '%(col_cov)s'
+        col_df[,c('colA', 'colC', 'colG', 'colT', 'colZ')]<- col_track
     }
     return(col_df)
 } 
 
-update_colour_df<- function(colour_df, refbases){
+update_colour_df<- function(colour_df, refbases, col_track){
     ## Update colour dataframe according to sequence. Where read nuc == reference set
     ## colour to 'grey' (or something)
     ## If refbases has no rows there will be no difference.
     ## ------------------------------------------------------------------------------
-    if('%(col_all)s' == 'False' && (max(colour_df$end - colour_df$start) == 1)){
-        ## See if intervals have single base resolution. If not, you can't
-        ## distinguidh nucleotides anyway:
-        colour_df<- merge(colour_df, refbases, by.x= c('chrom', 'end'), by.y= c('chrom', 'pos'), all.x= TRUE)
+    if('%(col_all)s' == 'False'){
+        ## Where you have single bases, set base to the reference
+        colour_df<- merge(colour_df, refbases, by.x= c('chrom', 'start', 'end'), by.y= c('chrom', 'start', 'end'), all.x= TRUE)
         ## Now, update colour where reference == base
         cols_idx<- match(c('colA', 'colC', 'colG', 'colT'), colnames(colour_df)) ## Positions of colour columns
         ## Add a column which says which column index should be updated
@@ -94,52 +112,59 @@ update_colour_df<- function(colour_df, refbases){
         ## Position of the newly added column
         ref_idx<- which(names(colour_df) == 'up_idx')
         ## Reset colour to N where sequenced base matches reference base
-        newcolours<- t(apply(colour_df, 1, change_colour, ref_idx))
+        newcolours<- t(apply(colour_df, 1, change_colour, ref_idx, col_track))
         colour_df<- data.frame(newcolours, stringsAsFactors= FALSE)
         colour_df$start<- as.integer(colour_df$start)
-        colour_df$end<- as.integer(colour_df$end)
+        colour_df$end<- as.integer(colour_df$end)        
     } else {
-        colour_df$base<- NA ## Add this column even if you don't have refbases.
+        colour_df$base<- NA
     }
     return(colour_df)
 }
 
+setPlotHeights<- function(heights){
+    "Set sensible (?) values for top and bottom panel given the vector of heights
+    heights:
+        Numeric vector, expected to be of the same length as inputlist.
+    Return:
+        Numeric vector of length inputlist + 2 to be passed to layout()"
+    top<- max(heights) / 8
+    bottom<- max(heights) / 2
+    return(c(top, heights, bottom))
+}
+    
 # ------------------------------------------------------------------------------
 # Intial settings
 # ------------------------------------------------------------------------------
+inputlist<- c(%(inputlist)s)
 nonbam<- '%(nonbam)s'
 mpileup_grp_bed_txt<- '%(mcov)s'
-cex.axis<- ifelse(%(cex_axis)s < 0, par('cex.axis'), %(cex_axis)s)
-col_nuc<- c(%(col_nuc)s)
-snames<- c(%(names)s) ## c() evaluates to NULL.
-col_names<- c(%(col_names)s)
-bg<- c(%(bg)s)
 inputlist<- c(%(inputlist)s)
+cex<- %(cex)s
+cex_axis<- %(cex_axis)s * cex
+cex_names<- %(cex_names)s * cex 
+cex_seq<- %(cex_seq)s * cex
+cex_range<- %(cex_range)s * cex
+cex_ann<- %(cex_ann)s * cex
+col_nuc<- c(%(col_nuc)s)
+col_track<- recycle(inputlist, c(%(col_track)s))
+snames<- recycle(inputlist, c(%(names)s))        ## c() evaluates to NULL.
+col_names<- recycle(inputlist, c(%(col_names)s))
+bg<- recycle( inputlist, c(%(bg)s) )
+ymax<- recycle( inputlist, c(%(ymax)s) )
+ymin<- recycle( inputlist, c(%(ymin)s) )
+vheights<- as.numeric(recycle( inputlist, c(%(vheights)s) ))
+mar<- c(%(mar)s)
 
 # ------------------------------------------------------------------------------
 # DATA INPUT
-#
-# data_df will look like:
-#    chrom   start     end            file_name  A  C  G  T  Z  feature name strand
-#1    chr7 5566757 5566829         actb.cov.bed NA NA NA NA 10 coverage   10 <NA>
-#2    chr7 5566757 5566829         actb.cov.bed NA NA NA NA 10 coverage   10 <NA>     
-#3    chr7 5566757 5566829         actb.cov.bed NA NA NA NA 20 coverage   20 <NA>
-#4    chr7 5566757 5566829         actb.cov.bed NA NA NA NA 10 coverage   10 <NA>
-#5    chr7 5566757 5566829         actb.cov.bed NA NA NA NA 20 coverage   20 <NA>
-#6    chr7 5566757 5566829         actb.cov.bed NA NA NA NA  0 coverage    0 <NA>
-#7    chr7 5566777 5566829            genes.gtf NA NA NA NA NA     exon ACTB <NA>
-#110  chr7 5566777 5566778 bam/ds051.actb.2.bam  0  1  0  0  1 coverage <NA> <NA>
-#210  chr7 5566778 5566779 bam/ds051.actb.2.bam  0  0  0  4  4 coverage <NA> <NA>
-#310  chr7 5566779 5566780 bam/ds051.actb.2.bam  0  1  0  3  4 coverage <NA> <NA>
-#
 # ------------------------------------------------------------------------------
 
 # NON BAM FILES
 
-if( nonbam != ''){
+if( nonbam != '' ){
     data_df<- read.table(nonbam, header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')   
 }
-
 # BAM FILES
 
 if( mpileup_grp_bed_txt != ''){
@@ -147,32 +172,18 @@ if( mpileup_grp_bed_txt != ''){
     mcov<- read.table(mpileup_grp_bed_txt, header= FALSE, sep= '\t', stringsAsFactors= FALSE, skip= 1, comment.char= '')
     names(mcov)<- header
     mcov2<- reshape_mcov(mcov) ## Long format
-    data_df<- rbind(data_df, mcov2)
+    if( nonbam != ''){
+        data_df<- rbind(data_df, mcov2)
+    } else {
+        data_df<- mcov2
+    }
     rm(mcov2)
     rm(mcov)
 }
 
-# -----------------------------------------------------------------------------
-## For each position/interval in mcov (grouped coverage) assign a colour to each base  
-col_df<- make_colour_df(data_df, col_nuc)
-
 ## Reference bases
-## ---------------
+
 refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')
-
-## Update colour dataframe according to reference
-col_df<- update_colour_df(col_df, refbases)
-data_df<- unique(merge(data_df, col_df, by.x<- c('chrom', 'start', 'end'), by.y<- c('chrom', 'start', 'end'), sort= FALSE))
-
-## GTF file
-do.gtf<- FALSE
-if('%(gtf)s' != ''){
-    gtf<- read.table('%(gtf)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')
-    gtf<- gtf[which(gtf$type %%in%% c('start_codon', 'stop_codon') == FALSE),] ## Do not annotate start and stop codon
-    if(nrow(gtf) > 0){
-        do.gtf<- TRUE
-    }
-}
 
 # ------------------------------------------------------------------------------
 # Plotting
@@ -187,38 +198,48 @@ if(pheight <= 0){
     pheight<- (pwidth * 0.35) + ((pwidth/10) / nplots)
 }
 
-## Vector indexes to iterate thourgh names colours etc. to features
-names_i<- 1
-col_names_i<- 1
-bg_i<- 1
-
- # LAYOUT ----------------------------------------------------------------------
+# LAYOUT ----------------------------------------------------------------------
 # For layout() you need to know what files are `coverage` and what are not. Include
 # Duplicate files!
-cov_x_ann<- 8 ## Proportion of height for coverage vs annotation plot. E.g. 4 means coverage is 4x higher than annotation 
 plot_type<- unique(data_df[, c('file_name', 'feature')])
 plot_type$feature<- ifelse(plot_type$feature == 'coverage', 'coverage', 'annotation')
 plot_type<- unique(plot_type)
 plot_type<- merge(plot_type, data.frame(file_name= inputlist, order=1:length(inputlist), stringsAsFactors= FALSE))
 plot_type<- plot_type[order(plot_type$order),]
-plot_type$exp<- ifelse(plot_type$feature == 'coverage', cov_x_ann, 1)
-lay.mat<- rep(plot_type$order, times= plot_type$exp)
-lay.mat<- as.matrix(c(lay.mat, rep(max(lay.mat)+1, 3)), ncol= 1) ## Add one more 'short' plot for bottom annotation
+
+if(all(is.na(vheights))){
+    cov_height= 1
+    ann_height= 1/6
+    top_height= 1/8
+    bottom_height= 1/2
+    plot_type$height<- ifelse(plot_type$feature == 'coverage', cov_height, ann_height)
+    plot_heights<- c(top_height, plot_type$height, bottom_height)
+} else {
+    plot_type$height<- vheights
+    plot_heights<- setPlotHeights(vheights)
+}
+lay.mat<- as.matrix(c(1, plot_type$order + 1, max(plot_type$order) + 2), ncol= 1)
 
 pdf('%(pdffile)s', width= pwidth/2.54, height= pheight/2.54, pointsize= %(psize)s)
-layout(lay.mat)
-# print(as.vector(lay.mat))
-# -----------------------------------------------------------------------------
+layout(lay.mat, heights= plot_heights)
+## Top panel
+par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
+plot(0, ylim= c(0,100), xlim= c(%(xlim1)s, %(xlim2)s), ylab= '', xlab= '')
 for(i in 1:nrow(plot_type)){
     file_name<- plot_type$file_name[i]
     type<- plot_type$feature[i]
     pdata<- data_df[which(data_df$file_name == file_name), ]
-    if(is.null(snames)){
+    if(is.na(snames[i])){
         libname<- basename(file_name)
     } else {
-        libname<- snames[names_i]
+        libname<- snames[i]
     }
+    col4track<- ifelse(col_track[i] == '', ifelse(type == 'coverage', 'grey', 'firebrick4'), col_track[i])
     if(type == 'coverage'){
+        col_df<- make_colour_df(pdata, col_nuc, col4track)
+        ## Update colour dataframe according to reference
+        col_df<- update_colour_df(col_df, refbases, col4track)
+        pdata<- unique(merge(pdata, col_df, by.x<- c('chrom', 'start', 'end'), by.y<- c('chrom', 'start', 'end'), sort= FALSE))
         ## This is to have base colours stacked on top of each others
         Z<- pdata$Z
         A<- pdata$A
@@ -227,16 +248,23 @@ for(i in 1:nrow(plot_type)){
         T<- pdata$T + G
         ## Set maximum for y-axt
         ## ---------------------
-        if('%(ylim)s' == 'max'){
-            ylim<- max(data_df$Z, na.rm= TRUE)
-        } else if('%(ylim)s' == 'indiv'){
-            ylim<- max(pdata$Z)
+        pymax<- ymax[i]
+        if(pymax == 'max'){
+            pymax<- max(data_df$Z, na.rm= TRUE)
+        } else if(pymax == 'indiv'){
+            pymax<- max(pdata$Z)
         } else {
-            ylim<- as.numeric('%(ylim)s')
+            pymax<- as.numeric(pymax)
         }
-        par(las= 1, mar= c(0, 4, 0, 1), bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0)) ## oma= c(%(oma)s), mar= c(%(mar)s)
-        plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(0, ylim), xlim= c(%(xlim1)s, %(xlim2)s), cex.axis= cex.axis)
-        rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[bg_i], border= 'transparent')
+        pymin<- ymin[i]
+        if(pymin == 'min'){
+            pymin<- ifelse(min(data_df$Z, na.rm= TRUE) < 0, min(data_df$Z, na.rm= TRUE), 0)
+        } else {
+            pymin<- as.numeric(pymin)
+        }
+        par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0))
+        plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(pymin, pymax), xlim= c(%(xlim1)s, %(xlim2)s), cex.axis= cex_axis)
+        rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[i], border= 'transparent')
         if('%(nogrid)s' == 'False'){
             grid(col= 'darkgrey')
         }
@@ -245,60 +273,45 @@ for(i in 1:nrow(plot_type)){
         rect(xleft= pdata$start, ybottom= C,             xright= pdata$end, ytop= G, col= pdata$colG, border= 'transparent')
         rect(xleft= pdata$start, ybottom= G,             xright= pdata$end, ytop= T, col= pdata$colT, border= 'transparent')
         rect(xleft= pdata$start, ybottom= T,             xright= pdata$end, ytop= Z, col= pdata$colZ, border= 'transparent')
-        mtext(side= 3, text= libname, adj= 0.02, line= -1, col= col_names[col_names_i], cex= %(cex_names)s)
+        text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
     } else {
-        par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(0,4,0,1))
+        par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
         plot(0, type= 'n', ylim= c(0, 100), xlim= c(%(xlim1)s, %(xlim2)s), xlab= '', ylab= '')
-
-        thick_bottom<- 40 - 15
-        thick_top<-    40 + 15
-        thin_bottom<-  40 - 5
-        thin_top<-     40 + 5
+        rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= makeTransparent('blue', 20), border= 'transparent')
+        thick_bottom<- 30 - 15
+        thick_top<-    30 + 15
+        thin_bottom<-  30 - 5
+        thin_top<-     30 + 5
         rect(xleft= pdata$start,
                     xright= pdata$end,
                     ybottom= ifelse(pdata$feature == 'CDS', thick_bottom, thin_bottom),
                     ytop= ifelse(pdata$feature == 'CDS', thick_top, thin_top),
-                    col= '%(col_ann)s', border= '%(col_ann)s')
-        text(x= rowMeans(pdata[, c('start', 'end')]), y= thick_top + 5, labels= paste(pdata$name, pdata$strand), adj= c(0.5,0), col= '%(col_text_ann)s', cex= cex.axis * 0.9)
+                    col= col4track, border= col4track)
+        text(x= rowMeans(pdata[, c('start', 'end')]), y= thick_top + 10, labels= paste(pdata$name, pdata$strand), adj= c(0.5,0), col= '%(col_text_ann)s', cex= cex_ann)
+        text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
     }
-    names_i<- ifelse(names_i < length(snames), names_i + 1, 1)
-    col_names_i<- ifelse(col_names_i < length(col_names), col_names_i + 1, 1)
-    bg_i<- ifelse(bg_i < length(bg), bg_i + 1, 1)
 }
+
 ## x-axis labels, tickmarks and range: Note very low level
-par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(0,4,0,1), tcl= 0.5)
+baseline<- 90 ## Annotate bottom panel from this y-coord.
+par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(mar[1], mar[2], 0, mar[4]), tcl= 0.5)
 plot(0, type= 'n', ylim= c(0, 100), xlim= c(%(xlim1)s, %(xlim2)s), xlab= '', ylab= '')
 par(xaxt= 's')
 x<- axis(side= 3, labels= FALSE, tick= FALSE)
-segments(x0= x, x1= x, y0= 100, y1= 90)
-text(x= x, y= 85, labels= formatC(x, format= 'd', big.mark= ','), cex.axis= cex.axis, adj= c(0.5, 1))
+segments(x0= x, x1= x, y0= 110, y1= 95) ## Give 110 to make sure it goes all the way to the top
+text(x= x, y= baseline, labels= formatC(x, format= 'd', big.mark= ','), cex= cex_axis, adj= c(1, 1), xpd= NA)
+w<- strheight(formatC(x[1], format= 'd', big.mark= ','), cex= cex_axis)
+## 
 ## Range
-wcex_range<- ifelse(%(cex_range)s <= 0, ifelse(nplots > 3, 0.66, 0.7), %(cex_range)s)
 xrange<- x[length(x)] - x[1]
-text(text= '|', x= c(x[1], x[length(x)]), y= cex= wcex_range)
-text(labels= formatC(paste(xrange, 'bp'), format= 'd', big.mark= ','), cex= wcex_range)
-
-old<- "
-x<- axis(side= 1, labels= FALSE)
-axis(labels= formatC(x, format= 'd', big.mark= ','), side= 1, at= x, cex.axis= cex.axis)
-mtext(text= '%(plotname)s', cex= 0.95, outer= TRUE, side= 4, las= 0, line= 0, col= 'grey50')
-mtext(text= '%(ylab)s', cex= 0.95, outer= TRUE, side= 2, las= 0, line= -0.2)
+#segments(x0= c(x[1], x[length(x)]), x1= c(x[1], x[length(x)]), y0= 40, y1= 50)
+baseline2<- baseline - (w * 2)
+text(y= baseline2, x= mean(c(x[1], x[length(x)])), labels= formatC(paste(xrange, 'bp'), format= 'd', big.mark= ','), cex= cex_range, adj= c(0.5, 1))
+text(y= baseline2, x= c(x[1], x[length(x)]), labels= '|', cex= cex_range, adj= c(0.5, 1))
+w2<- strheight(formatC(paste(xrange, 'bp')), cex= cex_range)
+## Sequence annotation
 if(nrow(refbases) > 0){
-    cex_seq<- ifelse(%(cex_seq)s <= 0, ifelse(nplots > 3, 0.66, 0.75), %(cex_seq)s)
-    mtext(at= refbases$pos,
-        side= 1,
-        text= refbases$base,
-        line= %(line_seq)s,
-        cex= cex_seq,
-        col= '%(col_seq)s',
-        adj= 1,
-        family= 'mono',
-        font= 1)
+    baseline3<- baseline2 - (w2 * 2)
+    text(x= refbases$end, y= baseline3, labels= refbases$base, adj= c(0.5, 1), col= '%(col_seq)s', family= 'mono', font= 1, cex= cex_seq)
 }
-## Text for range
-wcex_range<- ifelse(%(cex_range)s <= 0, ifelse(nplots > 3, 0.66, 0.7), %(cex_range)s)
-xrange<- x[length(x)] - x[1]
-mtext(text= '|', at= c(x[1], x[length(x)]), line= %(line_range)s, side= 1, xpd= NA, cex= wcex_range)
-mtext(text= formatC(paste(xrange, 'bp'), format= 'd', big.mark= ','), line= %(line_range)s, side= 1, xpd= NA, cex= wcex_range)
-"
 dev.off()

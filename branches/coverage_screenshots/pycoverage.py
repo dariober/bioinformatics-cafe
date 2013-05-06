@@ -6,12 +6,14 @@ import subprocess
 import glob
 import pycoverage
 
-def getFileList(files):
+def getFileList(files, keepdups= False):
     """Expand the list of files using glob. Return a list of unique files.
     """
     inputlist_dup= []
     for bam in files:
         inputlist_dup.extend(glob.glob(bam))
+    if keepdups:
+        return(inputlist_dup)
     inputlist= []
     for bam in inputlist_dup:
         if bam not in inputlist:
@@ -225,12 +227,12 @@ def rpm(raw_counts, libsize):
 def getRefSequence(fasta, region):
     """Read the fasta file and extract the region given in bedtool interval region.
     Return:
-        List of lists with inner list ['chrom', 'pos', 'base']
+        List of tuples with inner tuple ['chrom', 'start', 'end', 'base']
     """
     bedregion= pybedtools.BedTool(str(region), from_string= True)
     seq = bedregion.sequence(fi=fasta, tab= True)
     seq= open(seq.seqfn).read().split('\t')
-    seq_table= zip([region.chrom] * (region.end - region.start), range(region.start+1, region.end+1), list(seq[1].strip()))
+    seq_table= zip([region.chrom] * (region.end - region.start), range(region.start, region.end), range(region.start+1, region.end+1), list(seq[1].strip()))
     return(seq_table)
 
 def quoteStringList(x):
@@ -407,7 +409,7 @@ def prepare_reference_fasta(fasta_seq_name, maxres, region, fasta):
         True on success. Side effect produce the reference file *.seq.txt
     """
     region_seq= open(fasta_seq_name, 'w')
-    region_seq.write('\t'.join(['chrom', 'pos', 'base']) + '\n')
+    region_seq.write('\t'.join(['chrom', 'start', 'end', 'base']) + '\n')
     if ((region.end - region.start) <= maxres) and fasta:
         fasta_seq= getRefSequence(fasta, region)
         for line in fasta_seq:
@@ -483,4 +485,4 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, R
         mpileup_grp_fout.write(str(line))
     mpileup_grp_fout.close()
     return(True)
-    
+
