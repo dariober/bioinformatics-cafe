@@ -7,6 +7,7 @@ bedtools.intersect<-function(a, b, opt.string=""){
     a.file<- tempfile(fileext = ".bed")
     b.file<- tempfile(fileext = ".bed")
     out   <- tempfile(fileext = ".bed")
+    ori_scipen<- options('scipen')
     options(scipen= 99) # not to use scientific notation when writing out
     
     #write bed formatted dataframes to tempfile
@@ -20,5 +21,6 @@ bedtools.intersect<-function(a, b, opt.string=""){
     
     res=read.table(out, header=F, stringsAsFactors= FALSE)
     unlink(a.file);unlink(b.file);unlink(out)
+    options(scipen= ori_scipen)
     return(res)
 }
