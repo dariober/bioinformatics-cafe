@@ -1,9 +1,12 @@
-glmBS<- function(cnt_M, cnt_c, library_id, bs, locus, contrast= sort(unique(bs)), thres= 10, ...){
+glmBS<- function(bsobj= NULL, cnt_M= NULL, cnt_c= NULL, library_id= NULL, bs= NULL, locus= NULL, contrast, thres= 10, ...){
 "
 _____________________________ Description ______________________________
 Fit a glm with binomial error family to the each experiment or locus.
 
 _______________________________ Arguments ______________________________
+bsobj:
+         BSdata object from which cnt_met, tot_reads, library_id, locus, bs can
+         be extrated.
 cnt_M:
          Vector of count of Methylated reads
 cnt_c:
@@ -20,7 +23,7 @@ contrast:
          and with the same strings as in bs. E.g. c('BS', 'oxBS') to compare BS-oxBS
          or c('redBS', 'BS') to compare redBS-BS
 thres:
-         Don't analyze loci with less than these may reads in total. These loci
+         Don't analyze loci with less than these many reads in total. These loci
          don't appear at all in the output (to be chnaged?)
 
 _____________________________ Value ____________________________________
@@ -41,16 +44,30 @@ estimate, pvalue:
 fdr:
          pvalue adjusted by method 'fdr'.
 "
-    if(length(unique(c(length(cnt_M), length(cnt_c), length(library_id), length(bs), length(locus)))) != 1){
-         stop('Vectors: cnt_M, cnt_c, library_id, bs, locus must be of equal length')
+    if(length(contrast) != 2){
+         stop(sprintf('Only two contrasts allowed. Found %s', length(contrast)))
     }
-    if(length(unique(bs)) != 2){
-         stop('More than two levels found in bs')
+
+    if(is.null(bsobj)){
+          if(length(unique(c(length(cnt_M), length(cnt_c), length(library_id), length(bs), length(locus)))) != 1){
+               stop('Vectors: cnt_M, cnt_c, library_id, bs, locus must be of equal length')
+          }
+          bsframe<- data.frame( locus= as.factor(locus), cnt_M, cnt_c, library_id= as.factor(library_id), bs= bs)
+    } else if(class(bsobj) == 'BSdata'){
+          bsframe<- data.frame(locus= rep(rownames(bsobj@cnt_met), ncol(bsobj@cnt_met)),
+               cnt_M= c(bsobj@cnt_met),
+               cnt_c= c(bsobj@tot_reads - bsobj@cnt_met),
+               library_id= rep(colnames(bsobj@cnt_met), each= nrow(bsobj@cnt_met))
+          )
+          bsframe<- merge(bsframe, bsdata@design[, c('library_id', 'bs')], by.x= c('library_id'), by.y= c('library_id'), sort= FALSE)
+    } else {
+         stop('Invalid input.')
+    } 
+    bsframe<- bsframe[which(bsframe$bs %in% contrast),]
+    bsframe$bs<- factor(bsframe$bs, levels= contrast)
+    if(length(unique(bsframe$bs)) != 2){
+        stop(sprintf('Invalid number of contrast levels found: %s', unique(bsframe$contrast)))
     }
-    if( !all(sort(unique(bs)) == sort(contrast)) ){
-         stop('Invalid levels in bs or contrast.')
-    }
-    bsframe<- data.frame(cnt_M, cnt_c, library_id= as.factor(library_id), bs= factor(bs, levels= contrast), locus= as.factor(locus))
     estimate<- as.numeric()
     pvalue<- as.numeric()
     avg.cnt_M<- as.numeric()
@@ -61,12 +78,11 @@ fdr:
     for(i in unique(bsframe$locus)){
          bsdf<- bsframe[which(bsframe$locus == i), ]
          filter<- which(bsdf$bs == contrast[1])
-         pct<- sum(bsdf$cnt_M[filter]) / sum(bsdf$cnt_M[filter] + bsdf$cnt_c[filter])
+         pct<- ( sum(bsdf$cnt_M[filter]) / sum(bsdf$cnt_M[filter] + bsdf$cnt_c[filter]) ) * 100
          pct.cond1.M<- append(pct.cond1.M, pct)
          filter<- which(bsdf$bs == contrast[2])
-         pct<- sum(bsdf$cnt_M[filter]) / sum(bsdf$cnt_M[filter] + bsdf$cnt_c[filter])
+         pct<- ( sum(bsdf$cnt_M[filter]) / sum(bsdf$cnt_M[filter] + bsdf$cnt_c[filter]) ) * 100
          pct.cond2.M<- append(pct.cond2.M, pct)
-         
          avg.cnt_M<- append(avg.cnt_M, mean(bsdf$cnt_M))
          avg.cnt_c<- append(avg.cnt_c, mean(bsdf$cnt_c))
          if(sum(bsdf$cnt_M, bsdf$cnt_c) < thres){
@@ -86,5 +102,6 @@ fdr:
     }
     glmOut<- data.frame(locus= unique(bsframe$locus), pct.cond1.M, pct.cond2.M, avg.cnt_M, avg.cnt_c, estimate, pvalue)
     glmOut$fdr<- p.adjust(pvalue, method= 'fdr')
+    glmOut$pct.diff<- glmOut$pct.cond1.M - glmOut$pct.cond2.M
     return(glmOut)
 }
