@@ -8,34 +8,6 @@ import pycoverage
 import gzip
 import re
 
-class InputFile:
-    def __init__(self):
-        filename= None ## File name only 
-        filepath= None ## Full path only
-        filetype= None ## Type of file: coverage, annotation, etc
-        file_ext= None ## Extension for this file, w/o .gz
-        gzip= None ## True/False for whether file is gzipped       
-    
-def describeInputFile(filename):
-    """CURRENTLY UNUSED Collect a number of characteristics for input file.
-    Return:
-        InputFile object
-    """
-    filex= InputFile()
-    filex.filepath, filex.filename= os.path.split(filename)
-    if os.path.splitext(filename)[1] == '.gz':
-        filex.gzip= True
-    else:
-        filex.gzip= False
-    filex.ext= os.path.splitext(re.sub('\.gz$', '', filename))[1]
-    if filex.ext == '.bam':
-        filex.filetype= 'coverage'
-    elif filex.ext.lower() == '.bedgraph':
-        filex.filetype= 'coverage'
-    else:
-        pass
-    return(filex)
-
 def getFileList(files):
     """Expand the list of files using glob. Return a list of unique files.
     """
@@ -220,20 +192,6 @@ def pileupToBed(pdict, bams):
     for c in ['depth', 'A', 'C', 'G', 'T', 'N', 'Z']:
         for bam in bams:
             bedlist.append(pdict[bam][c])
-#    for bam in bams:
-#        bedlist.append(pdict[bam]['depth'])
-#    for bam in bams:
-#        bedlist.append(pdict[bam]['A'])
-#    for bam in bams:
-#        bedlist.append(pdict[bam]['C'])
-#    for bam in bams:
-#        bedlist.append(pdict[bam]['G'])
-#    for bam in bams:
-#        bedlist.append(pdict[bam]['T'])
-#    for bam in bams:
-#        bedlist.append(pdict[bam]['N'])
-#    for bam in bams:
-#        bedlist.append(pdict[bam]['Z'])
     return(bedlist)
 
 def rpm(raw_counts, libsize):
@@ -342,11 +300,7 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
         True with line written
     """
     infile= pybedtools.BedTool(infile_name)
-    bedregion= tempfile.NamedTemporaryFile(delete= False, suffix= '.bed.txt', prefix= 'nonbam_')
-    bedregion.write(str(region))
-    bedregion.close()
-    region_x_infile= infile.intersect(pybedtools.BedTool(bedregion.name)) ## BedInterval has to be convetred to BedTool
-    os.remove(bedregion.name)
+    region_x_infile= infile.all_hits(region)
     isGTF= False
     for line in region_x_infile:
         if line.name == '':
@@ -364,7 +318,7 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
             outline= [line.chrom, line.start, line.end, infile_name, '0', '0', '0', '0', line.name, 'coverage', 'NA', strand]
         else:
             outline= [line.chrom, line.start, line.end, infile_name, 'NA', 'NA', 'NA', 'NA', 'NA', 'generic', line.name, strand]
-    outfile_handle.write('\t'.join([str(x) for x in outline]) + '\n')
+        outfile_handle.write('\t'.join([str(x) for x in outline]) + '\n')
     return(True)
 
 def make_dummy_mpileup(chrom, start, end, nbams):
