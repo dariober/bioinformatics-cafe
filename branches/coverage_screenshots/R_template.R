@@ -1,11 +1,11 @@
 #!/usr/bin/env Rscript
 
+library(tools)
+
 # -----------------------------------------------------------------------------
 # This script template read by pycoverage.RPlot
 #
 # TODO:
-# - Window compression to potentially large bed coverage files.
-# - Y-axis labelling
 # - Read args from config file.
 # -----------------------------------------------------------------------------
 
@@ -67,7 +67,7 @@ reshape_mcov<- function(mcov){
     }
     mcov_long$feature<- 'coverage'
     mcov_long$name<- NA
-    mcov_long$strand<- NA
+    mcov_long$strand<- '.'
     return(mcov_long)
 }
 
@@ -132,7 +132,68 @@ setPlotHeights<- function(heights){
     bottom<- max(heights) / 2
     return(c(top, heights, bottom))
 }
-    
+
+regname2plotname<- function(regname){
+    "Convert regname 'chrom_start_end[_name]'
+    to a plotname with format 'chr:start-end [name]'
+    Examples:
+        regname2plotname('chr7_5566757_5566829_ACTB_2') #>>> 'chr7:5,566,757-5,566,829 ACTB_2'
+        regname2plotname('chr7_5566757_5566829_ACTB')   #>>> 'chr7:5,566,757-5,566,829 ACTB'
+        regname2plotname('chr7_5566757_5566829')        #>>> 'chr7:5,566,757-5,566,829'
+    "
+    oripen<- options('scipen')
+    options(scipen= 99)
+    pname<- strsplit(regname, '_')[[1]]
+    chrom<- pname[1]
+    start<- formatC(as.numeric(pname[2]), big.mark= ',', format= 'd')
+    end<- formatC(as.numeric(pname[3]), big.mark= ',', format= 'd')
+    options(scipen= oripen)
+    if(length(pname) > 3){
+        rname<- paste(pname[4:length(pname)], collapse= '_')
+        plotname<- sprintf('%%s:%%s-%%s %%s', chrom, start, end, rname)
+    } else {
+        plotname<- sprintf('%%s:%%s-%%s', chrom, start, end)
+    }
+    return(plotname)
+}
+
+cex.for.height<- function(text, height){
+    ## text: string of text
+    ## width: desired width
+    w<- strheight(text, cex= 1)
+    cex.out<- height / w
+    return(cex.out)
+}
+
+getFeatureExtremes<- function(pdata){
+    "Extract from df pdata the extreme coordinates of a feature.
+    pdata:
+        Data frame with at least columns start, end, name, strand
+    Returns:
+        Data frame with columns start, and, name, strand
+    "
+    pMin<- aggregate(pdata[, 'start'], by= list(name= pdata$name, strand= pdata$strand), min)
+    names(pMin)[ncol(pMin)]<- 'start'
+    pMax<- aggregate(pdata[, 'end'], by= list(name= pdata$name, strand= pdata$strand), max)
+    names(pMax)[ncol(pMax)]<- 'end'
+    pextr<- merge(pMin, pMax, sort= FALSE, by.x= c('name', 'strand'), by.y= c('name', 'strand'))
+    return(pextr)
+}
+
+filename2tracktype<- function(filename){
+    "Determine what track type (coverage or annotation) should be assigned to
+    this file given the extension
+    "
+    filename= sub('\\.gz', '', filename, perl= TRUE)
+    ext<- file_ext(filename)
+    if(ext %%in%% c('bedGraph', 'bedgraph', 'bam')){
+        return('coverage')
+    }
+    else {
+        return('annotation')
+    }
+}
+
 # ------------------------------------------------------------------------------
 # Intial settings
 # ------------------------------------------------------------------------------
@@ -153,8 +214,10 @@ col_names<- recycle(inputlist, c(%(col_names)s))
 bg<- recycle( inputlist, c(%(bg)s) )
 ymax<- recycle( inputlist, c(%(ymax)s) )
 ymin<- recycle( inputlist, c(%(ymin)s) )
+ylab<- recycle( inputlist, c(%(ylab)s) )
 vheights<- as.numeric(recycle( inputlist, c(%(vheights)s) ))
 mar<- c(%(mar)s)
+regname<- '%(regname)s'
 
 # ------------------------------------------------------------------------------
 # DATA INPUT
@@ -200,12 +263,11 @@ if(pheight <= 0){
 
 # LAYOUT ----------------------------------------------------------------------
 # For layout() you need to know what files are `coverage` and what are not. Include
-# Duplicate files!
-plot_type<- unique(data_df[, c('file_name', 'feature')])
-plot_type$feature<- ifelse(plot_type$feature == 'coverage', 'coverage', 'annotation')
-plot_type<- unique(plot_type)
-plot_type<- merge(plot_type, data.frame(file_name= inputlist, order=1:length(inputlist), stringsAsFactors= FALSE))
-plot_type<- plot_type[order(plot_type$order),]
+# Duplicate files! 
+# Use file extensions to decide whether a file is to be plotted as coverage or
+# annotation
+plot_type<- data.frame(file_name= inputlist, feature= sapply(inputlist, filename2tracktype))
+plot_type$order<- 1:length(inputlist)
 
 if(all(is.na(vheights))){
     cov_height= 1
@@ -222,9 +284,15 @@ lay.mat<- as.matrix(c(1, plot_type$order + 1, max(plot_type$order) + 2), ncol= 1
 
 pdf('%(pdffile)s', width= pwidth/2.54, height= pheight/2.54, pointsize= %(psize)s)
 layout(lay.mat, heights= plot_heights)
-## Top panel
+
+## TOP PANEL
+## ---------
 par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
 plot(0, ylim= c(0,100), xlim= c(%(xlim1)s, %(xlim2)s), ylab= '', xlab= '')
+plotname<- regname2plotname(regname)
+text(x= mean(c(%(xlim1)s, %(xlim2)s)), y= 10, labels= plotname, cex= cex.for.height(plotname, 80), adj= c(0.5,0))
+## MAIN PANELS
+## ----------
 for(i in 1:nrow(plot_type)){
     file_name<- plot_type$file_name[i]
     type<- plot_type$feature[i]
@@ -263,18 +331,22 @@ for(i in 1:nrow(plot_type)){
             pymin<- as.numeric(pymin)
         }
         par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0))
-        plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(pymin, pymax), xlim= c(%(xlim1)s, %(xlim2)s), cex.axis= cex_axis)
+        plot(x= 0, type= 'n', xlab= '', ylab= ylab[i], ylim= c(pymin, pymax), xlim= c(%(xlim1)s, %(xlim2)s), cex.axis= cex_axis)
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[i], border= 'transparent')
         if('%(nogrid)s' == 'False'){
             grid(col= 'darkgrey')
         }
-        rect(xleft= pdata$start, ybottom= rep(0, nrow(pdata)), xright= pdata$end, ytop= pdata$A, col= pdata$colA, border= 'transparent')
-        rect(xleft= pdata$start, ybottom= A,             xright= pdata$end, ytop= C, col= pdata$colC, border= 'transparent')
-        rect(xleft= pdata$start, ybottom= C,             xright= pdata$end, ytop= G, col= pdata$colG, border= 'transparent')
-        rect(xleft= pdata$start, ybottom= G,             xright= pdata$end, ytop= T, col= pdata$colT, border= 'transparent')
-        rect(xleft= pdata$start, ybottom= T,             xright= pdata$end, ytop= Z, col= pdata$colZ, border= 'transparent')
-        text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
+        if(nrow(pdata) > 0){
+            rect(xleft= pdata$start, ybottom= rep(0, nrow(pdata)), xright= pdata$end, ytop= pdata$A, col= pdata$colA, border= 'transparent')
+            rect(xleft= pdata$start, ybottom= A,             xright= pdata$end, ytop= C, col= pdata$colC, border= 'transparent')
+            rect(xleft= pdata$start, ybottom= C,             xright= pdata$end, ytop= G, col= pdata$colG, border= 'transparent')
+            rect(xleft= pdata$start, ybottom= G,             xright= pdata$end, ytop= T, col= pdata$colT, border= 'transparent')
+            rect(xleft= pdata$start, ybottom= T,             xright= pdata$end, ytop= Z, col= pdata$colZ, border= 'transparent')
+            text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
+        }
     } else {
+        ## If type is non-coverage (annotation)
+        ## ------------------------------------
         par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
         plot(0, type= 'n', ylim= c(0, 100), xlim= c(%(xlim1)s, %(xlim2)s), xlab= '', ylab= '')
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= makeTransparent('blue', 20), border= 'transparent')
@@ -282,16 +354,21 @@ for(i in 1:nrow(plot_type)){
         thick_top<-    30 + 15
         thin_bottom<-  30 - 5
         thin_top<-     30 + 5
-        rect(xleft= pdata$start,
-                    xright= pdata$end,
-                    ybottom= ifelse(pdata$feature == 'CDS', thick_bottom, thin_bottom),
-                    ytop= ifelse(pdata$feature == 'CDS', thick_top, thin_top),
-                    col= col4track, border= col4track)
-        text(x= rowMeans(pdata[, c('start', 'end')]), y= thick_top + 10, labels= paste(pdata$name, pdata$strand), adj= c(0.5,0), col= '%(col_text_ann)s', cex= cex_ann)
-        text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
+        if(nrow(pdata) > 0){
+            fextr<- getFeatureExtremes(pdata)
+            rect(xleft= pdata$start,
+                        xright= pdata$end,
+                        ybottom= ifelse(pdata$feature == 'CDS', thick_bottom, thin_bottom),
+                        ytop= ifelse(pdata$feature == 'CDS', thick_top, thin_top),
+                        col= col4track, border= col4track)
+            segments(y0= 30, y1= 30, x0= fextr$start, x1= fextr$end, col= col4track)
+            text(x= rowMeans(fextr[, c('start', 'end')]), y= thick_top + 10, labels= paste(fextr$name, ifelse(fextr$strand == '.', '', fextr$strand)), adj= c(0.5,0), col= '%(col_text_ann)s', cex= cex_ann)
+            text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
+        }
     }
 }
-
+## BOTTOM PANEL
+## -----------
 ## x-axis labels, tickmarks and range: Note very low level
 baseline<- 90 ## Annotate bottom panel from this y-coord.
 par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(mar[1], mar[2], 0, mar[4]), tcl= 0.5)
@@ -304,7 +381,6 @@ w<- strheight(formatC(x[1], format= 'd', big.mark= ','), cex= cex_axis)
 ## 
 ## Range
 xrange<- x[length(x)] - x[1]
-#segments(x0= c(x[1], x[length(x)]), x1= c(x[1], x[length(x)]), y0= 40, y1= 50)
 baseline2<- baseline - (w * 2)
 text(y= baseline2, x= mean(c(x[1], x[length(x)])), labels= formatC(paste(xrange, 'bp'), format= 'd', big.mark= ','), cex= cex_range, adj= c(0.5, 1))
 text(y= baseline2, x= c(x[1], x[length(x)]), labels= '|', cex= cex_range, adj= c(0.5, 1))
