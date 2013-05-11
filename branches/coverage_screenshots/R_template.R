@@ -243,7 +243,6 @@ if( mpileup_grp_bed_txt != ''){
     rm(mcov2)
     rm(mcov)
 }
-
 ## Reference bases
 
 refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')
