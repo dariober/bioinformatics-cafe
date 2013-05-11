@@ -340,10 +340,6 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
         Open file handle to write to.
     Return:
         True with line written
-    
-    NB: To decide whether infile_name is gtf, the extension will be used (.gtf or
-    .gtf.gz). For non-gtf, the file is `coverage` if 4th line is (can be) all
-    numeric otherwise it is `annotation`. non-gtf annotation will have exon as feature.
     """
     infile= pybedtools.BedTool(infile_name)
     bedregion= tempfile.NamedTemporaryFile(delete= False, suffix= '.bed.txt', prefix= 'nonbam_')
@@ -351,7 +347,6 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
     bedregion.close()
     region_x_infile= infile.intersect(pybedtools.BedTool(bedregion.name)) ## BedInterval has to be convetred to BedTool
     os.remove(bedregion.name)
-    outlist= []
     isGTF= False
     for line in region_x_infile:
         if line.name == '':
@@ -364,12 +359,12 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
             strand= line.strand
         if infile_name.endswith('.gtf') or infile_name.endswith('.gtf.gz'):
             outline= [line.chrom, line.start - 1, line.end, infile_name, 'NA', 'NA', 'NA', 'NA', 'NA', line.fields[2], name, strand] ## NA for ACTGZ
-            outlist.append(outline)
+        elif infile_name.lower().endswith('.bedgraph') or infile_name.lower().endswith('.bedgraph.gz'):
+            ## NB: This switch is not used if bedgraph files are processed by compressBedGraph 
+            outline= [line.chrom, line.start, line.end, infile_name, '0', '0', '0', '0', line.name, 'coverage', 'NA', strand]
         else:
-            outline= [line.chrom, line.start, line.end, infile_name, '0', '0', '0', '0', line.name, 'generic', name, strand]
-            outlist.append(outline)
-    for line in outlist:
-        outfile_handle.write('\t'.join([str(x) for x in line]) + '\n')
+            outline= [line.chrom, line.start, line.end, infile_name, 'NA', 'NA', 'NA', 'NA', 'NA', 'generic', line.name, strand]
+    outfile_handle.write('\t'.join([str(x) for x in outline]) + '\n')
     return(True)
 
 def make_dummy_mpileup(chrom, start, end, nbams):
