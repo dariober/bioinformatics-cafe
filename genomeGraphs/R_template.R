@@ -223,16 +223,17 @@ regname<- '%(regname)s'
 # DATA INPUT
 # ------------------------------------------------------------------------------
 
-# NON BAM FILES
+colClasses<- c('character', 'integer', 'integer', 'character', 'integer', 'integer', 'integer', 'integer', 'numeric', 'character', 'character', 'character')
 
+# NON BAM FILES
 if( nonbam != '' ){
-    data_df<- read.table(nonbam, header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')   
+    data_df<- read.table(nonbam, header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '', colClasses= colClasses)   
 }
 # BAM FILES
 
 if( mpileup_grp_bed_txt != ''){
     header<- read.table(mpileup_grp_bed_txt, header= FALSE, sep= '\t', stringsAsFactors= FALSE, nrows= 1, comment.char= '')   
-    mcov<- read.table(mpileup_grp_bed_txt, header= FALSE, sep= '\t', stringsAsFactors= FALSE, skip= 1, comment.char= '')
+    mcov<- read.table(mpileup_grp_bed_txt, header= FALSE, sep= '\t', stringsAsFactors= FALSE, skip= 1, comment.char= '', colClasses= colClasses)
     names(mcov)<- header
     mcov2<- reshape_mcov(mcov) ## Long format
     if( nonbam != ''){
@@ -244,8 +245,8 @@ if( mpileup_grp_bed_txt != ''){
     rm(mcov)
 }
 ## Reference bases
-
-refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '')
+refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '',
+    colClasses= c('character', 'integer', 'integer', 'character'))
 
 # ------------------------------------------------------------------------------
 # Plotting
