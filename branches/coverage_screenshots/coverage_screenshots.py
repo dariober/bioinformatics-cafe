@@ -44,7 +44,7 @@ input_args.add_argument('--ibam', '-i',
                    nargs= '+',
                    help='''List of bam files, sorted and indexed to visualize.
 Metacharacters are expanded by python (`glob`). E.g. to match all the bam files
-use '*.bam'. 
+use '*.bam'. Use '-' to read the list of files from stdin.
                    ''')
 
 input_args.add_argument('--bed', '-b',
@@ -115,6 +115,14 @@ averaged by window. Small value give a coarse resolution while larger values mor
 jagged profile. Default 1000. If nwinds < maxres,  nwinds is reset to maxres.  
 ''')
 
+output_args.add_argument('--group_fun',
+                   type= str,
+                   default= 'mean',
+                   help='''The function to group-by windows if the bedgraph or bam files
+generate ranges larger than --nwinds. Default 'mean'. See bedtools groupby for
+valid alternatives.
+''')
+
 # -----------------------------------------------------------------------------
 plot_coverage= parser.add_argument_group('Plot of coverage', '')
 
@@ -149,14 +157,14 @@ xaxis_args.add_argument('--col_seq', default= 'black', help='''Colour for the nu
 plot_layout= parser.add_argument_group('Plot layout', '')
 
 plot_layout.add_argument('--ymax', '-Y',
-                    default= ['max'],
+                    default= ['indiv'],
                     type= str,
                     nargs= '+',
                     help='''Maximum limit of y-axis. Options are:
-'max' (default) all y-axes set to the maximum value of all the coverage plots.
-'indiv': Scale each plot individually to its maximum.
+'indiv': Scale each plot individually to its maximum (default).
+'max' all y-axes set to the maximum value of all the coverage plots.
 <float>: Set all the plots to this maximum.
-'max' cannot be combined with other choices.
+'max' cannot be combined with other choices. Float and indiv will be recycled.
                    ''')
 
 plot_layout.add_argument('--ymin', '-y',
@@ -166,6 +174,12 @@ plot_layout.add_argument('--ymin', '-y',
                     help='''Minimum limit of y-axis. Options are:
 'min' (default) all y-axes set to 0 or the minimum value of all the coverage plots.
 <float>: Set all the plots to this minimum.''')
+
+plot_layout.add_argument('--ylab', '-yl',
+                    default= [''],
+                    type= str,
+                    nargs= '+',
+                    help='''Labels for Y-axis. Recycled.''')
 
 plot_layout.add_argument('--vheights',
                     default= [''],
@@ -236,11 +250,17 @@ def main():
         nwinds= args.nwinds
     if args.replot and args.tmpdir is None:
         sys.exit('\nCannot replot without a working (--tmpdir) directory!\n')
-    inputlist= getFileList(args.ibam)
-    inputlist_all= getFileList(args.ibam, keepdups= True)
+    if args.ibam == ['-']:
+        inputlist_all= [x.strip() for x in sys.stdin.readlines()]
+    else:
+        inputlist_all= getFileList(args.ibam)
+    inputlist= dedupFileList(inputlist_all)
     bamlist= [x for x in inputlist if x.endswith('.bam')]
     nonbamlist= [x for x in inputlist if not x.endswith('.bam')]
     names= parse_names(args.names, inputlist_all)
+
+#    guessFiletype(inputlist[0])
+    
     if not args.replot:
         print('\nFiles to analyze (%s found):\n%s\n' %(len(inputlist), ', '.join(inputlist)))
     if len(inputlist) == 0 and not args.replot:
@@ -313,8 +333,11 @@ def main():
             ## ----------------------- BAM FILES -------------------------------
             ## At the end of this session you have *.grp.bed.txt (matrix-like
             ## file read by R)
+            regionWindows= False ## bed interval divided into nwinds intervals by bedtools windowMaker
             if bamlist != []:
-                bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, args.fasta, args.rpm, nwinds, samtools= args.samtools) ## Produce mpileup matrix
+                if not regionWindows:
+                    regionWindows= makeWindows(region, nwinds) 
+                bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, args.fasta, args.rpm, regionWindows, samtools= args.samtools, groupFun= args.group_fun) ## Produce mpileup matrix
             else:
                 mpileup_grp_name= ''
             ## ----------------------NON BAM FILES -----------------------------
@@ -329,7 +352,12 @@ def main():
                 non_bam_fh= open(non_bam_name, 'w')
                 non_bam_fh.write('\t'.join(['chrom', 'start', 'end', 'file_name', 'A', 'C', 'G', 'T', 'Z', 'feature', 'name', 'strand']) + '\n')
                 for nonbam in nonbamlist:
-                    prepare_nonbam_file(nonbam, non_bam_fh, region)
+                    if nonbam.endswith('.bedGraph') or nonbam.endswith('.bedGraph.gz'): 
+                        if not regionWindows:
+                            regionWindows= makeWindows(region, nwinds) 
+                        compressBedGraph(regionWindows, nonbam, non_bam_fh, groupFun= args.group_fun)                        
+                    else:
+                        prepare_nonbam_file(nonbam, non_bam_fh, region)
                 non_bam_fh.close()
             else:
                 non_bam_name= ''
@@ -337,23 +365,18 @@ def main():
         # Plotting 
         # ----------------------------------------------------------------------
         outputPDF.append(pdffile)
-        if args.rpm:
-            ylab= 'Reads per million'
-        else:
-            ylab= 'Read count'
-        ## Memo: All the args passed to RPlot() become part of the R script.
         rgraph= RPlot(
               inputlist= quoteStringList(inputlist_all),
               pdffile= pdffile,
               rscript= rscript,
-              plotname= regname,
+              regname= regname,
               mcov= mpileup_grp_name,
               nonbam= non_bam_name,
               refbases= fasta_seq_name,
               pheight= pheight,
               pwidth= args.pwidth,
               psize= args.psize,
-              ylab= ylab,
+              ylab= quoteStringList(args.ylab),
               xlim1= region.start,
               xlim2= region.end,
               maxres= args.maxres,

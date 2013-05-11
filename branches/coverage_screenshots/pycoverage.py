@@ -5,19 +5,52 @@ import tempfile
 import subprocess
 import glob
 import pycoverage
+import gzip
+import re
 
-def getFileList(files, keepdups= False):
+class InputFile:
+    def __init__(self):
+        filename= None ## File name only 
+        filepath= None ## Full path only
+        filetype= None ## Type of file: coverage, annotation, etc
+        file_ext= None ## Extension for this file, w/o .gz
+        gzip= None ## True/False for whether file is gzipped       
+    
+def describeInputFile(filename):
+    """CURRENTLY UNUSED Collect a number of characteristics for input file.
+    Return:
+        InputFile object
+    """
+    filex= InputFile()
+    filex.filepath, filex.filename= os.path.split(filename)
+    if os.path.splitext(filename)[1] == '.gz':
+        filex.gzip= True
+    else:
+        filex.gzip= False
+    filex.ext= os.path.splitext(re.sub('\.gz$', '', filename))[1]
+    if filex.ext == '.bam':
+        filex.filetype= 'coverage'
+    elif filex.ext.lower() == '.bedgraph':
+        filex.filetype= 'coverage'
+    else:
+        pass
+    return(filex)
+
+def getFileList(files):
     """Expand the list of files using glob. Return a list of unique files.
     """
     inputlist_dup= []
     for bam in files:
         inputlist_dup.extend(glob.glob(bam))
-    if keepdups:
-        return(inputlist_dup)
+    return(inputlist_dup)
+
+def dedupFileList(x):
+    """Remove duplicates from list x
+    """
     inputlist= []
-    for bam in inputlist_dup:
-        if bam not in inputlist:
-            inputlist.append(bam)
+    for a in x:
+        if a not in inputlist:
+            inputlist.append(a)
     return(inputlist)
 
 def getLibrarySizes(bams, samtools_path= ''):
@@ -288,37 +321,6 @@ def catPdf(in_pdf, out_pdf):
     output.write(outputStream)
     outputStream.close()
 
-#def prepare_annotation(gtf_file, bedinterval, outfile):
-#    """Output an annotation file suitable for R plotting.
-#    gtf_file:
-#        Annotation file in gtf format. E.g. gene.gtf for hg19 in iGenomes.
-#    bedinterval:
-#        A pybedtools.Interval to intersect to the gtf. Intersected feature will be
-#        sent to output
-#    outfile:
-#        Name for output file
-#    """
-#    outf= open(outfile, 'w')
-#    header= '\t'.join(['chrom', 'start', 'end', 'name', 'type', 'strand', 'col', 'lwd'])
-#    outf.write(header + '\n')
-#    gtf= pybedtools.BedTool(gtf_file)
-#    tmp= tempfile.NamedTemporaryFile(delete= False, suffix= '.bed.txt', prefix= 'gtf_')
-#    tmp.write(str(bedinterval))
-#    tmp.close()
-#    region_gtf= gtf.intersect(pybedtools.BedTool(tmp.name)) ## BedInterval has to be convetred to BedTool
-#    os.remove(tmp.name)
-#    feature_graph= {'CDS':{'col': 'red', 'lwd': 4},
-#                    'exon':{'col': 'blue', 'lwd': 2},
-#                    'start_codon':{'col': 'blue', 'lwd': 4},
-#                    'stop_codon':{'col': 'blue', 'lwd': 4}
-#    }
-#    for line in region_gtf:
-#        ftype= line.fields[2]
-#        pline= [line.chrom, line.start, line.end, line.name, ftype, line.strand]
-#        pline.extend([feature_graph[ftype]['col'], feature_graph[ftype]['lwd']])
-#        outf.write('\t'.join([str(x) for x in pline]) + '\n')
-#    outf.close()
-
 def prepare_nonbam_file(infile_name, outfile_handle, region):
     """Intersect a bed interval with the bed, bed-like or gtf file. Each intersected
     line is written to outfile_handle in the format:
@@ -335,7 +337,7 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
         A pybedtools.Interval to intersect to the gtf. Intersected feature will be
         sent to output
     outfile_handle:
-        OPen file handle to write to.
+        Open file handle to write to.
     Return:
         True with line written
     
@@ -357,7 +359,7 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
         else:
             name= line.name
         if line.strand == '':
-            strand= 'NA'
+            strand= '.'
         else:
             strand= line.strand
         if infile_name.endswith('.gtf') or infile_name.endswith('.gtf.gz'):
@@ -366,13 +368,8 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
         else:
             outline= [line.chrom, line.start, line.end, infile_name, '0', '0', '0', '0', line.name, 'generic', name, strand]
             outlist.append(outline)
-            try:
-                [float(x[8]) for x in outlist]
-                outlist= [x[0:9] + ['coverage'] + x[10:] for x in outlist]
-            except ValueError:
-                outlist= [x[0:8] + ['NA'] + x[9:] for x in outlist]
-        for line in outlist:
-            outfile_handle.write('\t'.join([str(x) for x in line]) + '\n')
+    for line in outlist:
+        outfile_handle.write('\t'.join([str(x) for x in line]) + '\n')
     return(True)
 
 def make_dummy_mpileup(chrom, start, end, nbams):
@@ -417,7 +414,7 @@ def prepare_reference_fasta(fasta_seq_name, maxres, region, fasta):
     region_seq.close()
     return(True)
 
-def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, RPM, nwinds, samtools):
+def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, RPM, regionWindows, samtools, groupFun= 'mean'):
     """Output mpileup and grouped mpileup files for list of bam files
     mpileup_name, mpileup_grp_name:
         Name for output mpileup and grouped mpileup file
@@ -430,10 +427,13 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, R
         fasta file for mpileup reference
     RPM:
         True/False for whether mpileup counts should be normlaized to RPM
-    nwinds:
-        Number of windows to split the region into.
+    regionWindows:
+        bed interval divided into regions by (output of) pycoverage.makeWindows
     samtools:
         Path to samtools (just the path, e.g. /home/myself/bin)
+    groupFun:
+        Apply this function to group-by windows. This opt passed to bedtools
+        groupby. Check there for valid options
     Returns:
         True on success. Side effect is to produce *.mpileup.bed.txt, *.grp.bed.txt
     """
@@ -452,6 +452,9 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, R
     mpileup_bed= open(mpileup_name, 'w')
     cmd= mpileup_cmd(bamlist= bamlist, region= region, fasta= fasta, mpileup= os.path.join(samtools, 'samtools mpileup'))
     proc= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE, stderr= subprocess.PIPE)
+    if RPM:
+        libsizes= getLibrarySizes(bamlist, samtools_path= samtools)
+        libsizes= [libsizes[x] for x in bamlist]
     while True:
         ## Use this while loop to avoid reading in memory all the output of mpileup.
         ## See also http://stackoverflow.com/questions/2804543/read-subprocess-stdout-line-by-line
@@ -472,17 +475,42 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, R
         mpileup_bed.close()
     ## Divide interval in this many regions. No difference if region span < nwinds
     ## --------------------------------------------------------------------
-    w= makeWindows(region, nwinds) 
     ## Assign to each pileup position its window --------------------------
-    mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(w, wb= True)
+    mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(regionWindows, wb= True)
     ## Aggregate counts in each position by window: -----------------------
     pile_cols= range(7, len(bedline)+1) ## Indexes of columns with counts
     wind_idx= [len(bedline)+1, len(bedline)+2, len(bedline)+3] ## These are the indexes of the columns containing the windows
-    mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= ['mean'] * len(pile_cols), stream= False)
+    mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= [groupFun] * len(pile_cols), stream= False)
     mpileup_grp_fout= open(mpileup_grp_name, 'w')
     mpileup_grp_fout.write(header + '\n')
     for line in mpileup_grp:
         mpileup_grp_fout.write(str(line))
     mpileup_grp_fout.close()
     return(True)
+
+def compressBedGraph(regionWindows, bedgraph_name, bedgraph_grp_fh, groupFun= 'mean'):
+    """Compress a bedgraph by dividing it in n windows and averaging windows
+    regionWindows:
+        bed interval divided into n windows by pycoverage.makeWindows
+    bedgraph_name:
+        bedgraph file to compress and name for output compressed bedgraph.
+    bedgraph_grp_fh:
+        Output file handle to write to
+    groupFun:
+        Apply this function to group-by windows. This opt passed to bedtools
+        groupby. Check there for valid options
+
+    """
+    ## Assign to each pileup position its window --------------------------
+    if bedgraph_name.endswith('.gz'):
+        ncols= len(gzip.open(bedgraph_name).readline().split('\t'))## get number of columns in this bedgraph
+    else:
+        ncols= len(open(bedgraph_name).readline().split('\t'))## get number of columns in this bedgraph
+    bedgraph_winds= pybedtools.BedTool(bedgraph_name).intersect(regionWindows, wb= True)
+    ## Aggregate counts in each position by window: -----------------------
+    wind_idx= [ncols+1, ncols+2, ncols+3] ## These are the indexes of the columns containing the windows. 1 based!
+    bedgraph_grp= bedgraph_winds.groupby(g= wind_idx, c= 4, o= groupFun, stream= False)
+    for line in bedgraph_grp:
+        outline= [line.chrom, str(line.start), str(line.end), bedgraph_name, '0', '0', '0', '0', line.name, 'coverage', 'NA', '.']
+        bedgraph_grp_fh.write('\t'.join(outline) + '\n')
 
