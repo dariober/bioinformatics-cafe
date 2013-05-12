@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 
 library(tools)
-
 # -----------------------------------------------------------------------------
 # This script template read by pycoverage.RPlot
 #
@@ -224,16 +223,17 @@ regname<- '%(regname)s'
 # ------------------------------------------------------------------------------
 
 colClasses<- c('character', 'integer', 'integer', 'character', 'integer', 'integer', 'integer', 'integer', 'numeric', 'character', 'character', 'character')
-
+colNames<- c('chrom', 'start', 'end', 'file_name', 'A', 'C', 'G', 'T', 'Z', 'feature', 'name', 'strand')
 # NON BAM FILES
 if( nonbam != '' ){
-    data_df<- read.table(nonbam, header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '', colClasses= colClasses)   
+    data_df<- read.table(nonbam, header= FALSE, col.names= colNames, sep= '\t', stringsAsFactors= FALSE, comment.char= '', colClasses= colClasses)   
 }
 # BAM FILES
 
 if( mpileup_grp_bed_txt != ''){
     header<- read.table(mpileup_grp_bed_txt, header= FALSE, sep= '\t', stringsAsFactors= FALSE, nrows= 1, comment.char= '')   
-    mcov<- read.table(mpileup_grp_bed_txt, header= FALSE, sep= '\t', stringsAsFactors= FALSE, skip= 1, comment.char= '', colClasses= colClasses)
+    cc<- c('character', 'integer', 'integer', rep('numeric', length(header)-3))
+    mcov<- read.table(mpileup_grp_bed_txt, header= FALSE, sep= '\t', stringsAsFactors= FALSE, skip= 1, comment.char= '', colClasses= cc)
     names(mcov)<- header
     mcov2<- reshape_mcov(mcov) ## Long format
     if( nonbam != ''){
@@ -244,6 +244,7 @@ if( mpileup_grp_bed_txt != ''){
     rm(mcov2)
     rm(mcov)
 }
+
 ## Reference bases
 refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '',
     colClasses= c('character', 'integer', 'integer', 'character'))
@@ -337,11 +338,12 @@ for(i in 1:nrow(plot_type)){
             grid(col= 'darkgrey')
         }
         if(nrow(pdata) > 0){
-            rect(xleft= pdata$start, ybottom= rep(0, nrow(pdata)), xright= pdata$end, ytop= pdata$A, col= pdata$colA, border= 'transparent')
-            rect(xleft= pdata$start, ybottom= A,             xright= pdata$end, ytop= C, col= pdata$colC, border= 'transparent')
-            rect(xleft= pdata$start, ybottom= C,             xright= pdata$end, ytop= G, col= pdata$colG, border= 'transparent')
-            rect(xleft= pdata$start, ybottom= G,             xright= pdata$end, ytop= T, col= pdata$colT, border= 'transparent')
-            rect(xleft= pdata$start, ybottom= T,             xright= pdata$end, ytop= Z, col= pdata$colZ, border= 'transparent')
+            border<- 'grey'
+            rect(xleft= pdata$start, ybottom= rep(0, nrow(pdata)), xright= pdata$end, ytop= pdata$A, col= pdata$colA, border= border)
+            rect(xleft= pdata$start, ybottom= A,             xright= pdata$end, ytop= C, col= pdata$colC, border= border)
+            rect(xleft= pdata$start, ybottom= C,             xright= pdata$end, ytop= G, col= pdata$colG, border= border)
+            rect(xleft= pdata$start, ybottom= G,             xright= pdata$end, ytop= T, col= pdata$colT, border= border)
+            rect(xleft= pdata$start, ybottom= T,             xright= pdata$end, ytop= Z, col= pdata$colZ, border= border)
             text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
         }
     } else {
@@ -380,9 +382,10 @@ text(x= x, y= baseline, labels= formatC(x, format= 'd', big.mark= ','), cex= cex
 w<- strheight(formatC(x[1], format= 'd', big.mark= ','), cex= cex_axis)
 ## 
 ## Range
+#options(scipen= 99) ## Do not use exp notation for large ranges
 xrange<- x[length(x)] - x[1]
 baseline2<- baseline - (w * 2)
-text(y= baseline2, x= mean(c(x[1], x[length(x)])), labels= formatC(paste(xrange, 'bp'), format= 'd', big.mark= ','), cex= cex_range, adj= c(0.5, 1))
+text(y= baseline2, x= mean(c(x[1], x[length(x)])), labels= paste(formatC(xrange, format= 'd', big.mark= ','), 'bp'), cex= cex_range, adj= c(0.5, 1))
 text(y= baseline2, x= c(x[1], x[length(x)]), labels= '|', cex= cex_range, adj= c(0.5, 1))
 w2<- strheight(formatC(paste(xrange, 'bp')), cex= cex_range)
 ## Sequence annotation

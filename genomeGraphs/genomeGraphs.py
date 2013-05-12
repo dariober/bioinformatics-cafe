@@ -333,8 +333,8 @@ def main():
             regionWindows= False ## bed interval divided into nwinds intervals by bedtools windowMaker
             if bamlist != []:
                 if not regionWindows:
-                    regionWindows= makeWindows(region, nwinds) 
-                bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, args.fasta, args.rpm, regionWindows, samtools= args.samtools, groupFun= args.group_fun) ## Produce mpileup matrix
+                    regionWindows= makeWindows(region, nwinds)
+                bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, nwinds, args.fasta, args.rpm, regionWindows, samtools= args.samtools, groupFun= args.group_fun) ## Produce mpileup matrix
             else:
                 mpileup_grp_name= ''
             ## ----------------------NON BAM FILES -----------------------------
@@ -346,15 +346,31 @@ def main():
             ## bed files (4th) goes to column Z.
             ## file_name has the name of the file as it has been passed to --ibam
             if nonbamlist != []:
-                non_bam_fh= open(non_bam_name, 'w')
-                non_bam_fh.write('\t'.join(['chrom', 'start', 'end', 'file_name', 'A', 'C', 'G', 'T', 'Z', 'feature', 'name', 'strand']) + '\n')
+                non_bam_fh= open(non_bam_name, 'w') ## Here all the files concatenated.
                 for nonbam in nonbamlist:
-                    if nonbam.endswith('.bedGraph') or nonbam.endswith('.bedGraph.gz'): 
-                        if not regionWindows:
-                            regionWindows= makeWindows(region, nwinds) 
-                        compressBedGraph(regionWindows, nonbam, non_bam_fh, groupFun= args.group_fun)                        
+                    if nonbam.endswith('.bedGraph') or nonbam.endswith('.bedGraph.gz'):
+                        """Bedgraph needs to go to tmp file because you don't know if
+                        it has to be compressed by windows or not.
+                        """
+                        tmp_name= os.path.join(tmpdir, 'nonbam.tmp.bed')
+                        tmpfh= open(tmp_name, 'w')
+                        nlines= prepare_nonbam_file(nonbam, tmpfh, region) ## Write to fh the overlaps btw nonbam and region. Return no. lines
+                        tmpfh.close()
+                        if nlines > nwinds:
+                            if not regionWindows:
+                                regionWindows= makeWindows(region, nwinds) 
+                            compressBedGraph(regionWindows, tmp_name, use_file_name= nonbam, bedgraph_grp_fh= non_bam_fh, col_idx= 9, groupFun= args.group_fun)
+                        else:
+                            fh= open(tmp_name)
+                            for line in fh:
+                                non_bam_fh.write(line)
+                        os.remove(tmp_name)
                     else:
-                        prepare_nonbam_file(nonbam, non_bam_fh, region)
+                        nlines= prepare_nonbam_file(nonbam, non_bam_fh, region) ## Write to fh the overlaps btw nonbam and region. Return no. lines
+                    if nlines == 0:
+                        bedline= [region.chrom, str(region.start), str(region.end), nonbam, '0', '0', '0', '0', '0', 'generic', 'NA', '.']
+                        non_bam_fh.write('\t'.join(bedline) + '\n')
+                        non_bam_fh.close()
                 non_bam_fh.close()
             else:
                 non_bam_name= ''
