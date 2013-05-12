@@ -1,6 +1,7 @@
 """Functions to validate and parse arguments in coverage_screenshots.py
 """
 import os
+
 def validate_ymax(ymax):
     """Validate args.ymax
     """
@@ -41,4 +42,4 @@ def parse_names(names, inputlist):
         return(snames)
     else:
         return(names)
-        
+    

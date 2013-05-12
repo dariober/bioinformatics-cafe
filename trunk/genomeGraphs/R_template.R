@@ -193,6 +193,38 @@ filename2tracktype<- function(filename){
     }
 }
 
+transparent.border<- function(pdata, xlim, r){
+    "Decide whether the border of rect() should be transparent (returns TRUE) or
+    not (return FALSE). Decision is based on the amount of datapoints in pdata
+    spanning xlim.
+    pdata:
+        data frame with columns start and end which will be plotted by rect()
+    xlim:
+        Vector of two ints with the range spanned by the x-axis
+    r:
+        Threshold ratio to decide whether to make border transparent.
+        If pdata/xlim > r -> TRUE (border is transparent because data is dense enough)
+    
+    pdata<- data.frame(start= c(0, 20, 40), end= c(10, 30, 60)) ## span<- 40
+    xlim<- c(0, 1000)
+    r<- 1/20
+        
+    "
+    ## pdata span: Intervals are expected to be non-overlapping (true for bam and
+    ## bedgraph usually).
+    ## 0    10
+    ## 15   20
+    span<- sum(pdata$end - pdata$start)
+    xspan<- xlim[2] -xlim[1]
+    xr<- span/xspan
+    if(xr < r){
+        "Data is sparse, border not transparent"
+        return(FALSE)
+    } else {
+        return(TRUE)
+    }
+}
+
 # ------------------------------------------------------------------------------
 # Intial settings
 # ------------------------------------------------------------------------------
@@ -213,10 +245,13 @@ col_names<- recycle(inputlist, c(%(col_names)s))
 bg<- recycle( inputlist, c(%(bg)s) )
 ymax<- recycle( inputlist, c(%(ymax)s) )
 ymin<- recycle( inputlist, c(%(ymin)s) )
+xlim<- c(%(xlim1)s, %(xlim2)s)
 ylab<- recycle( inputlist, c(%(ylab)s) )
 vheights<- as.numeric(recycle( inputlist, c(%(vheights)s) ))
 mar<- c(%(mar)s)
 regname<- '%(regname)s'
+pwidth<- %(pwidth)s
+pheight<- %(pheight)s
 
 # ------------------------------------------------------------------------------
 # DATA INPUT
@@ -244,6 +279,14 @@ if( mpileup_grp_bed_txt != ''){
     rm(mcov2)
     rm(mcov)
 }
+## Max of all scores, 0 if there are no rows to plot
+if(nrow(data_df[which(is.na(data_df$Z) == FALSE), ]) > 0){
+    max_Z<- max(data_df$Z, na.rm= TRUE)
+    min_Z<- min(data_df$Z, na.rm= TRUE)
+} else {
+    max_Z<- 0
+    min_Z<- 0
+}
 
 ## Reference bases
 refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors= FALSE, comment.char= '',
@@ -254,13 +297,6 @@ refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors=
 # ------------------------------------------------------------------------------
 samples<- unique(data_df$file_name)
 nplots<- length(inputlist)
-
-pwidth<- %(pwidth)s
-pheight<- %(pheight)s
-if(pheight <= 0){
-    #Get sensible default values for height
-    pheight<- (pwidth * 0.35) + ((pwidth/10) / nplots)
-}
 
 # LAYOUT ----------------------------------------------------------------------
 # For layout() you need to know what files are `coverage` and what are not. Include
@@ -283,20 +319,33 @@ if(all(is.na(vheights))){
 }
 lay.mat<- as.matrix(c(1, plot_type$order + 1, max(plot_type$order) + 2), ncol= 1)
 
+# ----------------------------- PLOT SIZE -------------------------------------
+
+ncoverage<- nrow(plot_type[which(plot_type$feature == 'coverage'),]) ## No. plots which are coverage
+nannotation<- nrow(plot_type[which(plot_type$feature != 'coverage'),]) ## No. plots whichare not coverage
+
+if(pheight <= 0){
+    #Get sensible default values for height
+    pheight= pwidth/5 + (pwidth/4 * ncoverage) + (pwidth/8 * nannotation)
+}
+
 pdf('%(pdffile)s', width= pwidth/2.54, height= pheight/2.54, pointsize= %(psize)s)
 layout(lay.mat, heights= plot_heights)
 
 ## TOP PANEL
 ## ---------
 par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
-plot(0, ylim= c(0,100), xlim= c(%(xlim1)s, %(xlim2)s), ylab= '', xlab= '')
+plot(0, ylim= c(0,100), xlim= xlim, ylab= '', xlab= '')
 plotname<- regname2plotname(regname)
-text(x= mean(c(%(xlim1)s, %(xlim2)s)), y= 10, labels= plotname, cex= cex.for.height(plotname, 80), adj= c(0.5,0))
+text(x= mean(xlim), y= 10, labels= plotname, cex= cex.for.height(plotname, 80), adj= c(0.5,0))
 ## MAIN PANELS
 ## ----------
+
 for(i in 1:nrow(plot_type)){
     file_name<- plot_type$file_name[i]
     type<- plot_type$feature[i]
+    pymax<- ymax[i] ## This can be the keyword 'max', 'indiv' or a float
+    pymin<- ymin[i] ## This can be 'min' or a float.
     pdata<- data_df[which(data_df$file_name == file_name), ]
     if(is.na(snames[i])){
         libname<- basename(file_name)
@@ -305,52 +354,62 @@ for(i in 1:nrow(plot_type)){
     }
     col4track<- ifelse(col_track[i] == '', ifelse(type == 'coverage', 'grey', 'firebrick4'), col_track[i])
     if(type == 'coverage'){
-        col_df<- make_colour_df(pdata, col_nuc, col4track)
-        ## Update colour dataframe according to reference
-        col_df<- update_colour_df(col_df, refbases, col4track)
-        pdata<- unique(merge(pdata, col_df, by.x<- c('chrom', 'start', 'end'), by.y<- c('chrom', 'start', 'end'), sort= FALSE))
-        ## This is to have base colours stacked on top of each others
-        Z<- pdata$Z
-        A<- pdata$A
-        C<- pdata$C + A
-        G<- pdata$G + C
-        T<- pdata$T + G
+        if(nrow(pdata) > 0){
+            col_df<- make_colour_df(pdata, col_nuc, col4track)
+            ## Update colour dataframe according to reference
+            col_df<- update_colour_df(col_df, refbases, col4track)
+            pdata<- unique(merge(pdata, col_df, by.x<- c('chrom', 'start', 'end'), by.y<- c('chrom', 'start', 'end'), sort= FALSE))
+            ## This is to have base colours stacked on top of each others
+            Z<- pdata$Z
+            A<- pdata$A
+            C<- pdata$C + A
+            G<- pdata$G + C
+            T<- pdata$T + G
+            min_z<- min(pdata$Z) ## Min and max for plot
+            max_z<- max(pdata$Z)
+        } else {
+            ## If there is no data just get min & max for plotting.
+            min_z<- 0
+            max_z<- 0            
+        }
         ## Set maximum for y-axt
         ## ---------------------
-        pymax<- ymax[i]
-        if(pymax == 'max'){
-            pymax<- max(data_df$Z, na.rm= TRUE)
-        } else if(pymax == 'indiv'){
-            pymax<- max(pdata$Z)
+        if(pymax == 'indiv'){
+            pymax<- max_z
+        } else if (pymax == 'max') {
+            pymax<- max_Z
         } else {
             pymax<- as.numeric(pymax)
         }
-        pymin<- ymin[i]
+        ## Set minimum for y-axt
+        ## ---------------------
         if(pymin == 'min'){
-            pymin<- ifelse(min(data_df$Z, na.rm= TRUE) < 0, min(data_df$Z, na.rm= TRUE), 0)
+            pymin<- ifelse(min_Z < 0, min_Z, 0)
         } else {
             pymin<- as.numeric(pymin)
         }
+        ## Set up plot
+        ## ----------
         par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0))
-        plot(x= 0, type= 'n', xlab= '', ylab= ylab[i], ylim= c(pymin, pymax), xlim= c(%(xlim1)s, %(xlim2)s), cex.axis= cex_axis)
+        plot(x= 0, type= 'n', xlab= '', ylab= ylab[i], ylim= c(pymin, pymax), xlim= xlim, cex.axis= cex_axis)
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[i], border= 'transparent')
         if('%(nogrid)s' == 'False'){
             grid(col= 'darkgrey')
         }
         if(nrow(pdata) > 0){
-            border<- 'grey'
+            border<- ifelse(transparent.border(pdata, xlim, 1/10), 'transparent', col4track)
             rect(xleft= pdata$start, ybottom= rep(0, nrow(pdata)), xright= pdata$end, ytop= pdata$A, col= pdata$colA, border= border)
             rect(xleft= pdata$start, ybottom= A,             xright= pdata$end, ytop= C, col= pdata$colC, border= border)
             rect(xleft= pdata$start, ybottom= C,             xright= pdata$end, ytop= G, col= pdata$colG, border= border)
             rect(xleft= pdata$start, ybottom= G,             xright= pdata$end, ytop= T, col= pdata$colT, border= border)
             rect(xleft= pdata$start, ybottom= T,             xright= pdata$end, ytop= Z, col= pdata$colZ, border= border)
-            text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
         }
+        text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
     } else {
         ## If type is non-coverage (annotation)
         ## ------------------------------------
         par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
-        plot(0, type= 'n', ylim= c(0, 100), xlim= c(%(xlim1)s, %(xlim2)s), xlab= '', ylab= '')
+        plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '')
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= makeTransparent('blue', 20), border= 'transparent')
         thick_bottom<- 30 - 15
         thick_top<-    30 + 15
@@ -365,8 +424,8 @@ for(i in 1:nrow(plot_type)){
                         col= col4track, border= col4track)
             segments(y0= 30, y1= 30, x0= fextr$start, x1= fextr$end, col= col4track)
             text(x= rowMeans(fextr[, c('start', 'end')]), y= thick_top + 10, labels= paste(fextr$name, ifelse(fextr$strand == '.', '', fextr$strand)), adj= c(0.5,0), col= '%(col_text_ann)s', cex= cex_ann)
-            text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
         }
+        text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)        
     }
 }
 ## BOTTOM PANEL
@@ -374,7 +433,7 @@ for(i in 1:nrow(plot_type)){
 ## x-axis labels, tickmarks and range: Note very low level
 baseline<- 90 ## Annotate bottom panel from this y-coord.
 par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(mar[1], mar[2], 0, mar[4]), tcl= 0.5)
-plot(0, type= 'n', ylim= c(0, 100), xlim= c(%(xlim1)s, %(xlim2)s), xlab= '', ylab= '')
+plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '')
 par(xaxt= 's')
 x<- axis(side= 3, labels= FALSE, tick= FALSE)
 segments(x0= x, x1= x, y0= 110, y1= 95) ## Give 110 to make sure it goes all the way to the top

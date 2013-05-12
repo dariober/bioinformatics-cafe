@@ -440,7 +440,7 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, nwinds, 
         for line in mpileup_grp:
             mpileup_grp_fout.write(str(line))
     else:
-        """If all the positions are to be plotted (<nwinds), copy the output of
+        """If all the positions are to be plotted (nlines < nwinds), copy the output of
         mpileup with the header line.
         """
         mpileup_bed= open(mpileup_name)

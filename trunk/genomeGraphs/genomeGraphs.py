@@ -42,14 +42,17 @@ input_args.add_argument('--ibam', '-i',
                    required= False,
                    default= [],
                    nargs= '+',
-                   help='''List of bam files, sorted and indexed to visualize.
-Metacharacters are expanded by python (`glob`). E.g. to match all the bam files
-use '*.bam'. Use '-' to read the list of files from stdin.
+                   help='''List of input files for which coverage or annotation
+should be plotted. Bam files must be sorted and indexed. bedGraph files are
+taken as coverage all the other formats (bed, gtf, generic txt) are "annotation".
+Input can be gzipped. Metacharacters are expanded by python (`glob`). E.g. to
+match all the bam files use '*.bam'. Use '-' to read the list of files from stdin.
                    ''')
 
 input_args.add_argument('--bed', '-b',
                    required= True,
-                   help='''Bed file with regions to plot. 
+                   help='''Bed or Gtf file with regions to plot optionally gzipped.
+Use - to read from stdin.
                    ''')
 
 input_args.add_argument('--fasta', '-f',
@@ -221,7 +224,7 @@ figure_size_args.add_argument('--pwidth', '-W',
                    ''')
 
 figure_size_args.add_argument('--pheight', '-H',
-                    default= False,
+                    default= -1,
                     type= float,
                     help='''Height of the figure in cm
                    ''')
@@ -238,6 +241,10 @@ between 9 and 12 should suite most cases. Default 10.
 # -----------------------------------------------------------------------------
 def main():
     args = parser.parse_args()
+    # Checking arguments
+    # ------------------
+    if args.ibam == '-' and args.bed == '-':
+        sys.exit('stdin passed to *both* --ibam and --bed!')
     try:
         assert validate_ymax(args.ymax)
         assert validate_ymin(args.ymin)
@@ -262,10 +269,6 @@ def main():
         print('\nFiles to analyze (%s found):\n%s\n' %(len(inputlist), ', '.join(inputlist)))
     if len(inputlist) == 0 and not args.replot:
         sys.exit('No file found!\n')
-    if not args.pheight:
-        pheight= args.pwidth/5 + (args.pwidth/4 * len(bamlist)) + (args.pwidth/8 * len(nonbamlist))
-    else:
-        pheight= args.pheight
     # Output settings
     # ---------------
     if (args.outdir is not None) and (args.onefile is not None):
@@ -304,8 +307,17 @@ def main():
         libsizes_dict= getLibrarySizes(bamlist, args.samtools)
         libsizes= [libsizes_dict[x] for x in bamlist]
         print(', '.join([str(x) for x in libsizes]))
-    inbed= pybedtools.BedTool(args.bed)
-    for region in inbed:
+    if args.bed == '-':
+        inbed= sys.stdin
+    elif args.bed.endswith('.gz'):
+        inbed= gzip.open(args.bed)
+    else:
+        inbed= open(args.bed)
+    for line in inbed:
+        line= line.strip().split('\t')
+        if line == ['']:
+            continue
+        region= pybedtools.create_interval_from_list(line)
         print('Processing: %s' %(str(region).strip()))
         regname= '_'.join([str(x) for x in [region.chrom, region.start, region.end]])
         if region.name != '':
@@ -367,10 +379,6 @@ def main():
                         os.remove(tmp_name)
                     else:
                         nlines= prepare_nonbam_file(nonbam, non_bam_fh, region) ## Write to fh the overlaps btw nonbam and region. Return no. lines
-                    if nlines == 0:
-                        bedline= [region.chrom, str(region.start), str(region.end), nonbam, '0', '0', '0', '0', '0', 'generic', 'NA', '.']
-                        non_bam_fh.write('\t'.join(bedline) + '\n')
-                        non_bam_fh.close()
                 non_bam_fh.close()
             else:
                 non_bam_name= ''
@@ -386,7 +394,7 @@ def main():
               mcov= mpileup_grp_name,
               nonbam= non_bam_name,
               refbases= fasta_seq_name,
-              pheight= pheight,
+              pheight= args.pheight,
               pwidth= args.pwidth,
               psize= args.psize,
               ylab= quoteStringList(args.ylab),
@@ -413,7 +421,6 @@ def main():
               mar= ', '.join([str(x) for x in args.mar]),
               col_all= args.col_all
               )
-        
         
         if rgraph['stderr'] != '':
             print('\nExpection in executing R script "%s"\n' %(rscript))
