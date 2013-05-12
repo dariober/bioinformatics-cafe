@@ -450,6 +450,6 @@ w2<- strheight(formatC(paste(xrange, 'bp')), cex= cex_range)
 ## Sequence annotation
 if(nrow(refbases) > 0){
     baseline3<- baseline2 - (w2 * 2)
-    text(x= refbases$end, y= baseline3, labels= refbases$base, adj= c(0.5, 1), col= '%(col_seq)s', family= 'mono', font= 1, cex= cex_seq)
+    text(x= refbases$end, y= baseline3, labels= refbases$base, adj= c(1, 1), col= '%(col_seq)s', family= 'mono', font= 1, cex= cex_seq)
 }
 dev.off()
