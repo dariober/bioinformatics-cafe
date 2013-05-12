@@ -187,6 +187,15 @@ def test_plot_params():
     stdout, stderr= p.communicate()
     assert stderr == ''
 
+#def test_sequence():
+#    cmd= """echo -e "chr7	5567130	5567189" | genomeGraphs.py -i bam/ds051.actb.bam -b - -f annotation/chr7.fa --tmpdir %s -d %s"""  %(tmpdir, outdir)
+#    cmd= """echo "chr7\t5567130\t5567189" """
+#    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+#    stdout, stderr= p.communicate()
+#    assert stderr == stdout
+    
+""" TGACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG""" 
+
 #def test_plot_params():
 #    """Test a number of plotting parameters.
 #    """

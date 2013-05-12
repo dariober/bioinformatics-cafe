@@ -219,11 +219,18 @@ def getRefSequence(fasta, region):
     """Read the fasta file and extract the region given in bedtool interval region.
     Return:
         List of tuples with inner tuple ['chrom', 'start', 'end', 'base']
+    NB: You need to reduce the start by 1 because fastaFromBed seems to be 1-based.
     """
-    bedregion= pybedtools.BedTool(str(region), from_string= True)
+    region_str= '\t'.join([region.chrom, str(region.start-1), str(region.end)])
+    bedregion= pybedtools.BedTool(str(region_str), from_string= True)
     seq = bedregion.sequence(fi=fasta, tab= True)
     seq= open(seq.seqfn).read().split('\t')
-    seq_table= zip([region.chrom] * (region.end - region.start), range(region.start, region.end), range(region.start+1, region.end+1), list(seq[1].strip()))
+    seq_table= zip(
+        [region.chrom] * (region.end - (region.start-1)), ## Column of chrom
+        range(region.start-1, region.end), ## Column of start pos
+        range(region.start, region.end+1), ## Col of end pos
+        list(seq[1].strip()) ## Col of bases
+        )
     return(seq_table)
 
 def quoteStringList(x):
