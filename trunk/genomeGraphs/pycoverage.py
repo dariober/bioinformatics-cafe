@@ -143,7 +143,7 @@ def pileupBaseCallsToNucs(bases, refbase):
         callDict= {'A': 0, 'C': 0, 'G': 0, 'T': 0, 'N': 0, '.': 0, ',': 0}
         keys= tuple(callDict.keys())
         skip= False
-        for x in bases:
+        for x in bases.upper():
             if x  == '^':
                 skip= True
             elif skip:
@@ -181,14 +181,14 @@ def parse_pileup(pileup_line, bams):
     return(pdict)
 
 def pileupToBed(pdict, bams):
-    """Convert the dictionary produced by parse_pileup to a list suitabke to
+    """Convert the dictionary produced by parse_pileup to a list suitable to
     be written as bedfile. The bed line as:
-    <chrom> <pos-1> <pos> <refbase> <.> <.> <depth.1> <depth.2> ... <depth.n>
+    <chrom> <pos-1> <pos> <depth.1> <depth.2> ... <depth.n>
     bams:
         list of bam files which are the keys of the dict. MUST be in the same
         order as the list used for parse_pileup()
     """
-    bedlist= [pdict['chrom'], pdict['pos']-1, pdict['pos'], pdict['base'], '.', '.']
+    bedlist= [pdict['chrom'], pdict['pos']-1, pdict['pos']]
     for c in ['depth', 'A', 'C', 'G', 'T', 'N', 'Z']:
         for bam in bams:
             bedlist.append(pdict[bam][c])
@@ -297,11 +297,12 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
     outfile_handle:
         Open file handle to write to.
     Return:
-        True with line written
+        Number of intervals that overlap `region` (n lines)
     """
     infile= pybedtools.BedTool(infile_name)
     region_x_infile= infile.all_hits(region)
     isGTF= False
+    nlines= 0
     for line in region_x_infile:
         if line.name == '':
             name= 'NA'
@@ -314,27 +315,27 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
         if infile_name.endswith('.gtf') or infile_name.endswith('.gtf.gz'):
             outline= [line.chrom, line.start - 1, line.end, infile_name, 'NA', 'NA', 'NA', 'NA', 'NA', line.fields[2], name, strand] ## NA for ACTGZ
         elif infile_name.lower().endswith('.bedgraph') or infile_name.lower().endswith('.bedgraph.gz'):
-            ## NB: This switch is not used if bedgraph files are processed by compressBedGraph 
             outline= [line.chrom, line.start, line.end, infile_name, '0', '0', '0', '0', line.name, 'coverage', 'NA', strand]
         else:
             outline= [line.chrom, line.start, line.end, infile_name, 'NA', 'NA', 'NA', 'NA', 'NA', 'generic', line.name, strand]
         outfile_handle.write('\t'.join([str(x) for x in outline]) + '\n')
-    return(True)
+        nlines += 1
+    return(nlines)
 
 def make_dummy_mpileup(chrom, start, end, nbams):
     """Create an empty line from mpileup to be used for regions w/o any reads in
     any library. mpileup skips such regions altogheter and they wouldn't b plotted
     otherwise.
     Output will look like below with columns after the 6th with 0:
-    ['lambda_gi9626243', 9, 10, 'N', '.', '.', 327, 1, 0, 0, 326, 0, 327]
-    Each library occupies 7 columns
+    ['lambda_gi9626243', 9, 10, 327, 1, 0, 0, 326, 0, 327]
+    Each library occupies 7 columns: depth, A, C, T, G, N, Z.
     chrom, start, end:
         Chrom and position to fill with zeros
     nbams:
         Number of bam files that would be present
     """
     zeros= [0] * 7 * nbams
-    bedline= [chrom, start, end, 'N', '.', '.'] + zeros
+    bedline= [chrom, start, end] + zeros
     return(bedline)
 
 def prepare_reference_fasta(fasta_seq_name, maxres, region, fasta):
@@ -363,7 +364,7 @@ def prepare_reference_fasta(fasta_seq_name, maxres, region, fasta):
     region_seq.close()
     return(True)
 
-def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, RPM, regionWindows, samtools, groupFun= 'mean'):
+def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, nwinds, fasta, RPM, regionWindows, samtools, groupFun= 'mean'):
     """Output mpileup and grouped mpileup files for list of bam files
     mpileup_name, mpileup_grp_name:
         Name for output mpileup and grouped mpileup file
@@ -372,6 +373,8 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, R
     region:
         pybedtools interval where mpileup should be produced (passed to
         -r options of mpileup)
+    nwinds:
+        Maximum number of positions before windowing kinks in (args.nwinds)
     fasta:
         fasta file for mpileup reference
     RPM:
@@ -404,6 +407,7 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, R
     if RPM:
         libsizes= getLibrarySizes(bamlist, samtools_path= samtools)
         libsizes= [libsizes[x] for x in bamlist]
+    nlines= 0
     while True:
         ## Use this while loop to avoid reading in memory all the output of mpileup.
         ## See also http://stackoverflow.com/questions/2804543/read-subprocess-stdout-line-by-line
@@ -413,38 +417,52 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, fasta, R
             break
         pd= parse_pileup(line, bamlist)
         bedline= pileupToBed(pd, bamlist)
+        cnt_indx= 3 ## Column index in bedline where counts start (4th columns)
         if RPM:
-            bedline= bedline[0:6] + rpm(bedline[6:], libsizes)
+            bedline= bedline[0:cnt_indx] + rpm(bedline[cnt_indx:], libsizes)
         mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
+        nlines += 1
     mpileup_bed.close()
     if os.stat(mpileup_name).st_size == 0:
         mpileup_bed= open(mpileup_name, 'w')
         bedline= make_dummy_mpileup(region.chrom, region.start, region.start + 1, len(bamlist))
         mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
         mpileup_bed.close()
-    ## Divide interval in this many regions. No difference if region span < nwinds
-    ## --------------------------------------------------------------------
-    ## Assign to each pileup position its window --------------------------
-    mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(regionWindows, wb= True)
-    ## Aggregate counts in each position by window: -----------------------
-    pile_cols= range(7, len(bedline)+1) ## Indexes of columns with counts
-    wind_idx= [len(bedline)+1, len(bedline)+2, len(bedline)+3] ## These are the indexes of the columns containing the windows
-    mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= [groupFun] * len(pile_cols), stream= False)
     mpileup_grp_fout= open(mpileup_grp_name, 'w')
-    mpileup_grp_fout.write(header + '\n')
-    for line in mpileup_grp:
-        mpileup_grp_fout.write(str(line))
-    mpileup_grp_fout.close()
+    if nlines > nwinds:
+        """Divide interval in nwinds regions if the number of positions to plot is >nwinds
+        """
+        mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(regionWindows, wb= True)  ## Assign to each pileup position its window
+        pile_cols= range(cnt_indx+1, len(bedline)+1) ## Indexes of columns with counts 1-BASED!
+        wind_idx= [len(bedline)+1, len(bedline)+2, len(bedline)+3] ## These are the indexes of the columns containing the windows
+        mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= [groupFun] * len(pile_cols), stream= False) ## Aggregate counts in each position by window
+        mpileup_grp_fout.write(header + '\n')
+        for line in mpileup_grp:
+            mpileup_grp_fout.write(str(line))
+    else:
+        """If all the positions are to be plotted (<nwinds), copy the output of
+        mpileup with the header line.
+        """
+        mpileup_bed= open(mpileup_name)
+        mpileup_grp_fout.write(header + '\n')        
+        for line in mpileup_bed:
+            mpileup_grp_fout.write(str(line))
+    mpileup_grp_fout.close()        
     return(True)
-
-def compressBedGraph(regionWindows, bedgraph_name, bedgraph_grp_fh, groupFun= 'mean'):
+    
+def compressBedGraph(regionWindows, bedgraph_name, use_file_name, bedgraph_grp_fh, col_idx= 9, groupFun= 'mean'):
     """Compress a bedgraph by dividing it in n windows and averaging windows
     regionWindows:
         bed interval divided into n windows by pycoverage.makeWindows
     bedgraph_name:
         bedgraph file to compress and name for output compressed bedgraph.
+    use_file_name:
+        Put this file name in the output line. Must be the same as original
+        input.
     bedgraph_grp_fh:
         Output file handle to write to
+    col_idx:
+        Column index 1 BASED to summarize.
     groupFun:
         Apply this function to group-by windows. This opt passed to bedtools
         groupby. Check there for valid options
@@ -452,14 +470,14 @@ def compressBedGraph(regionWindows, bedgraph_name, bedgraph_grp_fh, groupFun= 'm
     """
     ## Assign to each pileup position its window --------------------------
     if bedgraph_name.endswith('.gz'):
-        ncols= len(gzip.open(bedgraph_name).readline().split('\t'))## get number of columns in this bedgraph
+        ncols= len(gzip.open(bedgraph_name).readline().split('\t')) ## get number of columns in this bedgraph
     else:
-        ncols= len(open(bedgraph_name).readline().split('\t'))## get number of columns in this bedgraph
+        ncols= len(open(bedgraph_name).readline().split('\t')) ## get number of columns in this bedgraph
     bedgraph_winds= pybedtools.BedTool(bedgraph_name).intersect(regionWindows, wb= True)
     ## Aggregate counts in each position by window: -----------------------
     wind_idx= [ncols+1, ncols+2, ncols+3] ## These are the indexes of the columns containing the windows. 1 based!
-    bedgraph_grp= bedgraph_winds.groupby(g= wind_idx, c= 4, o= groupFun, stream= False)
+    bedgraph_grp= bedgraph_winds.groupby(g= wind_idx, c= col_idx, o= groupFun, stream= False)
     for line in bedgraph_grp:
-        outline= [line.chrom, str(line.start), str(line.end), bedgraph_name, '0', '0', '0', '0', line.name, 'coverage', 'NA', '.']
+        outline= [line.chrom, str(line.start), str(line.end), use_file_name, '0', '0', '0', '0', line.name, 'coverage', 'NA', '.']
         bedgraph_grp_fh.write('\t'.join(outline) + '\n')
 
