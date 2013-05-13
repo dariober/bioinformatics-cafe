@@ -44,6 +44,31 @@ def getLibrarySizes(bams, samtools_path= ''):
         libsizes[bam]= libsize
     return(libsizes)
 
+def prefilter_nonbam(inbed, nonbamlist, tmpdir):
+    """For each filename in nonbamlist do the intersection with the regions in
+    inbed. Produce filtered files to tmpdir and return a dict of original filenames
+    and the filtered name
+    inbed:
+        pybedtools.BedTool() object of regions to intersect with the non bam files
+    nonbamlist:
+        List of non-bam files
+    tmpdir:
+        Where intersected files will go. Output name is
+        tmpdir/x_<original name w/o .gz>
+    Return:
+        dict of original names:filtered names
+        E.g. {'bedgraph/profile.bedGraph.gz': 'wdir/x_profile.bedGraph', 'annotation/genes.gtf.gz': 'wdir/x_genes.gtf'}
+        Output files are *sorted*
+    """
+    nonbam_dict= {}
+    for nonbam in nonbamlist:
+        bname= re.sub('\.gz$', '', os.path.split(nonbam)[1])
+        x_name= os.path.join(tmpdir, 'x_' + bname)
+        pynonbam= pybedtools.BedTool(nonbam)
+        nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed).sort().saveas(x_name)
+        nonbam_dict[nonbam]= x_name
+    return(nonbam_dict)
+
 def makeWindows(region, n):
     """Divide a region in n windows. If the region size is < n, than each postion
     is returned.
@@ -286,7 +311,7 @@ def catPdf(in_pdf, out_pdf):
     output.write(outputStream)
     outputStream.close()
 
-def prepare_nonbam_file(infile_name, outfile_handle, region):
+def prepare_nonbam_file(infile_name, outfile_handle, region, use_file_name):
     """Intersect a bed interval with the bed, bed-like or gtf file. Each intersected
     line is written to outfile_handle in the format:
         chrom start end file_name A C G T Z feature strand
@@ -303,11 +328,13 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
         sent to output
     outfile_handle:
         Open file handle to write to.
+    use_file_name:
+        Use this string as filename. Must match the original name passed to --ibam 
     Return:
         Number of intervals that overlap `region` (n lines)
     """
-    infile= pybedtools.BedTool(infile_name)   ## 
-    region_x_infile= infile.all_hits(region)  ## This step should be done for all the regions at once not just for the interval
+    infile= pybedtools.BedTool(infile_name) 
+    region_x_infile= pybedtools.BedTool().intersect(a= infile, b= pybedtools.BedTool(str(region), from_string= True), sorted= True)
     nlines= 0
     for line in region_x_infile:
         if line.name == '':
@@ -319,11 +346,11 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
         else:
             strand= line.strand
         if infile_name.endswith('.gtf') or infile_name.endswith('.gtf.gz'):
-            outline= [line.chrom, line.start - 1, line.end, infile_name, 'NA', 'NA', 'NA', 'NA', 'NA', line.fields[2], name, strand] ## NA for ACTGZ
+            outline= [line.chrom, line.start - 1, line.end, use_file_name, 'NA', 'NA', 'NA', 'NA', 'NA', line.fields[2], name, strand] ## NA for ACTGZ
         elif infile_name.lower().endswith('.bedgraph') or infile_name.lower().endswith('.bedgraph.gz'):
-            outline= [line.chrom, line.start, line.end, infile_name, '0', '0', '0', '0', line.name, 'coverage', 'NA', strand]
+            outline= [line.chrom, line.start, line.end, use_file_name, '0', '0', '0', '0', line.name, 'coverage', 'NA', strand]
         else:
-            outline= [line.chrom, line.start, line.end, infile_name, 'NA', 'NA', 'NA', 'NA', 'NA', 'generic', line.name, strand]
+            outline= [line.chrom, line.start, line.end, use_file_name, 'NA', 'NA', 'NA', 'NA', 'NA', 'generic', line.name, strand]
         outfile_handle.write('\t'.join([str(x) for x in outline]) + '\n')
         nlines += 1
     return(nlines)

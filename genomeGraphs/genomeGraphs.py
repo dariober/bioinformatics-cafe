@@ -331,13 +331,15 @@ def main():
         inbed= gzip.open(args.bed)
     else:
         inbed= open(args.bed)
-    ## TODO HERE: Pre intersect all the non-bam files `nonbamlist` with the --bed
-    ## file. Pass the intersected files to the loops below.
-    for line in inbed:
-        line= line.strip().split('\t')
-        if line == ['']:
-            continue
-        region= pybedtools.create_interval_from_list(line)
+    inbed= pybedtools.BedTool(inbed).sort() ## inbed is args.bed file handle
+    nonbam_dict= prefilter_nonbam(inbed, nonbamlist, tmpdir)
+    for region in inbed:
+        #line= line.strip().split('\t')
+        #if line == ['']:
+        #    continue
+        #region= pybedtools.create_interval_from_list(line)
+        #pybed_region= pybedtools.BedTool(line, from_string= True)
+        #region= pybed_region[0] 
         print('Processing: %s' %(str(region).strip()))
         regname= '_'.join([str(x) for x in [region.chrom, region.start, region.end]])
         if region.name != '' and region.name != '.':
@@ -379,26 +381,29 @@ def main():
             ## file_name has the name of the file as it has been passed to --ibam
             if nonbamlist != []:
                 non_bam_fh= open(non_bam_name, 'w') ## Here all the files concatenated.
-                for nonbam in nonbamlist:
-                    if nonbam.endswith('.bedGraph') or nonbam.endswith('.bedGraph.gz'):
+                for x in nonbamlist:
+                    nonbam= nonbam_dict[x]
+                    if x.endswith('.bedGraph') or x.endswith('.bedGraph.gz'):
                         """Bedgraph needs to go to tmp file because you don't know if
-                        it has to be compressed by windows or not.
+                        it has to be compressed by windows or not. <- This should be
+                        changed: You have already intersected the nonbam files with
+                        the bed regions.
                         """
                         tmp_name= os.path.join(tmpdir, 'nonbam.tmp.bed')
                         tmpfh= open(tmp_name, 'w')
-                        nlines= prepare_nonbam_file(nonbam, tmpfh, region) ## Write to fh the overlaps btw nonbam and region. Return no. lines
+                        nlines= prepare_nonbam_file(nonbam, tmpfh, region, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
                         tmpfh.close()
                         if nlines > nwinds:
                             if not regionWindows:
                                 regionWindows= makeWindows(region, nwinds) 
-                            compressBedGraph(regionWindows, tmp_name, use_file_name= nonbam, bedgraph_grp_fh= non_bam_fh, col_idx= 9, groupFun= args.group_fun)
+                            compressBedGraph(regionWindows, tmp_name, use_file_name= x, bedgraph_grp_fh= non_bam_fh, col_idx= 9, groupFun= args.group_fun)
                         else:
                             fh= open(tmp_name)
                             for line in fh:
                                 non_bam_fh.write(line)
                         os.remove(tmp_name)
                     else:
-                        nlines= prepare_nonbam_file(nonbam, non_bam_fh, region) ## Write to fh the overlaps btw nonbam and region. Return no. lines
+                        nlines= prepare_nonbam_file(nonbam, non_bam_fh, region, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
                 non_bam_fh.close()
             else:
                 non_bam_name= ''
@@ -455,6 +460,8 @@ def main():
             shutil.copyfile(pdffile, os.path.join(outdir, regname + '.pdf'))
     if onefile:
         catPdf(in_pdf= outputPDF, out_pdf= args.onefile)
+    for f in nonbam_dict:
+        os.remove(nonbam_dict[f])
     if args.tmpdir is None:
         shutil.rmtree(tmpdir)
 if __name__ == '__main__':
