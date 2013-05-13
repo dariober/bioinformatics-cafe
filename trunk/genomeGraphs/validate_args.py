@@ -21,8 +21,10 @@ def validate_ymax(ymax):
 def validate_ymin(ymin):
     """Validate args.ymin
     """
+    if ymin == ['min']:
+        return(True)
     for y in ymin:
-        if y == 'min':
+        if y == 'indiv':
             continue
         else:
             try:

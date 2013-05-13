@@ -33,6 +33,22 @@ SEE ALSO:
     Documentation at
     http://code.google.com/p/bioinformatics-misc/wiki/coverage_screenshots_docs
 
+TODO:
+    - Important: Bed intervals (--bed) are intersected one by one to the non-bam
+    files. This means that non-bam files are scanned many times!! This is very
+    time consuming for big bed files e.g. for of all the CpGs in a
+    genome. (This is not a problem for BAM files since they are indexed).
+    So: Intersect all the regions in --bed to the non-bam file(s). Pass these pre-
+    filtered files to prepare_nonbam_file().
+    bedtools memo: The b file is loaded in memory so for the sake of saving memory
+    put there the smaller one. However, loading in memory the big files, might be
+    slightly faster.
+    test this:
+    bsub -oo bsub.log -R "rusage[mem=8192]" "time intersectBed -b /home/berald01/reference_seqs/mm9.allCpG.bed.gz -a fcab_amplics.bed" ## ~43 sec ~5GB mem!
+    bsub -oo bsub2.log "time intersectBed -a /home/berald01/reference_seqs/mm9.allCpG.bed.gz -b fcab_amplics.bed" ## ~1m20sec
+
+    (see http://bedtools.readthedocs.org/en/latest/content/overview.html#file-b-is-loaded-into-memory-most-of-the-time)
+
     """, formatter_class= argparse.RawTextHelpFormatter)
 
 # -----------------------------------------------------------------------------
@@ -113,9 +129,10 @@ output_args.add_argument('--nwinds', '-w',
                    type= int,
                    default= 1000,
                    help='''Maximum number of data-points to plot. If the bed interval
-is larger than --nwinds it will be divided into equally sized windows and counts
-averaged by window. Small value give a coarse resolution while larger values more
-jagged profile. Default 1000. If nwinds < maxres,  nwinds is reset to maxres.  
+contains more than --nwinds data points it will be divided into equally sized
+windows and the scores (e.g. counts) averaged by window. Small value give a coarse
+resolution while larger values more jagged profile. Default 1000.
+If nwinds < maxres,  nwinds is reset to maxres.  
 ''')
 
 output_args.add_argument('--group_fun',
@@ -176,6 +193,7 @@ plot_layout.add_argument('--ymin', '-y',
                     nargs= '+',
                     help='''Minimum limit of y-axis. Options are:
 'min' (default) all y-axes set to 0 or the minimum value of all the coverage plots.
+'indiv': Scale each plot individually to its minimum.
 <float>: Set all the plots to this minimum.''')
 
 plot_layout.add_argument('--ylab', '-yl',
@@ -313,6 +331,8 @@ def main():
         inbed= gzip.open(args.bed)
     else:
         inbed= open(args.bed)
+    ## TODO HERE: Pre intersect all the non-bam files `nonbamlist` with the --bed
+    ## file. Pass the intersected files to the loops below.
     for line in inbed:
         line= line.strip().split('\t')
         if line == ['']:
