@@ -53,6 +53,19 @@ def test_bam_gtf_bedgraph():
     if stderr == '':
         shutil.rmtree(tmpdir)
 
+def test_file_headers():
+    """Make sure headers are what you think they are
+    """
+    cmd= '''echo "chr7\t5566757\t5566829" | genomeGraphs.py -i annotation/genes.gtf.gz bam/*.bam -b - -f annotation/chr7.fa --tmpdir %s -d %s''' %(tmpdir, outdir)
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert stderr == '' 
+    header= open(os.path.join(tmpdir, 'chr7_5566757_5566829.seq.txt')).readline().strip().split('\t')
+    assert header == ['chrom', 'start', 'end', 'base']
+
+    header= open(os.path.join(tmpdir, 'chr7_5566757_5566829.grp.bed.txt')).readline().strip().split('\t')
+    assert header == ['chrom', 'start', 'end', 'bam/ds051.actb.bam.depth', 'bam/ds052.actb.bam.depth', 'bam/ds053.actb.bam.depth', 'bam/ds051.actb.bam.A', 'bam/ds052.actb.bam.A', 'bam/ds053.actb.bam.A', 'bam/ds051.actb.bam.C', 'bam/ds052.actb.bam.C', 'bam/ds053.actb.bam.C', 'bam/ds051.actb.bam.G', 'bam/ds052.actb.bam.G', 'bam/ds053.actb.bam.G', 'bam/ds051.actb.bam.T', 'bam/ds052.actb.bam.T', 'bam/ds053.actb.bam.T', 'bam/ds051.actb.bam.N', 'bam/ds052.actb.bam.N', 'bam/ds053.actb.bam.N', 'bam/ds051.actb.bam.Z', 'bam/ds052.actb.bam.Z', 'bam/ds053.actb.bam.Z']
+
 def test_bam_coverage_eq_igv():
     """Confirm that the counts obtained from the BAM files is consistent with
     IGV.
@@ -148,7 +161,7 @@ def test_plot_params():
     stdout, stderr= p.communicate()
     assert stderr == ''
 
-    """ Use --replot: change size
+    """Use --replot: change size
     """
     cmd= 'genomeGraphs.py --replot -W 15 -H 18 -i annotation/genes.gtf.gz bam/ds051.actb.bam bam/ds052.actb.bam bam/ds053.actb.bam bedgraph/profile.bedGraph.gz annotation/actb_ann.bed -b actb.bed --tmpdir %s -d %s' %(tmpdir, outdir)
     p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
@@ -162,16 +175,15 @@ def test_plot_params():
     stdout, stderr= p.communicate()
     assert stderr == ''
 
-    """ Use --replot: change labels sizes
+    """Use --replot: change labels sizes
     """
     cmd= 'genomeGraphs.py --replot --cex 2 -i annotation/genes.gtf.gz bam/ds051.actb.bam bam/ds052.actb.bam bam/ds053.actb.bam bedgraph/profile.bedGraph.gz annotation/actb_ann.bed -b actb.bed --tmpdir %s -d %s' %(tmpdir, outdir)
     p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
     stdout, stderr= p.communicate()
     assert stderr == ''
 
-    """ Use --replot:
-    - Assign plot names other than default file names.
-    Put one name less: It should be recycled.
+    """Use --replot:
+    - Assign plot names other than default file names. Put one name less: It should be recycled.
     - Assign colour to names (recycled)
     - Change size 
     """
@@ -187,19 +199,13 @@ def test_plot_params():
     stdout, stderr= p.communicate()
     assert stderr == ''
 
-#def test_sequence():
-#    cmd= """echo -e "chr7	5567130	5567189" | genomeGraphs.py -i bam/ds051.actb.bam -b - -f annotation/chr7.fa --tmpdir %s -d %s"""  %(tmpdir, outdir)
-#    cmd= """echo "chr7\t5567130\t5567189" """
-#    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
-#    stdout, stderr= p.communicate()
-#    assert stderr == stdout
-    
-""" TGACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG""" 
-
-#def test_plot_params():
-#    """Test a number of plotting parameters.
-#    """
-#    cmd= 'genomeGraphs.py -i annotation/genes.gtf.gz bam/ds051.actb.bam bam/ds052.actb.bam bam/ds053.actb.bam bedgraph/profile.bedGraph.gz annotation/actb_ann.bed -b actb.bed --tmpdir %s -d %s' %(tmpdir, outdir)
-#    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
-#    stdout, stderr= p.communicate()
-#    assert stderr == ''
+def test_sequence_and_pipe():
+    cmd= """echo 'chr7\t5567130\t5567189' | genomeGraphs.py -i bam/ds051.actb.bam -b - -f annotation/chr7.fa --tmpdir %s -d %s"""  %(tmpdir, outdir)
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert stderr == ''
+    seqbed= open(os.path.join(tmpdir, 'chr7_5567130_5567189.seq.txt')).readlines()
+    seqbed= [x.strip().split('\t') for x in seqbed]
+    assert seqbed[0] == ['chrom', 'start', 'end', 'base'] ## Check first line is this header
+    nucseq= ''.join([x[3] for x in seqbed[1:]]) ## Get column 'base', skipping header.
+    assert nucseq == 'TGACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG' ## This sequence manually checked.
