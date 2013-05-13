@@ -383,7 +383,9 @@ for(i in 1:nrow(plot_type)){
         }
         ## Set minimum for y-axt
         ## ---------------------
-        if(pymin == 'min'){
+        if(pymin == 'indiv'){
+            pymin<- min_z
+        } else if(pymin == 'min'){
             pymin<- ifelse(min_Z < 0, min_Z, 0)
         } else {
             pymin<- as.numeric(pymin)

@@ -306,9 +306,8 @@ def prepare_nonbam_file(infile_name, outfile_handle, region):
     Return:
         Number of intervals that overlap `region` (n lines)
     """
-    infile= pybedtools.BedTool(infile_name)
-    region_x_infile= infile.all_hits(region)
-    isGTF= False
+    infile= pybedtools.BedTool(infile_name)   ## 
+    region_x_infile= infile.all_hits(region)  ## This step should be done for all the regions at once not just for the interval
     nlines= 0
     for line in region_x_infile:
         if line.name == '':
