@@ -320,8 +320,8 @@ def main():
         region= pybedtools.create_interval_from_list(line)
         print('Processing: %s' %(str(region).strip()))
         regname= '_'.join([str(x) for x in [region.chrom, region.start, region.end]])
-        if region.name != '':
-            regname = regname + '_' + region.name 
+        if region.name != '' and region.name != '.':
+            regname = regname + '_' + region.name
         ## --------------------[ Prepare output file names ]-------------------
         fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
 
