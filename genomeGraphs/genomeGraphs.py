@@ -82,6 +82,12 @@ input_args.add_argument('--samtools',
                     help='''Path to samtools. Default is '' which assumes it is
 on PATH''')
 
+input_args.add_argument('--nproc',
+                    default= 1,
+                    type= int,
+                    help='''Number of parallel jobs to run. Default 1. (Currently
+multiprocessising is applied only to pref-filetering non-bam files.)''')
+
 # -----------------------------------------------------------------------------
 output_args = parser.add_argument_group('Output options', '')
 
@@ -333,6 +339,7 @@ def main():
     else:
         inbed= open(args.bed)
     inbed= pybedtools.BedTool(inbed).sort() ## inbed is args.bed file handle
+    
     #nonbam_dict= prefilter_nonbam(inbed, nonbamlist, tmpdir)
     # ---------------------[ Pre-filter non-bam files ]-------------------------
     proc_list= []
@@ -340,7 +347,7 @@ def main():
         """List of dicts with argumnets passed to prefilter_nonbam_multiproc.
         """
         proc_list.append({'nonbam':nonbam, 'inbed':inbed, 'tmpdir':tmpdir})
-    pool = multiprocessing.Pool()
+    pool = multiprocessing.Pool(processes= args.nproc)
     ori_new= pool.map(prefilter_nonbam_multiproc, proc_list)
     nonbam_dict= {}
     for t in ori_new:
