@@ -7,6 +7,7 @@ import tempfile
 import subprocess
 import shutil
 import glob
+import multiprocessing
 from pycoverage import *
 from validate_args import *
 
@@ -332,7 +333,19 @@ def main():
     else:
         inbed= open(args.bed)
     inbed= pybedtools.BedTool(inbed).sort() ## inbed is args.bed file handle
-    nonbam_dict= prefilter_nonbam(inbed, nonbamlist, tmpdir)
+    #nonbam_dict= prefilter_nonbam(inbed, nonbamlist, tmpdir)
+    # ---------------------[ Pre-filter non-bam files ]-------------------------
+    proc_list= []
+    for nonbam in nonbamlist:
+        """List of dicts with argumnets passed to prefilter_nonbam_multiproc.
+        """
+        proc_list.append({'nonbam':nonbam, 'inbed':inbed, 'tmpdir':tmpdir})
+    pool = multiprocessing.Pool()
+    ori_new= pool.map(prefilter_nonbam_multiproc, proc_list)
+    nonbam_dict= {}
+    for t in ori_new:
+        nonbam_dict[t[0]]= t[1]
+    # -----------------------[ Loop thorugh regions ]----------------------------
     for region in inbed:
         #line= line.strip().split('\t')
         #if line == ['']:

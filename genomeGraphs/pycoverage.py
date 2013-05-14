@@ -69,6 +69,22 @@ def prefilter_nonbam(inbed, nonbamlist, tmpdir):
         nonbam_dict[nonbam]= x_name
     return(nonbam_dict)
 
+def prefilter_nonbam_multiproc(arg_dict):
+    """Multiprocessing veriosn of prefilter_nonbam()
+    Return:
+        Tuple of two items: ('original name', 'filtered name')
+    """
+    inbed= arg_dict['inbed']
+    nonbam= arg_dict['nonbam']
+    tmpdir= arg_dict['tmpdir']
+    bname= re.sub('\.gz$', '', os.path.split(nonbam)[1])
+    x_name= os.path.join(tmpdir, 'x_' + bname)
+    pynonbam= pybedtools.BedTool(nonbam)
+    nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed).sort().saveas(x_name)
+    ori_new= (nonbam, x_name)
+    return(ori_new)
+
+
 def makeWindows(region, n):
     """Divide a region in n windows. If the region size is < n, than each postion
     is returned.
