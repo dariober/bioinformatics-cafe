@@ -88,6 +88,11 @@ input_args.add_argument('--nproc',
                     help='''Number of parallel jobs to run. Default 1. (Currently
 multiprocessising is applied only to pref-filetering non-bam files.)''')
 
+input_args.add_argument('--parfile', '-pf',
+                    default= None,
+                    help='''_In prep_: Parameter file to get arguments from.''')
+
+
 # -----------------------------------------------------------------------------
 output_args = parser.add_argument_group('Output options', '')
 
@@ -266,6 +271,11 @@ between 9 and 12 should suite most cases. Default 10.
 # -----------------------------------------------------------------------------
 def main():
     args = parser.parse_args()
+    if args.parfile:
+        pf= read_parfile(args.parfile)
+        if not pf:
+            sys.exit('Error parsing parameter file %s' %(args.parfile))
+        args= assign_parfile(pf, args)
     # Checking arguments
     # ------------------
     if args.ibam == '-' and args.bed == '-':
@@ -354,12 +364,6 @@ def main():
         nonbam_dict[t[0]]= t[1]
     # -----------------------[ Loop thorugh regions ]----------------------------
     for region in inbed:
-        #line= line.strip().split('\t')
-        #if line == ['']:
-        #    continue
-        #region= pybedtools.create_interval_from_list(line)
-        #pybed_region= pybedtools.BedTool(line, from_string= True)
-        #region= pybed_region[0] 
         print('Processing: %s' %(str(region).strip()))
         regname= '_'.join([str(x) for x in [region.chrom, region.start, region.end]])
         if region.name != '' and region.name != '.':

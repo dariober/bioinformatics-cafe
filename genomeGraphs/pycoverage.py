@@ -7,6 +7,73 @@ import glob
 import pycoverage
 import gzip
 import re
+import csv
+
+def read_parfile(parfile):
+    """Read the paramater file and return a dictionary with {'param': args}.
+    """
+    allowed_args= sorted(['ibam',
+                   'col_track',
+                   'ymax',
+                   'ymin',
+                   'lab',
+                   'vheights',
+                   'names',
+                   'cex_names',
+                   'col_names',
+                   'bg'])
+    fin= open(parfile, "rU")
+    fargs= csv.DictReader(fin, delimiter= '\t')
+    fDict= {}
+
+    for k in fargs.fieldnames:
+        if k not in allowed_args:
+            print('\nParameter "%s" cannot be passed by the parameter file.\nAllowed parameters are:\n    %s\n' %(k, '\n    '.join(allowed_args)))
+            return(False)
+    for line in fargs:
+        for k in fargs.fieldnames:
+            v= line[k]
+            if k in fDict:
+                fDict[k].append(v)
+            else:
+                fDict[k]= [v]
+    ## Trim lists:
+    for k in fDict:
+        v= fDict[k]
+        for i in range(len(v))[::-1]:
+            if v[i] is None or v[i] == '':
+                del v[i]
+            else:
+                break
+    return(fDict)
+    
+def assign_parfile(pardict, args):
+    """Assign to the parser object args the arguments in dictionary pardict.
+    Return:
+        Parser object args with parameters updated.
+    """
+    for k in pardict:
+        args.__dict__[k]= pardict[k]
+    return(args)
+        
+def format_paramater_dict(pardict, parser):
+    """Format the arguments in dict pardict, tytpically returned by read_parfile(),
+    to comform to the parser.
+    pardict:
+        Dictionary of {parameter:argument}
+    parser:
+        Parser obejct from argparse
+    """
+    sys.exit()
+    argsDict= parser.__dict__['_option_string_actions']
+    for k in argsDict:
+        store_action= argsDict[k].__dict__
+        nargs= store_action
+        print(k, nargs)
+#    for arg in pardict:
+#        par= pardict[arg]
+#        parser[par]
+#        print(arg)
 
 def getFileList(files):
     """Expand the list of files using glob. Return a list of unique files.
@@ -281,13 +348,16 @@ def quoteStringList(x):
     E.g. x= ['blue', 'black']
     quoteStringList(x) >>> '"blue", "black"'
     NB:
-        Numbers are converted to strings and quoted as well!
+        Numbers are converted to strings and quoted as well! None is converted to
+        'NA'.
     NB2:
         This function is not meant to cope well with strings containing double quotes,
         weird metachars etc.
     '''
     s= ''
     for y in x:
+        if y is None:
+            y= 'NA'
         s= s + '"' + str(y) + '", '
     s= s.strip(', ')
     return(s)
