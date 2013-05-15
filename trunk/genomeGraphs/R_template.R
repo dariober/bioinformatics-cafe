@@ -9,7 +9,11 @@ library(tools)
 # -----------------------------------------------------------------------------
 
 recycle<- function(x, y){
-    ## Recycles or trim vector y to be of the same length of x
+    ## Recycles or trim vector y to be of the same length as x
+    ## Test:
+    ## x<- c('a', 'b', 'c', 'd')
+    ## y<- c('1', '2')
+    ## ylong<- recycle(x, y) #>>>  c('1', '2', '1', '2')
     if(is.null(y)){
         yext<- rep(NA, length(x))
         return(yext)
@@ -17,12 +21,15 @@ recycle<- function(x, y){
     if(length(y) >= length(x)){
         return(y[1:length(x)])
     } else{
-        yext<- c(rep(y, times= floor(length(x) / length(y))), y[1:(length(x) %%%% length(y))] )
+        yext<- rep(y, times= floor(length(x) / length(y)))
+        if(length(yext) < length(x)){
+            yext<- c(yext, y[1:(length(x) %%%% length(y))])
+        }
         return(yext)
     }
 }
 
-makeTransparent<-function(someColor, alpha=100){
+makeTransparent<- function(someColor, alpha=100){
     "Given a colour name (e.g. 'red'), make it transparent.
     someColor:
     Vector of colour names to make transparent e.g. c('red', 'blue')
@@ -413,10 +420,11 @@ for(i in 1:nrow(plot_type)){
         par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
         plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '')
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= makeTransparent('blue', 20), border= 'transparent')
-        thick_bottom<- 30 - 15
-        thick_top<-    30 + 15
-        thin_bottom<-  30 - 5
-        thin_top<-     30 + 5
+        offs<- 40
+        thick_bottom<- offs - 35
+        thick_top<-    offs + 35
+        thin_bottom<-  offs - 20
+        thin_top<-     offs + 20
         if(nrow(pdata) > 0){
             fextr<- getFeatureExtremes(pdata)
             rect(xleft= pdata$start,
@@ -424,10 +432,10 @@ for(i in 1:nrow(plot_type)){
                         ybottom= ifelse(pdata$feature == 'CDS', thick_bottom, thin_bottom),
                         ytop= ifelse(pdata$feature == 'CDS', thick_top, thin_top),
                         col= col4track, border= col4track)
-            segments(y0= 30, y1= 30, x0= fextr$start, x1= fextr$end, col= col4track)
+            segments(y0= offs, y1= offs, x0= fextr$start, x1= fextr$end, col= col4track)
             text(x= rowMeans(fextr[, c('start', 'end')]), y= thick_top + 10, labels= paste(fextr$name, ifelse(fextr$strand == '.', '', fextr$strand)), adj= c(0.5,0), col= '%(col_text_ann)s', cex= cex_ann)
         }
-        text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)        
+        text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= thick_top + 10, adj= c(0,0), labels= libname, col= col_names[i], cex= cex_names) #par('usr')[4] * 1
     }
 }
 ## BOTTOM PANEL
