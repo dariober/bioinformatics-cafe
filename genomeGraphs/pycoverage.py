@@ -329,14 +329,18 @@ def getRefSequence(fasta, region):
         List of tuples with inner tuple ['chrom', 'start', 'end', 'base']
     NB: You need to reduce the start by 1 because fastaFromBed seems to be 1-based.
     """
-    region_str= '\t'.join([region.chrom, str(region.start-1), str(region.end)])
+    if region.start == 0:
+        xstart= 0
+    else:
+        xstart= region.start-1 
+    region_str= '\t'.join([region.chrom, str(xstart), str(region.end)])
     bedregion= pybedtools.BedTool(str(region_str), from_string= True)
     seq = bedregion.sequence(fi=fasta, tab= True)
     seq= open(seq.seqfn).read().split('\t')
     seq_table= zip(
-        [region.chrom] * (region.end - (region.start-1)), ## Column of chrom
-        range(region.start-1, region.end), ## Column of start pos
-        range(region.start, region.end+1), ## Col of end pos
+        [region.chrom] * (region.end - (xstart)), ## Column of chrom
+        range(xstart, region.end), ## Column of start pos
+        range(region.start + 1, region.end+1), ## Col of end pos
         list(seq[1].strip()) ## Col of bases
         )
     return(seq_table)
@@ -541,6 +545,11 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, nwinds, 
             bedline= bedline[0:cnt_indx] + rpm(bedline[cnt_indx:], libsizes)
         mpileup_bed.write('\t'.join([str(x) for x in bedline]) + '\n')
         nlines += 1
+    stdout, stderr= proc.communicate()
+    if proc.returncode != 0:
+        print('\n' + stderr)
+        print('samtools exit code: ' + str(proc.returncode) + '\n')
+        raise Exception('Failed to execute:\n%s' %(cmd))
     mpileup_bed.close()
     if os.stat(mpileup_name).st_size == 0:
         mpileup_bed= open(mpileup_name, 'w')

@@ -139,8 +139,21 @@ setPlotHeights<- function(heights){
     return(c(top, heights, bottom))
 }
 
+makePlotName<- function(data_df, xlim){
+    "Make a plot name from chromosome name extracted from data_df and region limits
+    from xlim.
+    "
+    chrom<- unique(data_df$chrom)
+    xstart<- formatC(xlim[1] + 1, big.mark= ',', format= 'd')
+    xend<- formatC(xlim[2], big.mark= ',', format= 'd')
+    plotname<- plotname<- sprintf('%%s:%%s-%%s', chrom, xstart, xend)
+    return(plotname)
+}
+
 regname2plotname<- function(regname){
-    "Convert regname 'chrom_start_end[_name]'
+    "DEPRECATED
+    -----------
+    Convert regname 'chrom_start_end[_name]'
     to a plotname with format 'chr:start-end [name]'
     Examples:
         regname2plotname('chr7_5566757_5566829_ACTB_2') #>>> 'chr7:5,566,757-5,566,829 ACTB_2'
@@ -262,6 +275,7 @@ pheight<- %(pheight)s
 
 # ------------------------------------------------------------------------------
 # DATA INPUT
+# Coverage and annotation will all be in "data_df"
 # ------------------------------------------------------------------------------
 
 colClasses<- c('character', 'integer', 'integer', 'character', 'integer', 'integer', 'integer', 'integer', 'numeric', 'character', 'character', 'character')
@@ -342,8 +356,8 @@ layout(lay.mat, heights= plot_heights)
 ## TOP PANEL
 ## ---------
 par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
-plot(0, ylim= c(0,100), xlim= xlim, ylab= '', xlab= '')
-plotname<- regname2plotname(regname)
+plot(0, ylim= c(0,100), xlim= xlim, ylab= '', xlab= '', type= 'n')
+plotname<- makePlotName(data_df, xlim)
 text(x= mean(xlim), y= 10, labels= plotname, cex= cex.for.height(plotname, 80), adj= c(0.5,0))
 ## MAIN PANELS
 ## ----------
