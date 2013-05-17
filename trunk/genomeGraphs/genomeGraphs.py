@@ -250,8 +250,8 @@ figure_size_args.add_argument('--nogrid', action= 'store_true', help='''Do not p
 figure_size_args.add_argument('--pwidth', '-W',
                     default= 15,
                     type= float,
-                    help='''Width of the plots in cm. Default 24
-                   ''')
+                    help='''Width of the plots in cm. Default 15
+                    ''')
 
 figure_size_args.add_argument('--pheight', '-H',
                     default= -1,
