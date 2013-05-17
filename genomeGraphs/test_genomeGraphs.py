@@ -200,6 +200,7 @@ def test_plot_params():
     assert stderr == ''
 
 def test_sequence_and_pipe():
+    ## _MEMO_: On shell remember to use `echo -e` to correctly read \t!!
     cmd= """echo 'chr7\t5567130\t5567189' | genomeGraphs.py -i bam/ds051.actb.bam -b - -f annotation/chr7.fa --tmpdir %s -d %s"""  %(tmpdir, outdir)
     p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
     stdout, stderr= p.communicate()

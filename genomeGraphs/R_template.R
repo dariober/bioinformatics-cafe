@@ -252,7 +252,7 @@ col_names<- recycle(inputlist, c(%(col_names)s))
 bg<- recycle( inputlist, c(%(bg)s) )
 ymax<- recycle( inputlist, c(%(ymax)s) )
 ymin<- recycle( inputlist, c(%(ymin)s) )
-xlim<- c(%(xlim1)s, %(xlim2)s)
+xlim<- c(%(xlim1)s - 1, %(xlim2)s)
 ylab<- recycle( inputlist, c(%(ylab)s) )
 vheights<- as.numeric(recycle( inputlist, c(%(vheights)s) ))
 mar<- c(%(mar)s)
@@ -400,7 +400,8 @@ for(i in 1:nrow(plot_type)){
         ## Set up plot
         ## ----------
         par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0))
-        plot(x= 0, type= 'n', xlab= '', ylab= ylab[i], ylim= c(pymin, pymax), xlim= xlim, cex.axis= cex_axis)
+        plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(pymin, pymax), xlim= xlim)
+        mtext(side= 2, line= 3, text= ylab[i], cex= par('cex') * cex_axis, las= 0)
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[i], border= 'transparent')
         if('%(nogrid)s' == 'False'){
             grid(col= 'darkgrey')
