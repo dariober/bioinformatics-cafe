@@ -284,7 +284,7 @@ def main():
         assert validate_ymax(args.ymax)
         assert validate_ymin(args.ymin)
     except AssertionError:
-        print('''Invalid arguments passed to ymax or ymin.''')
+        print('''Invalid arguments passed to ymax (%s) or ymin (%s).''' %(args.ymax, args.ymin))
         sys.exit(1)
     if args.nwinds < args.maxres:
         nwinds= args.maxres

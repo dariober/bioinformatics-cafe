@@ -16,7 +16,7 @@ def read_parfile(parfile):
                    'col_track',
                    'ymax',
                    'ymin',
-                   'lab',
+                   'ylab',
                    'vheights',
                    'names',
                    'cex_names',
