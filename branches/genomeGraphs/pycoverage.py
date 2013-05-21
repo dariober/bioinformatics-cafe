@@ -114,7 +114,6 @@ def prefilter_nonbam_multiproc(arg_dict):
     x_name= fn.name
     pynonbam= pybedtools.BedTool(nonbam)
     nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True).sort().saveas(x_name)
-    print(nonbam_x_inbed)
     ori_new= (nonbam, x_name)
     return(ori_new)
 

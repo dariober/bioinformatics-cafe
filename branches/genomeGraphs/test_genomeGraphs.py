@@ -241,4 +241,4 @@ def test_sequence_and_pipe():
     seqbed= [x.strip().split('\t') for x in seqbed]
     assert seqbed[0] == ['chrom', 'start', 'end', 'base'] ## Check first line is this header
     nucseq= ''.join([x[3] for x in seqbed[1:]]) ## Get column 'base', skipping header.
-    assert nucseq == 'TGACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG' ## This sequence manually checked.
+    assert nucseq == 'GACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG' ## This sequence manually checked.

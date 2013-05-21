@@ -186,6 +186,12 @@ plot_coverage= parser.add_argument_group('Plot of coverage', '')
 plot_coverage.add_argument('--col_nuc', default= '', help='''File to the colour
 code for counts of the ACTGN (counts on + strand) and actgn (counts on - strand).
 ''')
+
+plot_coverage.add_argument('--no_col_bases', action= 'store_true', help='''Do not colour
+individual bases even if the span of the region is < maxseq. I.e. use col_track
+and col_track_rev
+''')
+
 plot_coverage.add_argument('--col_all', '-c',
                     action= 'store_true',
                     help='''Paint each bar with the colours given in --col_nuc
@@ -202,7 +208,8 @@ annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour 
 annotation_args.add_argument('--cex_ann', default= 0.8, type= float, help='''Character exapansion for the names of the annotation tracks''')
 annotation_args.add_argument('--col_track', default= [''], nargs= '+', help='''Colour for coverage and annotation tracks and for N base.
 Default will assigne grey to coverage and firebrick4 to annotation''')
-annotation_args.add_argument('--col_track_rev', default= [''], nargs= '+', help='''Relevant to bam files only: Colour for reads on reverse strand''')
+annotation_args.add_argument('--col_track_rev', default= [''], nargs= '+', help='''Relevant to bam files only: Colour for reads on reverse strand. Use NA
+to use the same colour as for forward reads (i.e. turn it off)''')
 
 # -----------------------------------------------------------------------------
 xaxis_args= parser.add_argument_group('Annotation of x-axis',
@@ -489,6 +496,7 @@ def main():
               col_track= quoteStringList(args.col_track),
               col_track_rev= quoteStringList(args.col_track_rev),
               col_nuc= args.col_nuc,
+              no_col_bases= args.no_col_bases,
               bg= quoteStringList(args.bg),
               nogrid= args.nogrid,
               col_text_ann= args.col_text_ann,
