@@ -217,6 +217,7 @@ cex_seq<- %(cex_seq)s * cex
 cex_range<- %(cex_range)s * cex
 cex_ann<- %(cex_ann)s * cex
 col_nuc<- "%(col_nuc)s"
+no_col_bases<- ifelse("%(no_col_bases)s" == 'False', FALSE, TRUE)
 col_track<- recycle(inputlist, c(%(col_track)s))
 col_track_rev<- recycle(inputlist, c(%(col_track_rev)s))
 snames<- recycle(inputlist, c(%(names)s))        ## c() evaluates to NULL.
@@ -341,11 +342,20 @@ for(i in 1:nrow(plot_type)){
         libname<- snames[i]
     }
     col4track<- ifelse(col_track[i] == '', ifelse(type == 'coverage', 'grey', 'firebrick4'), col_track[i])
+    if(col_track_rev[i] == '' && type == 'coverage'){
+        col4track_rev<- 'pink'
+    } else if (col_track_rev[i] == '' && type != 'coverage'){
+        col4track_rev<- 'firebrick4'
+    } else if (col_track_rev[i] == 'NA'){
+        col4track_rev<- col4track
+    } else {
+        col4track_rev<- col_track_rev[i]
+    }
     col4track_rev<- ifelse(col_track_rev[i] == '', ifelse(type == 'coverage', 'pink', 'firebrick4'), col_track_rev[i])
     if(type == 'coverage'){
         if(nrow(pdata) > 0){
             ## Need to decide which colour schema to use:
-            if((xlim[2] - xlim[1]) < maxseq){
+            if((xlim[2] - xlim[1]) < maxseq & no_col_bases == FALSE){
                 colour_schema<- data.frame(
                     base= c('A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n'),
                     col_match= rep(col4track, 10),
