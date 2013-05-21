@@ -60,15 +60,6 @@ colour_schema_stranded<- data.frame(
     stringsAsFactors= FALSE
 )
 
-    - Important: Bed intervals (--bed) are intersected one by one to the non-bam
-    files. This means that non-bam files are scanned many times!! This is very
-    time consuming for big bed files e.g. for of all the CpGs in a
-    genome. (This is not a problem for BAM files since they are indexed).
-    So: Intersect all the regions in --bed to the non-bam file(s). Pass these pre-
-    filtered files to prepare_nonbam_file().
-    bedtools memo: The b file is loaded in memory so for the sake of saving memory
-    put there the smaller one. However, loading in memory the big files, might be
-    slightly faster.
     test this:
     bsub -oo bsub.log -R "rusage[mem=8192]" "time intersectBed -b /home/berald01/reference_seqs/mm9.allCpG.bed.gz -a fcab_amplics.bed" ## ~43 sec ~5GB mem!
     bsub -oo bsub2.log "time intersectBed -a /home/berald01/reference_seqs/mm9.allCpG.bed.gz -b fcab_amplics.bed" ## ~1m20sec
