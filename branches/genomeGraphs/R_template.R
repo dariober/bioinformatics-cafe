@@ -351,7 +351,6 @@ for(i in 1:nrow(plot_type)){
     } else {
         col4track_rev<- col_track_rev[i]
     }
-    col4track_rev<- ifelse(col_track_rev[i] == '', ifelse(type == 'coverage', 'pink', 'firebrick4'), col_track_rev[i])
     if(type == 'coverage'){
         if(nrow(pdata) > 0){
             ## Need to decide which colour schema to use:
