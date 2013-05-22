@@ -112,14 +112,14 @@ update_col_df<- function(col_df, refbases){
     return(data.frame(col_df, stringsAsFactors= FALSE))
 }
 
-setPlotHeights<- function(heights){
+setPlotHeights<- function(heights, topCoef= NULL, bottomCoef= NULL){
     "Set sensible (?) values for top and bottom panel given the vector of heights
     heights:
         Numeric vector, expected to be of the same length as inputlist.
     Return:
         Numeric vector of length inputlist + 2 to be passed to layout()"
-    top<- max(heights) / 8
-    bottom<- max(heights) / 2
+    top<-    sum(heights) * topCoef ## max(heights) / 8
+    bottom<- sum(heights) * bottomCoef ## max(heights) / 2
     return(c(top, heights, bottom))
 }
 
@@ -298,14 +298,15 @@ plot_type$order<- 1:length(inputlist)
 if(all(is.na(vheights))){
     cov_height= 1
     ann_height= 1/6
-    top_height= 1/8
-    bottom_height= 1/2
+#    top_height= 1/8
+#    bottom_height= 1/2
     plot_type$height<- ifelse(plot_type$feature == 'coverage', cov_height, ann_height)
-    plot_heights<- c(top_height, plot_type$height, bottom_height)
+#    plot_heights<- c(top_height, plot_type$height, bottom_height)
 } else {
     plot_type$height<- vheights
-    plot_heights<- setPlotHeights(vheights)
+#    plot_heights<- setPlotHeights(vheights)
 }
+plot_heights<- setPlotHeights(plot_type$height, topCoef= 0.1 / (log2(nplots)+1), bottomCoef= 0.25 / (log2(nplots)+1))
 lay.mat<- as.matrix(c(1, plot_type$order + 1, max(plot_type$order) + 2), ncol= 1)
 
 # ----------------------------- PLOT SIZE -------------------------------------
@@ -398,7 +399,7 @@ for(i in 1:nrow(plot_type)){
         ## Set up plot
         ## -----------
         par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0))
-        plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(pymin, pymax), xlim= xlim)
+        plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(pymin, pymax), xlim= xlim, cex.axis= cex_axis)
         mtext(side= 2, line= 3, text= ylab[i], cex= par('cex') * cex_axis, las= 0)
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[i], border= 'transparent')
         if('%(nogrid)s' == 'False'){

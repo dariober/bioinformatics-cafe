@@ -75,7 +75,7 @@ def dedupFileList(x):
             inputlist.append(a)
     return(inputlist)
 
-def prefilter_nonbam(inbed, nonbamlist, tmpdir):
+def prefilter_nonbam_multiproc(inbed, nonbam, tmpdir):
     """For each filename in nonbamlist do the intersection with the regions in
     inbed. Produce filtered files to tmpdir and return a dict of original filenames
     and the filtered name
@@ -87,35 +87,18 @@ def prefilter_nonbam(inbed, nonbamlist, tmpdir):
         Where intersected files will go. Output name is
         tmpdir/x_<original name w/o .gz>
     Return:
-        dict of original names:filtered names
-        E.g. {'bedgraph/profile.bedGraph.gz': 'wdir/x_profile.bedGraph', 'annotation/genes.gtf.gz': 'wdir/x_genes.gtf'}
-        Output files are *sorted*
+        Name of the (temp) file with the filetered regions.
+#        dict of original names:filtered names
+#        E.g. {'bedgraph/profile.bedGraph.gz': 'wdir/x_profile.bedGraph', 'annotation/genes.gtf.gz': 'wdir/x_genes.gtf'}
+#        Output files are *sorted*
     """
-    nonbam_dict= {}
-    for nonbam in nonbamlist:
-        bname= re.sub('\.gz$', '', os.path.split(nonbam)[1])
-        x_name= os.path.join(tmpdir, 'x_' + bname)
-        pynonbam= pybedtools.BedTool(nonbam)
-        nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed).sort().saveas(x_name)
-        nonbam_dict[nonbam]= x_name
-    return(nonbam_dict)
-
-def prefilter_nonbam_multiproc(arg_dict):
-    """Multiprocessing veriosn of prefilter_nonbam()
-    Return:
-        Tuple of two items: ('original name', 'filtered name')
-    """
-    inbed= arg_dict['inbed']
-    nonbam= arg_dict['nonbam']
-    tmpdir= arg_dict['tmpdir']
     bname= re.sub('\.gz$', '', os.path.split(nonbam)[1])
-    # x_name= os.path.join(tmpdir, 'x_' + bname)
     fn= tempfile.NamedTemporaryFile(dir= tmpdir, suffix= '_' + bname, delete= False)
     x_name= fn.name
     pynonbam= pybedtools.BedTool(nonbam)
     nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True).sort().saveas(x_name)
-    ori_new= (nonbam, x_name)
-    return(ori_new)
+    #ori_new= (nonbam, x_name)
+    return(x_name)
 
 
 def makeWindows(region, n):
@@ -197,7 +180,6 @@ def RPlot(**kwargs):
     rout= open(kwargs['rscript'], 'w')
     rin= os.path.join(os.path.split(pycoverage.__file__)[0], 'R_template.R')
     rtemplate= open(rin).read()
-    print(kwargs)
     rplot= rtemplate %kwargs
     rout.write(rplot)
     rout.close()
@@ -338,3 +320,28 @@ def compressBedGraph(regionWindows, bedgraph_name, use_file_name, bedgraph_grp_f
 #        store_action= argsDict[k].__dict__
 #        nargs= store_action
 #        print(k, nargs)
+
+#def prefilter_nonbam(inbed, nonbamlist, tmpdir):
+#    """For each filename in nonbamlist do the intersection with the regions in
+#    inbed. Produce filtered files to tmpdir and return a dict of original filenames
+#   and the filtered name
+#    inbed:
+#        pybedtools.BedTool() object of regions to intersect with the non bam files
+#    nonbamlist:
+#        List of non-bam files
+#    tmpdir:
+#        Where intersected files will go. Output name is
+#        tmpdir/x_<original name w/o .gz>
+#    Return:
+#        dict of original names:filtered names
+#        E.g. {'bedgraph/profile.bedGraph.gz': 'wdir/x_profile.bedGraph', 'annotation/genes.gtf.gz': 'wdir/x_genes.gtf'}
+#        Output files are *sorted*
+#    """
+#    nonbam_dict= {}
+#    for nonbam in nonbamlist:
+#        bname= re.sub('\.gz$', '', os.path.split(nonbam)[1])
+#        x_name= os.path.join(tmpdir, 'x_' + bname)
+#        pynonbam= pybedtools.BedTool(nonbam)
+#        nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed).sort().saveas(x_name)
+#        nonbam_dict[nonbam]= x_name
+#    return(nonbam_dict)

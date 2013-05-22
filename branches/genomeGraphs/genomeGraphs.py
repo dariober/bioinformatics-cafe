@@ -66,11 +66,11 @@ input_args.add_argument('--samtools',
                     help='''Path to samtools. Default is '' which assumes it is
 on PATH''')
 
-input_args.add_argument('--nproc',
-                    default= 1,
-                    type= int,
-                    help='''Number of parallel jobs to run. Default 1. (Currently
-multiprocessising is applied only to pref-filtering non-bam files.)''')
+#input_args.add_argument('--nproc',
+#                    default= 1,
+#                    type= int,
+#                    help='''Number of parallel jobs to run. Default 1. (Currently
+#multiprocessising is applied only to pref-filtering non-bam files.)''')
 
 input_args.add_argument('--parfile', '-pf',
                     default= None,
@@ -343,18 +343,16 @@ def main():
         inbed= open(args.bed)
     inbed= pybedtools.BedTool(inbed).sort() ## inbed is args.bed file handle
     
-    #nonbam_dict= prefilter_nonbam(inbed, nonbamlist, tmpdir)
     # ---------------------[ Pre-filter non-bam files ]-------------------------
-    proc_list= []
-    for nonbam in nonbamlist:
-        """List of dicts with argumnets passed to prefilter_nonbam_multiproc.
-        """
-        proc_list.append({'nonbam':nonbam, 'inbed':inbed, 'tmpdir':tmpdir})
-    pool = multiprocessing.Pool(processes= args.nproc)
-    ori_new= pool.map(prefilter_nonbam_multiproc, proc_list)
     nonbam_dict= {}
-    for t in ori_new:
-        nonbam_dict[t[0]]= t[1]
+    for nonbam in nonbamlist:
+        nonbam_dict[nonbam]= prefilter_nonbam_multiproc(nonbam= nonbam, inbed= inbed, tmpdir= tmpdir)
+#        proc_list.append({'nonbam':nonbam, 'inbed':inbed, 'tmpdir':tmpdir})
+#    pool = multiprocessing.Pool(processes= args.nproc)
+#    ori_new= pool.map(prefilter_nonbam_multiproc, proc_list)
+#    nonbam_dict= {}
+#    for t in ori_new:
+#        nonbam_dict[t[0]]= t[1]
     # -----------------------[ Loop thorugh regions ]----------------------------
     for region in inbed:
         print('Processing: %s' %(str(region).strip()))
