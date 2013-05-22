@@ -215,7 +215,6 @@ cex_axis<- %(cex_axis)s * cex
 cex_names<- %(cex_names)s * cex 
 cex_seq<- %(cex_seq)s * cex
 cex_range<- %(cex_range)s * cex
-# cex_ann<- %(cex_ann)s * cex
 col_nuc<- "%(col_nuc)s"
 no_col_bases<- ifelse("%(no_col_bases)s" == 'False', FALSE, TRUE)
 col_track<- recycle(inputlist, c(%(col_track)s))
@@ -444,7 +443,6 @@ for(i in 1:nrow(plot_type)){
             segments(y0= offs, y1= offs, x0= fextr$start, x1= fextr$end, col= col4track)
             lab<- paste(fextr$name, ifelse(fextr$strand == '.', '', fextr$strand))
             text(x= rowMeans(fextr[, c('start', 'end')]), y= thick_top + 2, labels= lab, adj= c(0.5,0), col= '%(col_text_ann)s', cex= cex.for.height(lab, 98 - (thick_top + 2)))
-#            text(x= rowMeans(fextr[, c('start', 'end')]), y= thick_top + 10, labels= paste(fextr$name, ifelse(fextr$strand == '.', '', fextr$strand)), adj= c(0.5,0), col= '%(col_text_ann)s', cex= cex_ann)
         }
         text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= thick_top + 10, adj= c(0,0), labels= libname, col= col_names[i], cex= cex_names) #par('usr')[4] * 1
     }

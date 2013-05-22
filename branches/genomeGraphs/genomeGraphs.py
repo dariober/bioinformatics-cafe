@@ -4,13 +4,13 @@ import argparse
 import sys
 import os
 import tempfile
-import subprocess
 import shutil
 import glob
 import multiprocessing
 from pycoverage import *
 from validate_args import *
 import pympileup
+import pipes
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -171,7 +171,6 @@ annotation_args.add_argument('--cex', default= 1, type= float,
                              help='''Character expansion for all text. All the other
 cex parameters will be based on this''')
 annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
-# annotation_args.add_argument('--cex_ann', default= 0.8, type= float, help='''Character exapansion for the names of the annotation tracks''')
 annotation_args.add_argument('--col_track', default= [''], nargs= '+', help='''Colour for coverage and annotation tracks and for the N base.
 Default will assign grey to coverage and firebrick4 to annotation''')
 annotation_args.add_argument('--col_track_rev', default= [''], nargs= '+', help='''Relevant to bam files only: Colour for reads on reverse strand. Use NA
@@ -363,20 +362,21 @@ def main():
         if region.name != '' and region.name != '.':
             regname = regname + '_' + region.name
         ## --------------------[ Prepare output file names ]-------------------
-        fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
 
+        fasta_seq_name= pipes.quote(os.path.join(tmpdir, regname + '.seq.txt'))
         if bamlist != []:
-            mpileup_name= os.path.join(tmpdir, regname) + '.mpileup.bed.txt'
-            mpileup_grp_name= os.path.join(tmpdir, regname) + '.grp.bed.txt'
+            mpileup_name= pipes.quote(os.path.join(tmpdir, regname) + '.mpileup.bed.txt')
+            mpileup_grp_name= pipes.quote(os.path.join(tmpdir, regname) + '.grp.bed.txt')
         else:
             mpileup_name= ''
             mpileup_grp_name= ''
         if nonbamlist != []:
-            non_bam_name= os.path.join(tmpdir, regname) + '.nonbam.bed.txt'
+            non_bam_name= pipes.quote(os.path.join(tmpdir, regname) + '.nonbam.bed.txt')
         else:
             non_bam_name= ''
-        pdffile= os.path.join(tmpdir, regname + '.pdf')
-        rscript= os.path.join(tmpdir, regname + '.R')
+        pdffile= pipes.quote(os.path.join(tmpdir, regname + '.pdf'))
+        final_pdffile= pipes.quote(os.path.join(outdir, regname + '.pdf'))
+        rscript= pipes.quote(os.path.join(tmpdir, regname + '.R'))
         if not args.replot:
             prepare_reference_fasta(fasta_seq_name, args.maxseq, region, args.fasta) ## Create reference file even if header only
             ## ----------------------- BAM FILES -------------------------------
@@ -458,7 +458,6 @@ def main():
               bg= quoteStringList(args.bg),
               nogrid= args.nogrid,
               col_text_ann= args.col_text_ann,
-             #  cex_ann= args.cex_ann,
               names= quoteStringList(names),
               col_names= quoteStringList(args.col_names),
               cex_names= args.cex_names,
@@ -479,7 +478,7 @@ def main():
         if not onefile and tmpdir != outdir:
             ## Copy PDFs from temp dir to output dir. Unless you want them in onefile or
             ## if the final destination dir has been set to be also the tempdir
-            shutil.copyfile(pdffile, os.path.join(outdir, regname + '.pdf'))
+            shutil.copyfile(pdffile, final_pdffile)
     if onefile:
         catPdf(in_pdf= outputPDF, out_pdf= args.onefile)
     for f in nonbam_dict:

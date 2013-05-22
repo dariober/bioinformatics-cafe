@@ -197,7 +197,8 @@ def RPlot(**kwargs):
     rout= open(kwargs['rscript'], 'w')
     rin= os.path.join(os.path.split(pycoverage.__file__)[0], 'R_template.R')
     rtemplate= open(rin).read()
-    rplot= rtemplate %kwargs ## %{'mcov': tmp.name, 'plotname': plotname + '.pdf', 'pheight': args.pheight, 'pwidth':args.pwidth, 'psize': args.psize}
+    print(kwargs)
+    rplot= rtemplate %kwargs
     rout.write(rplot)
     rout.close()
     p= subprocess.Popen('Rscript %s' %(kwargs['rscript']), stdout= subprocess.PIPE, stderr= subprocess.PIPE, shell= True)
