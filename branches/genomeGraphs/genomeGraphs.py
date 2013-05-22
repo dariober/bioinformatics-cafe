@@ -14,12 +14,11 @@ import pympileup
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
-    Produce coverage plots for one or more bam files at the positons specified in
-    a bed file. Plots are written in pdf format, one per region or concatenated in
-    a single file.
+    Produce coverage plots for one or more bam/bedgraph/gtf/bed files at the
+    intervals specified in a bed file. 
     
-    Plots can be annotated according to a GTF file and decorated with the individual
-    nucleotides if a corresponding refernce FASTA file is provided.
+    Plots can be annotated according to a gtf or bed file and decorated with the individual
+    nucleotides if a corresponding reference FASTA file is provided.
     
     Intermediate output files, including the R script, can be saved for future inspection.
 
@@ -34,37 +33,6 @@ EXAMPLE:
 SEE ALSO:
     Documentation at
     http://code.google.com/p/bioinformatics-misc/wiki/coverage_screenshots_docs
-
-TODO:
-## Track colouring:
---col_track COL_TRACK []
---col_track_rev COL_TRACK_REV []
---col_nuc COL_NUC
---col_all
-
---maxseq: Maximum length of nuc sequence for printing AND max size of bed interval to colour bases
---nwinds: Number of windows to dived up the bed interval (can't be < maxres). 
-
-TO ADD:
---col_winds: Colour windows according to colour schema. I.e. do not switch 
-
-if region-size > maxseq:
-    Use colour_schema_stranded
-if region-size <= maxseq:
-    Use standard   
-
-colour_schema_stranded<- data.frame(
-    base= ('A', 'C', 'G', 'T', 'N', 'a', 'c', 'g', 't', 'n'),
-    col_match= rep(c("%(col_track)s", "%(col_track_rev)s"), each= 5),
-    col_mismatch= rep(c("%(col_track)s", "%(col_track_rev)s"), each= 5),
-    stringsAsFactors= FALSE
-)
-
-    test this:
-    bsub -oo bsub.log -R "rusage[mem=8192]" "time intersectBed -b /home/berald01/reference_seqs/mm9.allCpG.bed.gz -a fcab_amplics.bed" ## ~43 sec ~5GB mem!
-    bsub -oo bsub2.log "time intersectBed -a /home/berald01/reference_seqs/mm9.allCpG.bed.gz -b fcab_amplics.bed" ## ~1m20sec
-
-    (see http://bedtools.readthedocs.org/en/latest/content/overview.html#file-b-is-loaded-into-memory-most-of-the-time)
 
     """, formatter_class= argparse.RawTextHelpFormatter)
 
@@ -102,12 +70,11 @@ input_args.add_argument('--nproc',
                     default= 1,
                     type= int,
                     help='''Number of parallel jobs to run. Default 1. (Currently
-multiprocessising is applied only to pref-filetering non-bam files.)''')
+multiprocessising is applied only to pref-filtering non-bam files.)''')
 
 input_args.add_argument('--parfile', '-pf',
                     default= None,
                     help='''_In prep_: Parameter file to get arguments from.''')
-
 
 # -----------------------------------------------------------------------------
 output_args = parser.add_argument_group('Output options', '')
@@ -122,29 +89,37 @@ dir. NB: Not to be confused with --tmpdir where temp file go.
 output_args.add_argument('--onefile', '-o',
                    required= False,
                    default= None,
-                   help='''Concatenate the output PDF files into a single one
-passed as argument (requires PyPDF2 package). 
+                   help='''If given, concatenate all the pdf figures into this
+output file (requires PyPDF2 package). 
                    ''')
 
 output_args.add_argument('--tmpdir', '-t',
                     default= None,
-                    help='''Directory where to dump temporary files. By default
-python will find one which will be deleted at the end of the execution. If set
-it will *not* be deleted.
+                    help='''Directory where to dump temporary files. If not assigned
+the tmpdir will be deleted. If set it will *not* be deleted.
                    ''')
+
+output_args.add_argument('--nwinds', '-w',
+                   type= int,
+                   default= 1000,
+                   help='''Maximum number of data-points to plot. If the bed interval
+contains more than --nwinds data points it will be divided into equally sized
+windows and the counts or bedgraph scores grouped by window. Small value give a coarse
+resolution while larger values more jagged profile. Default 1000.
+If nwinds < maxseq,  nwinds is reset to maxseq.  
+''')
 
 output_args.add_argument('--replot',
                    action= 'store_true',
-                   help='''Re-use the output files from a previous execution. Just
-redraw the plots using different graphical parameters.
-This option allows to reformat the plots without going thorugh the time consuming
-steps of generating pileups etc.
+                   help='''Re-draw plots using the output files from a previous
+execution. This option allows to reformat the plots without going thorugh the time
+consuming steps of generating pileups, intersections etc.
 ''')
 
 output_args.add_argument('--rpm',
                    action= 'store_true',
                    help='''Normalize counts by reads per million using library
-sizes. Default is to use raw counts. 
+sizes. Default is to use raw counts. (Only relevant to bam files).
 ''')
 
 output_args.add_argument('--verbose', '-v',
@@ -153,28 +128,26 @@ output_args.add_argument('--verbose', '-v',
 the stdout and stderr from R. Only useful for debugging.
 ''')
 
-output_args.add_argument('--nwinds', '-w',
-                   type= int,
-                   default= 1000,
-                   help='''Maximum number of data-points to plot. If the bed interval
-contains more than --nwinds data points it will be divided into equally sized
-windows and the scores (e.g. counts) averaged by window. Small value give a coarse
-resolution while larger values more jagged profile. Default 1000.
-If nwinds < maxseq,  nwinds is reset to maxseq.  
-''')
-
 output_args.add_argument('--group_fun',
                    type= str,
                    default= 'mean',
                    help='''The function to group-by windows if the bedgraph or bam files
 generate ranges larger than --nwinds. Default 'mean'. See bedtools groupby for
-valid alternatives.
+valid options.
 ''')
 
 # -----------------------------------------------------------------------------
 plot_coverage= parser.add_argument_group('Plot of coverage', '')
 
-plot_coverage.add_argument('--col_nuc', default= '', help='''File to the colour
+plot_coverage.add_argument('--maxseq', '-m',
+                    default= 100,
+                    type= int,
+                    help='''The maximum width of the region (bp) to print bases
+and to plot each nucleotide in different colour. Default 100 (i.e. regions smaller
+than 100 bp will be printed with colour coded nucleotides and the sequence will
+be shown).''')
+
+plot_coverage.add_argument('--col_nuc', default= '', help='''_in prep_ File to the colour
 code for counts of the ACTGN (counts on + strand) and actgn (counts on - strand).
 ''')
 
@@ -187,18 +160,20 @@ plot_coverage.add_argument('--col_all', '-c',
                     action= 'store_true',
                     help='''Paint each bar with the colours given in --col_nuc
 even if the base matches the reference. Default is to paint only mismatching bases.
-Irrelvant if --maxseq is exceeded or a reference genome is not provided with --fasta.
+Irrelvant if --maxseq is exceeded or a reference is not given to --fasta.
                    ''')
 
 # -----------------------------------------------------------------------------
 annotation_args= parser.add_argument_group('Track options',
     'Graphical options for the individual tracks.')
 
-annotation_args.add_argument('--cex', default= 1, type= float, help='''Character expansion for all text. All the other cex parameters will be based on this''')
+annotation_args.add_argument('--cex', default= 1, type= float,
+                             help='''Character expansion for all text. All the other
+cex parameters will be based on this''')
 annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
-annotation_args.add_argument('--cex_ann', default= 0.8, type= float, help='''Character exapansion for the names of the annotation tracks''')
-annotation_args.add_argument('--col_track', default= [''], nargs= '+', help='''Colour for coverage and annotation tracks and for N base.
-Default will assigne grey to coverage and firebrick4 to annotation''')
+# annotation_args.add_argument('--cex_ann', default= 0.8, type= float, help='''Character exapansion for the names of the annotation tracks''')
+annotation_args.add_argument('--col_track', default= [''], nargs= '+', help='''Colour for coverage and annotation tracks and for the N base.
+Default will assign grey to coverage and firebrick4 to annotation''')
 annotation_args.add_argument('--col_track_rev', default= [''], nargs= '+', help='''Relevant to bam files only: Colour for reads on reverse strand. Use NA
 to use the same colour as for forward reads (i.e. turn it off)''')
 
@@ -260,14 +235,6 @@ Useful to colour code samples sharing the same conditions''')
 # -----------------------------------------------------------------------------
 figure_size_args= parser.add_argument_group('Global graphical optons',
     'These options affect all the tracks or the figure as a whole')
-
-figure_size_args.add_argument('--maxseq', '-m',
-                    default= 100,
-                    type= int,
-                    help='''The maximum width of the region (bp) to print bases
-and to plot each nucleotide in different colour. Default 100 (i.e. regions smaller
-than 100 bp will be printed with colour coded nucleotides and the sequence will
-be shown).''')
 
 figure_size_args.add_argument('--mar', default= [0, 4, 0.2, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.''')
 
@@ -491,7 +458,7 @@ def main():
               bg= quoteStringList(args.bg),
               nogrid= args.nogrid,
               col_text_ann= args.col_text_ann,
-              cex_ann= args.cex_ann,
+             #  cex_ann= args.cex_ann,
               names= quoteStringList(names),
               col_names= quoteStringList(args.col_names),
               cex_names= args.cex_names,
