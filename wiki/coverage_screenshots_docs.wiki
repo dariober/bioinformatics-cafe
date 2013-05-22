@@ -1,5 +1,13 @@
 #summary UNDER CONSTRUCTION: Documentation for genomeGraphs.py
 
+TO DO:
+
+* Region names with ';' (and possibly other metachars) produce output files with such chars in the file name (e.g. `peak1;peak2.R`). These file names cause problems to subprocess.Popen (in fact to shell). Maybe quote them before passing to subprocess.Popen
+
+* Remove the use of multiprocessesing: LSF doesn't seem to like it.
+
+* Pre-filetering step: Execption thrown by `bedtools sort` if no lines are in input
+
 <wiki:toc max_depth="2" />
 
 = Introduction  & Description =
