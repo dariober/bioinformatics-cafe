@@ -228,6 +228,7 @@ xlim<- c(%(xlim1)s - 1, %(xlim2)s)
 chrom<- '%(chrom)s'
 ylab<- recycle( inputlist, c(%(ylab)s) )
 vheights<- as.numeric(recycle( inputlist, c(%(vheights)s) ))
+title<- '%(title)s'
 mar<- c(%(mar)s)
 pwidth<- %(pwidth)s
 pheight<- %(pheight)s
@@ -279,8 +280,16 @@ refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors=
     colClasses= c('character', 'integer', 'integer', 'character'))
 refbases$base<- toupper(refbases$base)
 
-plotname<- makePlotName(chrom, xlim)
-
+## Plotname
+if(title == ''){
+    plotname<- makePlotName(chrom, xlim)
+} else if (grepl('^:region:.*', title, perl= TRUE)){
+    mytitle<- sub('^:region:', '', title, perl= TRUE)
+    plotname<- makePlotName(chrom, xlim)
+    plotname<- paste(plotname, mytitle, sep= '')
+} else {
+    plotname<- title
+}
 # ------------------------------------------------------------------------------
 # Plotting
 # ------------------------------------------------------------------------------
@@ -324,7 +333,7 @@ layout(lay.mat, heights= plot_heights)
 
 ## TOP PANEL
 ## ---------
-par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
+par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar, xaxs= 'i')
 plot(0, ylim= c(0,100), xlim= xlim, ylab= '', xlab= '', type= 'n')
 text(x= mean(xlim), y= 10, labels= plotname, cex= cex.for.height(plotname, 80), adj= c(0.5,0))
 ## MAIN PANELS
@@ -398,7 +407,7 @@ for(i in 1:nrow(plot_type)){
         }
         ## Set up plot
         ## -----------
-        par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0))
+        par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0), xaxs= 'i')
         plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(pymin, pymax), xlim= xlim, cex.axis= cex_axis)
         mtext(side= 2, line= 3, text= ylab[i], cex= par('cex') * cex_axis, las= 0)
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[i], border= 'transparent')
@@ -426,7 +435,7 @@ for(i in 1:nrow(plot_type)){
     } else {
         ## If type is non-coverage (annotation)
         ## ------------------------------------
-        par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar)
+        par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar, xaxs= 'i')
         plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '')
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= makeTransparent('blue', 20), border= 'transparent')
         offs<- 35
@@ -452,9 +461,9 @@ for(i in 1:nrow(plot_type)){
 ## -----------
 ## x-axis labels, tickmarks and range: Note very low level
 baseline<- 90 ## Annotate bottom panel from this y-coord.
-par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(mar[1], mar[2], 0, mar[4]), tcl= 0.5)
+par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(mar[1], mar[2], 0, mar[4]), tcl= 0.5, xaxs= 'i')
 plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '')
-par(xaxt= 's')
+par(xaxt= 's', xaxs= 'i')
 x<- axis(side= 3, labels= FALSE, tick= FALSE)
 segments(x0= x, x1= x, y0= 110, y1= 95) ## Give 110 to make sure it goes all the way to the top
 text(x= x, y= baseline, labels= formatC(x, format= 'd', big.mark= ','), cex= cex_axis, adj= c(1, 1), xpd= NA)

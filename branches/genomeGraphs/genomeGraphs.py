@@ -235,6 +235,11 @@ Useful to colour code samples sharing the same conditions''')
 figure_size_args= parser.add_argument_group('Global graphical optons',
     'These options affect all the tracks or the figure as a whole')
 
+figure_size_args.add_argument('--title', default= '',
+    help= '''Title for each region. Default are the region coords <chrom>:<start>-<end>
+You can add a custom title while keeping the coordinates using the syntax --title ':region: My title'
+TODO: Make it recyclable/one for each region?''')
+
 figure_size_args.add_argument('--mar', default= [0, 4, 0.2, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.''')
 
 figure_size_args.add_argument('--nogrid', action= 'store_true', help='''Do not plot grid''')
@@ -360,22 +365,23 @@ def main():
         regname= '_'.join([str(x) for x in [region.chrom, region.start, region.end]])
         if region.name != '' and region.name != '.':
             regname = regname + '_' + region.name
+        regname= re.sub('[^a-zA-Z0-9_\.\-\+]', '_', regname) ## Get rid of metachar to make sensible file names
         ## --------------------[ Prepare output file names ]-------------------
-
-        fasta_seq_name= pipes.quote(os.path.join(tmpdir, regname + '.seq.txt'))
+        
+        fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
         if bamlist != []:
-            mpileup_name= pipes.quote(os.path.join(tmpdir, regname) + '.mpileup.bed.txt')
-            mpileup_grp_name= pipes.quote(os.path.join(tmpdir, regname) + '.grp.bed.txt')
+            mpileup_name= os.path.join(tmpdir, regname + '.mpileup.bed.txt')
+            mpileup_grp_name= os.path.join(tmpdir, regname + '.grp.bed.txt')
         else:
             mpileup_name= ''
             mpileup_grp_name= ''
         if nonbamlist != []:
-            non_bam_name= pipes.quote(os.path.join(tmpdir, regname) + '.nonbam.bed.txt')
+            non_bam_name= os.path.join(tmpdir, regname + '.nonbam.bed.txt')
         else:
             non_bam_name= ''
-        pdffile= pipes.quote(os.path.join(tmpdir, regname + '.pdf'))
-        final_pdffile= pipes.quote(os.path.join(outdir, regname + '.pdf'))
-        rscript= pipes.quote(os.path.join(tmpdir, regname + '.R'))
+        pdffile= os.path.join(tmpdir, regname + '.pdf')
+        final_pdffile= os.path.join(outdir, regname + '.pdf')
+        rscript= os.path.join(tmpdir, regname + '.R')
         if not args.replot:
             prepare_reference_fasta(fasta_seq_name, args.maxseq, region, args.fasta) ## Create reference file even if header only
             ## ----------------------- BAM FILES -------------------------------
@@ -437,6 +443,7 @@ def main():
               mcov= mpileup_grp_name,
               nonbam= non_bam_name,
               refbases= fasta_seq_name,
+              title= args.title,
               pheight= args.pheight,
               pwidth= args.pwidth,
               psize= args.psize,
