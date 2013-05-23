@@ -312,6 +312,7 @@ def main():
             os.makedirs(outdir)
     else:
         onefile= True
+        outdir= os.path.split(args.onefile)[0]
         try:
             import PyPDF2
         except ImportError:
