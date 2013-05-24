@@ -59,7 +59,7 @@ fdr:
                cnt_c= c(bsobj@tot_reads - bsobj@cnt_met),
                library_id= rep(colnames(bsobj@cnt_met), each= nrow(bsobj@cnt_met))
           )
-          bsframe<- merge(bsframe, bsdata@design[, c('library_id', 'bs')], by.x= c('library_id'), by.y= c('library_id'), sort= FALSE)
+          bsframe<- merge(bsframe, bsobj@design[, c('library_id', 'bs')], by.x= c('library_id'), by.y= c('library_id'), sort= FALSE)
     } else {
          stop('Invalid input.')
     } 

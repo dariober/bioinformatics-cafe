@@ -1,6 +1,7 @@
 ## source('~/svn_checkout/bioinformatics-misc/BSdata.R')
 
-## Objject to store BS data in format similar to limma
+### Objject to store BS data in format similar to limma
+
 BSdata<- setClass("BSdata", representation(
                                         loci= 'data.frame',
                                         tot_reads= 'matrix',
@@ -67,10 +68,11 @@ makeBSdataLong<- function(bsobj){
     }
     longf<- data.frame(locus= rep(rownames(bsobj@cnt_met), ncol(bsobj@cnt_met)),
         cnt_M= c(bsobj@cnt_met),
-        tot_reads= c(bsobj@tot_reads - bsobj@cnt_met),
+        cnt_m= c(bsobj@tot_reads - bsobj@cnt_met),
+        tot_reads= c(bsobj@tot_reads),
         library_id= rep(colnames(bsobj@cnt_met), each= nrow(bsobj@cnt_met))
     )
-    longf<- merge(longf, bsdata@design[, c('library_id', 'bs')], by.x= c('library_id'), by.y= c('library_id'), sort= FALSE)
+    longf<- merge(longf, bsobj@design[, c('library_id', 'bs')], by.x= c('library_id'), by.y= c('library_id'), sort= FALSE)
     longf<- longf[order(longf$locus, longf$library_id),]
     return(longf)
 }
@@ -102,7 +104,7 @@ checkMatrices<- function(bsobj){
     return(TRUE)
 }
 
-BSdataApply<- function(bsobj, FUN, slots= c('tot_reads', 'cnt_met', 'pct_met'), ...){
+BSdataApply<- function(bsobj, slots= c('tot_reads', 'cnt_met', 'pct_met'), FUN, ...){
     "Apply the function FUN to the *matrices* in BSdata object.
     Returns a BSdata object with the matrices apply'd
     FUN:
@@ -127,3 +129,38 @@ BSdataApply<- function(bsobj, FUN, slots= c('tot_reads', 'cnt_met', 'pct_met'), 
     checkMatrices(bsapp)
     return(bsapp)
 }
+
+BSmatrix2begraph<- function(bsobj, m, outdir= '.', header= FALSE){
+    "Produce a bedGraph file for each column (library) of a matrix in a BSdata object
+    bsobj:
+        A BSdata object    
+    m:
+        Slot name of the matrix to convert to bedGraph
+    outdir:
+        Output directory for the files. Default to cwdir.
+        Files named as <column-name>.<matrix-name>.bedGraph
+    Example:
+        BSmatrix2begraph(bsobj, 'pct_met')
+    Assumptions:
+        The row name of the matrix has match in bsobj@loci$locus from which chrom
+        coordinates can be extracted
+    "
+    bdg<- slot(bsobj, m)
+    if(all(rownames(bdg) %in% bsobj@loci$locus) == FALSE){
+        stop('Not all rownames in the bsobj could be extracted from bsobj@loci$locus')
+    }
+    libraries<- colnames(bdg)
+    locus<- rownames(bdg)
+    bdg<- as.data.frame(bdg)
+    bdg$locus<- locus
+    bdg<- merge(bdg, bsobj@loci[, c('locus', 'chrom', 'start', 'end')], by.x= c('locus'), by.y= c('locus'))
+    bdg<- bdg[order(bdg$chrom, bdg$start, bdg$end),]
+    dir.create(outdir, showWarnings = FALSE, recursive = FALSE)
+    for(x in libraries){
+        outfile<- paste(x, m, 'bedGraph', sep= '.')
+        write.table(bdg[, c('chrom', 'start', 'end', x)], file.path(outdir, outfile), row.names= FALSE, col.names= header, sep= '\t', quote= FALSE)
+    }
+}
+
+
+
