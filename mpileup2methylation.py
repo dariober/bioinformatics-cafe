@@ -7,7 +7,7 @@ parser = argparse.ArgumentParser(description= """
 DESCRIPTION
     Extract methylation calls from samtools mpileup. Only positions with non-zero count
     are printed. Output has is bedGraph with additional columns:
-    <chrom>  <pos-1>  <pos>  <pct meth'd>  <tot count>  <strand>
+    <chrom>  <pos-1>  <pos>  <pct meth'd>  <cnt methylated>  <tot count>  <strand>
 
    Memo: bedGraph is 0-based, so if the first base of chr1 is C it will have position: `chrom 0 1 ... +`
 
@@ -79,7 +79,7 @@ def pileup2methylation(mpileup, outfmt):
       methList= [mpileup[0], mpileup[1], strand, str(cnt_M), str(cnt_m)]
    elif outfmt == 'bedgraph':
       totreads= cnt_M + cnt_m
-      methList= [mpileup[0], str(int(mpileup[1])-1), mpileup[1], str(round(100*(float(cnt_M)/totreads), 4)), str(totreads), strand]
+      methList= [mpileup[0], str(int(mpileup[1])-1), mpileup[1], str(round(100*(float(cnt_M)/totreads), 4)), str(cnt_M), str(totreads), strand]
    else:
       sys.exit('Unexpected keyword for outfmt "%s"' %(outfmt))
    return(methList)

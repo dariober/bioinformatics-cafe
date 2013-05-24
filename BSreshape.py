@@ -12,12 +12,15 @@ DEFAULT= {'cnt_M': 4, 'cnt_tot': 5}
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
+    Concatenate bed files in a format suitable for R/glmBS (glm with binomial
+    error structure).
+    
+    The input of BSreshape is one or more bed files produced by BS-Seq and oxBS-Seq
+    pipelines. Each bed file has an additional column for the number of reads
+    methylated and an additional column for the number of reads unmethylated.
 
-* Merge all input bedgraph to get "consensus" bedgraph (union)
-* Add to each bedgraph the missing positions. Missing positions get 0 counts
-* Compress bedgraphs by windows
-* Concatenate bedgraphs and reshape to have <chrom> <start> <end> <locus name (expt)> <cnt_M> <cnt_c> <lib type (BS/oxBS)> <library_id>
-* Feed cat bedgraph to glmBS()
+    The final output has columns:
+    <locus> <library_id> <bs type (BS|oxBS)> <count methylated> <count unmethylated> 
 
 EXAMPLE
     BSreshape.py -w 10 --oxbs mjb050_E14oxBSAD01.20130301.bs4.bedGraph --bs mjb053_E14BSAD04.20130301.bs4.bedGraph
@@ -47,10 +50,11 @@ Default is to use the filename dir. NB: library_id's must be unique.
 ''')
 
 parser.add_argument('--window_size', '-w',
-                   required= True,
+                   required= False,
+                   default= 1,
                    type= int,
                    help='''Window size to group features. This option passed to
-bedtools makewindows.
+bedtools makewindows. Default is 1 
 
 ''')
 
@@ -221,6 +225,7 @@ def compressBed(inbed, window_size, step_size, ops):
     """
     ## 1. Get extremes of each chrom
     grp= inbed.groupby(g= [1], c= [2,3], ops= ['min', 'max'], stream= False)
+
     ## 2. Divide each chrom in windows
     windows= grp.window_maker(b= grp.fn, w= window_size, s= step_size, stream= False)
 
@@ -252,7 +257,7 @@ bsfiles= bsFiles+ oxbsFiles
 
 # Merge all input bedgraphs to get "consensus" bedgraph (union)
 unionBed= pybedtools.BedTool(bsfiles[0])
-unionBed= unionBed.cat(*bsfiles, postmerge= True)
+unionBed= unionBed.cat(*bsfiles, postmerge= True, d= -1) ## Use -1 otherwise adjacent positions will be merged.
 
 # Collect info on the libraries
 bdgDict={} ## This dict will be {'library_id': Bedgraph()}. It's not really used but keep for future devel
@@ -275,19 +280,20 @@ for bdg in bsfiles:
     bed= pybedtools.BedTool(bdgObj.filename)
     bdgObj.gffComplete= BEDfile2GFFfile(bed, source= bdgObj.bsType,
         attrStr= {'library_id': bdgObj.library_id, 'bsType': bdgObj.bsType},
-        attrIdx= {'cnt_M': 4, 'cnt_tot': 5})
+        attrIdx= {'cnt_M': args.cnt_M, 'cnt_tot': args.cnt_tot})
     ## Add missing positions. After this gffComplete is not a real GFF!
     bdgObj.gffComplete= unionBed.intersect(bdgObj.gffComplete, wb= True, loj= True).saveas()
     ## Assign missing attributes. Now gffComplete is real GFF again
     bdgObj.gffComplete= bdgObj.gffComplete.each(addMissingAttr)
     ## Compress GFF. Need to convert to BED in order to use groupBy
-    bed= [[f.chrom, f.start-1, f.end, f.attrs['cnt_M'], f.attrs['cnt_tot']] for f in bdgObj.gffComplete]
+    bed= [[f.chrom, f.start, f.end, f.attrs['cnt_M'], f.attrs['cnt_tot']] for f in bdgObj.gffComplete]
     xbed= pybedtools.BedTool(bed).saveas()
     windBed= compressBed(xbed, args.window_size, args.step_size, args.ops)
     ## Convert BED 2 GFF
     bdgObj.gffWindow= BEDfile2GFFfile(windBed, source= bdgObj.bsType,
         attrStr= {'library_id': bdgObj.library_id, 'bsType': bdgObj.bsType},
         attrIdx= {'cnt_M': 3, 'cnt_tot': 4})
+
     # -------------------------------------------------------------------------
     # Print out file suitable for R/glmBS
     # Column headers must be: library_id, locus, cnt_M, cnt_c, bs
