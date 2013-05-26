@@ -6,8 +6,10 @@ import subprocess
 import pycoverage
 import gzip
 import re
+import pympileup
 
-COUNT_HEADER= ['depth', 'A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n', 'Z', 'z']
+##COUNT_HEADER= ['depth', 'A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n', 'Z', 'z']
+COUNT_HEADER= ['A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n', 'Z', 'z']
 
 def getLibrarySizes(bams, samtools_path= ''):
     """Get the number of reads for each bam file (library sizes)
@@ -29,7 +31,8 @@ def getLibrarySizes(bams, samtools_path= ''):
     return(libsizes)
 
 def mpileup_cmd(bamlist, region, fasta= None, mpileup= 'samtools mpileup'):
-    """Compile a command string to execute samtools mpileup
+    """DEPRECATED: Use mpileup_java_cmd instead()
+    Compile a command string to execute samtools mpileup
     bamlist:
         List of input bams
     region:
@@ -49,6 +52,38 @@ def mpileup_cmd(bamlist, region, fasta= None, mpileup= 'samtools mpileup'):
         f= ''        
     cmd= '%(mpileup)s %(f)s -BQ0 -d10000000 %(r)s %(bamlist)s' %{'mpileup': mpileup, 'f': f, 'r': r, 'bamlist': ' '.join(bamlist)}
     return(cmd)
+
+def mpileup_java_cmd(bamlist, region, fasta= None, mpileup= 'samtools mpileup'):
+    """Compile a command string to execute samtools mpileup piped to
+    java mpileupParser
+    bamlist:
+        List of input bams
+    region:
+        Pybedtools interval to get chrom start, end position
+    f:
+        FASTA file to get sequence from.
+    mpileup:
+        String with the full path to mpileup or just samtools mpileup
+        if the program is on path
+    Return:
+        String to pass to subprocess.Popen(). Subprocess will return a string
+        formatted as a dict like:
+    {'chrom': 'chr7', 'pos': 5566778, 'base': 'N',
+    0: {'A': 0, 'a': 0, 'C': 1, 'c': 0, 'G': 0, 'g': 0, 'T': 0, 't': 0, 'N': 0, 'n': 0, 'Z': 1, 'z': 0},
+    1: {'A': 0, 'a': 0, 'C': 1, 'c': 0, 'G': 0, 'g': 0, 'T': 0, 't': 0, 'N': 0, 'n': 0, 'Z': 1, 'z': 0},}
+    The numeric keys are one for each bamfile passed to mpileup
+    """
+    r= '-r ' + region.chrom + ':' + str(region.start + 1) + '-' + str(region.end)
+    if fasta:
+        f= '-f %s' %(fasta)
+    else:
+        f= ''
+    mpileupParserPath= os.path.join(os.path.split(pympileup.__file__)[0], 'java_code/mpileupToNucCounts')
+    
+    cmd= '%(mpileup)s %(f)s -BQ0 -d10000000 %(r)s %(bamlist)s | java -classpath %(mpileupParserPath)s mpileupParser' %{'mpileup': mpileup,
+            'f': f, 'r': r, 'bamlist': ' '.join(bamlist), 'mpileupParserPath': mpileupParserPath}
+    return(cmd)
+
                 
 def pileupBaseCallsToNucs(bases, refbase):
         """Parses the string of read bases from mpileup output to return the count
@@ -94,9 +129,10 @@ def pileupBaseCallsToNucs(bases, refbase):
         callDict['Z']= sum((callDict[x] for x in ('A', 'C', 'G', 'T', 'N')))
         callDict['z']= sum((callDict[x] for x in ('a', 'c', 'g', 't', 'n')))
         return(callDict)
-        
+
 def parse_pileup(pileup_line, bams):
-    """Parse a pileup line (str) typically returned by pysam.mpileup() or
+    """DEPRECATED: Dict is returned by java code (actually string fomratted as dict)
+    Parse a pileup line (str) typically returned by pysam.mpileup() or
     mpileup via subprocess.
     bams:
         List of bam files. Must be in the same order as in mpileup!
@@ -122,15 +158,16 @@ def parse_pileup(pileup_line, bams):
 def pileupToBed(pdict, bams, count_header= COUNT_HEADER):
     """Convert the dictionary produced by parse_pileup to a list suitable to
     be written as bedfile. The bed line as:
-    <chrom> <pos-1> <pos> <depth.1> <depth.2> ... <depth.n>
+    <chrom> <pos-1> <pos> <nuc.1> <nuc.2> ... <nuc.n>
     bams:
-        list of bam files which are the keys of the dict. MUST be in the same
-        order as the list used for parse_pileup()
+        list of bam files *in the same order* as passed to samtools.
+        Bamfiles are associated to nuc counts using their index in the list. 
     """
     bedlist= [pdict['chrom'], pdict['pos']-1, pdict['pos']]
+    bam_idx= range(0, len(bams))
     for c in COUNT_HEADER:
-        for bam in bams:
-            bedlist.append(pdict[bam][c])
+        for idx in bam_idx:
+            bedlist.append(pdict[idx][c])
     return(bedlist)
 
 def rpm(raw_counts, libsize):
@@ -202,11 +239,11 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, nwinds, 
         header.extend([x + '.' + h for x in bamlist])
     header= '\t'.join(header)
     mpileup_bed= open(mpileup_name, 'w')
-    cmd= mpileup_cmd(bamlist= bamlist, region= region, fasta= fasta, mpileup= os.path.join(samtools, 'samtools mpileup'))
-    proc= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE, stderr= subprocess.PIPE)
     if RPM:
         libsizes= getLibrarySizes(bamlist, samtools_path= samtools)
         libsizes= [libsizes[x] for x in bamlist]
+    cmd= mpileup_java_cmd(bamlist= bamlist, region= region, fasta= fasta, mpileup= os.path.join(samtools, 'samtools mpileup'))
+    proc= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE, stderr= subprocess.PIPE)
     nlines= 0
     while True:
         ## Use this while loop to avoid reading in memory all the output of mpileup.
@@ -215,7 +252,8 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, nwinds, 
         sys.stdout.flush()
         if not line:
             break
-        pd= parse_pileup(line, bamlist)
+        pd= eval(line)
+#        pd= parse_pileup(line, bamlist)
         bedline= pileupToBed(pd, bamlist)
         cnt_indx= 3 ## Column index in bedline where counts start (4th columns)
         if RPM:

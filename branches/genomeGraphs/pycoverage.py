@@ -9,6 +9,7 @@ import gzip
 import re
 import csv
 import pympileup
+import copy
 
 def read_parfile(parfile):
     """Read the paramater file and return a dictionary with {'param': args}.
@@ -48,7 +49,76 @@ def read_parfile(parfile):
             else:
                 break
     return(fDict)
+
+class SlopError(Exception):
+    pass
+
+def slopbed(interval, slop):
+    """Extend bed interval by given slop.
+    interval:
+        pybedtool.Interval to extend or list or tuple with first three items:
+        <str chrom> <int start> <int end>
+    slop:
+        A list or tuple of two integers or floats. Integers
+        will expand the interval by that many bases while floats will expand as
+        percentages of feature size (e.g. 0.1 to expand by 10 percent). First
+        value applied to left and second to right. Must be 0 or positive.
+    Return:
+        Same list or pybedtool interval as in input with coordinates extended.
+
+    interval = iter(pybedtools.BedTool('chr1 1 100 asdf 0 + a b c d', from_string=True)).next()
+
+    """
+    if type(interval) == pybedtools.cbedtools.Interval:
+        left= interval.start
+        right= interval.end
+    elif type(interval) in (list, tuple):
+        left= interval[1]
+        right= interval[2]
+    else:
+        raise SlopError('Invalid type of interval. Expected pybedtools.cbedtools.Interval or list or tuple. Got %s' %(type(interval)))
+    if slop[0] < 0 or slop[1] < 0:
+        raise SlopError('Slop must be positive int or float. Got %s' %(slop))
     
+    size= right - left
+
+    ## Left feature    
+    if type(slop[0]) == int:
+        xleft= left - slop[0]
+    elif type(slop[0]) == float:
+        xleft= round(left - (size * slop[0]))
+    else:
+        raise SlopError('Slop must be of type int or float. Got %s' %(type(slop[0])))
+    if xleft < 0:
+        xleft= 0
+    ## Right feature
+    if type(slop[1]) == int:
+        xright= right + slop[1]
+    elif type(slop[1]) == float:
+        xright= round(right + (size * slop[1]))
+    else:
+        raise SlopError('Slop must be of type int or float. Got %s' %(type(slop[1])))
+
+    if type(interval) == pybedtools.cbedtools.Interval:
+        xinterval= copy.copy(interval)
+        xinterval.start= xleft
+        xinterval.end= xright
+    else:
+        xinterval= [x for x in interval]
+        xinterval[1]= xleft
+        xinterval[2]= xright
+    return(xinterval)
+
+def slopBedFile(inbed, slop, outbed):
+    """Apply function slopbed to input file inbed.
+    inbed:
+        Input filename
+    slop:
+        
+    """
+    a= pybedtools.BedTool(inbed)
+    b = a.each(slopbed, slop)
+
 def assign_parfile(pardict, args):
     """Assign to the parser object args the arguments in dictionary pardict.
     Return:

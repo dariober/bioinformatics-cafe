@@ -56,6 +56,17 @@ input_args.add_argument('--bed', '-b',
 Use - to read from stdin.
                    ''')
 
+input_args.add_argument('--slop', '-s',
+                   default= ['0.05', '0.05'],
+                   nargs= '+',
+                   help='''Extend each interval in --bed input. If integer(s),
+extend by that many base left and/or right. If float(s), extend by that percent
+of interval size (e.g. 0.1 to extend by 10%). If one value is given, it will be
+applied to left and right. If two values, first will be applied to left and second
+to right. Must be >= 0.
+                   ''')
+
+
 input_args.add_argument('--fasta', '-f',
                    help='''Fasta file of the reference genome. If given, high
 resolution plots will show the reference bases at each position.
@@ -65,12 +76,6 @@ input_args.add_argument('--samtools',
                     default= '',
                     help='''Path to samtools. Default is '' which assumes it is
 on PATH''')
-
-#input_args.add_argument('--nproc',
-#                    default= 1,
-#                    type= int,
-#                    help='''Number of parallel jobs to run. Default 1. (Currently
-#multiprocessising is applied only to pref-filtering non-bam files.)''')
 
 input_args.add_argument('--parfile', '-pf',
                     default= None,
@@ -283,6 +288,27 @@ def main():
     except AssertionError:
         print('''Invalid arguments passed to ymax (%s) or ymin (%s).''' %(args.ymax, args.ymin))
         sys.exit(1)
+    if len(args.slop) > 2:
+        print('Only one or two ints or floats must be passed to --slop! Got %s' %(args.slop))
+        sys.exit(1)
+    if len(args.slop) == 1:
+        args.slop.append(args.slop[0])
+    slop= []
+    try:
+        slop.append(int(args.slop[0]))
+    except ValueError:
+        try:
+            slop.append(float(args.slop[0]))
+        except:
+            sys.exit('Invalid argument passed to --slop. Must be ints or floats: %s' %(args.slop))
+    try:
+        slop.append(int(args.slop[1]))
+    except ValueError:
+        try:
+            slop.append(float(args.slop[1]))
+        except:
+            sys.exit('Invalid argument passed to --slop. Must be ints or floats: %s' %(args.slop))
+            
     if args.nwinds < args.maxseq:
         print('\nWarning: nwinds (%s) reset to maxseq (%s)' %(args.nwinds, args.maxseq))
         nwinds= args.maxseq
@@ -350,9 +376,10 @@ def main():
     inbed= pybedtools.BedTool(inbed).sort() ## inbed is args.bed file handle
     
     # ---------------------[ Pre-filter non-bam files ]-------------------------
+    xinbed= pybedtools.BedTool(inbed).each(slopbed, slop)
     nonbam_dict= {}
     for nonbam in nonbamlist:
-        nonbam_dict[nonbam]= prefilter_nonbam_multiproc(nonbam= nonbam, inbed= inbed, tmpdir= tmpdir)
+        nonbam_dict[nonbam]= prefilter_nonbam_multiproc(nonbam= nonbam, inbed= xinbed, tmpdir= tmpdir)
 #        proc_list.append({'nonbam':nonbam, 'inbed':inbed, 'tmpdir':tmpdir})
 #    pool = multiprocessing.Pool(processes= args.nproc)
 #    ori_new= pool.map(prefilter_nonbam_multiproc, proc_list)
@@ -362,10 +389,13 @@ def main():
     # -----------------------[ Loop thorugh regions ]----------------------------
     for region in inbed:
         print('Processing: %s' %(str(region).strip()))
-        regname= '_'.join([str(x) for x in [region.chrom, region.start, region.end]])
+        bstart= region.start
+        bend= region.end
+        regname= '_'.join([str(x) for x in [region.chrom, bstart, bend]])
         if region.name != '' and region.name != '.':
             regname = regname + '_' + region.name
         regname= re.sub('[^a-zA-Z0-9_\.\-\+]', '_', regname) ## Get rid of metachar to make sensible file names
+        xregion= slopbed(region, slop)
         ## --------------------[ Prepare output file names ]-------------------
         
         fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
@@ -383,15 +413,15 @@ def main():
         final_pdffile= os.path.join(outdir, regname + '.pdf')
         rscript= os.path.join(tmpdir, regname + '.R')
         if not args.replot:
-            prepare_reference_fasta(fasta_seq_name, args.maxseq, region, args.fasta) ## Create reference file even if header only
+            prepare_reference_fasta(fasta_seq_name, args.maxseq, xregion, args.fasta) ## Create reference file even if header only
             ## ----------------------- BAM FILES -------------------------------
             ## At the end of this session you have *.grp.bed.txt (matrix-like
             ## file read by R)
             regionWindows= False ## bed interval divided into nwinds intervals by bedtools windowMaker
             if bamlist != []:
                 if not regionWindows:
-                    regionWindows= makeWindows(region, nwinds)
-                pympileup.bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, nwinds, args.fasta, args.rpm, regionWindows, samtools= args.samtools, groupFun= args.group_fun) ## Produce mpileup matrix
+                    regionWindows= makeWindows(xregion, nwinds)
+                pympileup.bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, xregion, nwinds, args.fasta, args.rpm, regionWindows, samtools= args.samtools, groupFun= args.group_fun) ## Produce mpileup matrix
             else:
                 mpileup_grp_name= ''
             ## ----------------------NON BAM FILES -----------------------------
@@ -415,11 +445,11 @@ def main():
                         tmpfh= tempfile.NamedTemporaryFile(dir= tmpdir, suffix= 'nonbam.tmp.bed', delete= False)
                         tmp_name= tmpfh.name
                         #tmpfh= open(tmp_name, 'w')
-                        nlines= prepare_nonbam_file(nonbam, tmpfh, region, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
+                        nlines= prepare_nonbam_file(nonbam, tmpfh, xregion, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
                         tmpfh.close()
                         if nlines > nwinds:
                             if not regionWindows:
-                                regionWindows= makeWindows(region, nwinds) 
+                                regionWindows= makeWindows(xregion, nwinds) 
                             compressBedGraph(regionWindows, tmp_name, use_file_name= x, bedgraph_grp_fh= non_bam_fh, col_idx= 9, groupFun= args.group_fun)
                         else:
                             fh= open(tmp_name)
@@ -427,7 +457,7 @@ def main():
                                 non_bam_fh.write(line)
                         os.remove(tmp_name)
                     else:
-                        nlines= prepare_nonbam_file(nonbam, non_bam_fh, region, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
+                        nlines= prepare_nonbam_file(nonbam, non_bam_fh, xregion, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
                 non_bam_fh.close()
             else:
                 non_bam_name= ''
@@ -448,12 +478,14 @@ def main():
               pwidth= args.pwidth,
               psize= args.psize,
               ylab= quoteStringList(args.ylab),
-              xlim1= region.start,
-              xlim2= region.end,
+              bstart= bstart,
+              bend= bend,
+              xlim1= xregion.start,
+              xlim2= xregion.end,
               maxseq= args.maxseq,
               ymax= quoteStringList(args.ymax),
               ymin= quoteStringList(args.ymin),
-              chrom= region.chrom,
+              chrom= xregion.chrom,
               vheights= quoteStringList(args.vheights),
               cex= args.cex,
               cex_axis= args.cex_axis,

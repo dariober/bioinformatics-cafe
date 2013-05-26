@@ -7,6 +7,8 @@ import shutil
 import os
 import sys
 import subprocess as sp
+import pybedtools
+import pycoverage
 
 genomeGraphs='~/svn_checkout/bioinformatics-misc/branches/genomeGraphs/genomeGraphs.py'
 example_dir='/Users/berald01/Documents/genomeGraphs/example'
@@ -72,7 +74,7 @@ def test_file_headers():
     header= open(os.path.join(tmpdir, 'chr7_5566757_5566829.grp.bed.txt')).readline().strip().split('\t')
 
     expected_header= ['chrom', 'start', 'end']
-    for x in ['depth', 'A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n', 'Z', 'z']:
+    for x in ['A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n', 'Z', 'z']:
         for bam in ['bam/ds051.actb.bam', 'bam/ds052.actb.bam', 'bam/ds053.actb.bam']:
             expected_header.append(bam + '.' + x)
     assert header == expected_header
@@ -96,46 +98,39 @@ def test_bam_coverage_eq_igv():
     """These counts cross-checked in IGV.
     Multiply by the number of bam files you have in `-i` to get the counts
     """
-    assert line[n*1] == '922'      ## Depth
-    assert line[n*2] == '0'       ## A
-    assert line[n*3] == '0'       ## a
-    assert line[n*4] == '510'       ## C
-    assert line[n*5] == '411'       ## c
-    assert line[n*6] == '0'       ## G
-    assert line[n*7] == '0'       ## g
-    assert line[n*8] == '0'      ## T
-    assert line[n*9] == '1'       ## t
-    assert line[n*10] == '0'       ## N
-    assert line[n*11] == '0'       ## n
-    assert line[n*12] == '510'      ## Z: Sum ACGTN.
-    assert line[n*13] == '412'      ## z: Sum actgn.
+#    assert line[n*1] == '922'      ## Depth
+    assert line[n*1] == '0'       ## A
+    assert line[n*2] == '0'       ## a
+    assert line[n*3] == '510'       ## C
+    assert line[n*4] == '411'       ## c
+    assert line[n*5] == '0'       ## G
+    assert line[n*6] == '0'       ## g
+    assert line[n*7] == '0'      ## T
+    assert line[n*8] == '1'       ## t
+    assert line[n*9] == '0'       ## N
+    assert line[n*10] == '0'       ## n
+    assert line[n*11] == '510'      ## Z: Sum ACGTN.
+    assert line[n*12] == '412'      ## z: Sum actgn.
 
     line= pileup[556]
     print(line)
     assert line[2] == '5567333' ## Make sure you are at this position
 
     ## Second bam
-    assert line[(n*1)+1] == '462'      ## Depth
-    assert line[(n*2)+1] == '0'       ## A
-    assert line[(n*3)+1] == '0'       ## a
-    assert line[(n*4)+1] == '0'       ## C
-    assert line[(n*5)+1] == '1'       ## c
-    assert line[(n*6)+1] == '0'       ## G
-    assert line[(n*7)+1] == '0'       ## g
-    assert line[(n*8)+1] == '227'      ## T
-    assert line[(n*9)+1] == '234'       ## t
-    assert line[(n*10)+1] == '0'       ## N
-    assert line[(n*11)+1] == '0'       ## n
-    assert line[(n*12)+1] == '227'      ## Z: Sum ACGTN.
-    assert line[(n*13)+1] == '235'      ## z: Sum actgn.
-#    ## Third bam
-#    assert line[(n*1) + 2] == '12'
-#    assert line[(n*2) + 2] == '0'
-#    assert line[(n*3) + 2] == '2'
-#    assert line[(n*4) + 2] == '0'
-#    assert line[(n*5) + 2] == '10'
-#    assert line[(n*6) + 2] == '0'
-#    assert line[(n*7) + 2] == '12'
+#    assert line[(n*1)+1] == '462'      ## Depth
+    assert line[(n*1)+1] == '0'       ## A
+    assert line[(n*2)+1] == '0'       ## a
+    assert line[(n*3)+1] == '0'       ## C
+    assert line[(n*4)+1] == '1'       ## c
+    assert line[(n*5)+1] == '0'       ## G
+    assert line[(n*6)+1] == '0'       ## g
+    assert line[(n*7)+1] == '227'      ## T
+    assert line[(n*8)+1] == '234'       ## t
+    assert line[(n*9)+1] == '0'       ## N
+    assert line[(n*10)+1] == '0'       ## n
+    assert line[(n*11)+1] == '227'      ## Z: Sum ACGTN.
+    assert line[(n*12)+1] == '235'      ## z: Sum actgn.
+
     if stderr == '':
         shutil.rmtree(tmpdir)
 
@@ -242,3 +237,52 @@ def test_sequence_and_pipe():
     assert seqbed[0] == ['chrom', 'start', 'end', 'base'] ## Check first line is this header
     nucseq= ''.join([x[3] for x in seqbed[1:]]) ## Get column 'base', skipping header.
     assert nucseq == 'GACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG' ## This sequence manually checked.
+
+def test_slopbed_pybedtool():
+    """Test function slopbed with pybedtool interval feature 
+    """
+    f = iter(pybedtools.BedTool('chr1 1 100 asdf 0 + a b c d', from_string=True)).next()
+    xf= pycoverage.slopbed(f, [0, 0])
+    assert f == xf
+    
+    xf= pycoverage.slopbed(f, [0, 10])
+    assert xf == iter(pybedtools.BedTool('chr1 1 110 asdf 0 + a b c d', from_string=True)).next()
+    
+    xf= pycoverage.slopbed(f, [1, 0])
+    assert xf == iter(pybedtools.BedTool('chr1 0 100 asdf 0 + a b c d', from_string=True)).next()
+
+    xf= pycoverage.slopbed(f, [10, 0]) ## Left coord must remain 0
+    assert xf == iter(pybedtools.BedTool('chr1 0 100 asdf 0 + a b c d', from_string=True)).next()
+
+    xf= pycoverage.slopbed(f, [1, 1]) ## Left coord must remain 0
+    assert xf == iter(pybedtools.BedTool('chr1 0 101 asdf 0 + a b c d', from_string=True)).next()
+
+    xf= pycoverage.slopbed(f, [0.1, 0.13]) ## Left coord must remain 0
+    assert xf == iter(pybedtools.BedTool('chr1 0 113 asdf 0 + a b c d', from_string=True)).next()
+
+    xf= pycoverage.slopbed(f, [0.1, 1.13]) ## Left coord must remain 0
+    assert xf == iter(pybedtools.BedTool('chr1 0 212 asdf 0 + a b c d', from_string=True)).next()
+
+    try:
+        xf= pycoverage.slopbed(f, [-1, 0])
+    except pycoverage.SlopError:
+        assert True
+    try:
+        xf= pycoverage.slopbed(f, [0, '0'])
+    except pycoverage.SlopError:
+        assert True
+        
+def test_slopbed_list():
+    """Test function slopbed with list interval feature 
+    """
+    f= ['chr1', 1, 100, 'actb']
+    xf= pycoverage.slopbed(f, [0, 0])
+    assert f == xf
+
+    xf= pycoverage.slopbed(f, [0.1, 1.13]) ## Left coord must remain 0
+    assert xf == ['chr1', 0, 212, 'actb']
+
+    try:  
+        xf= pycoverage.slopbed(['chr1', '0', 212, 'actb'], [0.1, 1.13]) ## Left coord must remain 0
+    except TypeError:
+        assert True

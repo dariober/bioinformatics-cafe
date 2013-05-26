@@ -157,6 +157,27 @@ getFeatureExtremes<- function(pdata){
     return(pextr)
 }
 
+axisRich<- function(side= 1, ...){
+    "Increase the number of tickmarks on plot.
+    side, ...:
+        Arguments passed to axis()        
+    "
+    if(side %%in%% c(1, 3)){
+        lim<- par('usr')[2] 
+    } else if(side %%in%% c(2, 4)){
+        lim<- par('usr')[4]
+    } else {
+        stop('Invalid side')
+    }
+    x<- axis(side= 1, labels= FALSE, tick= FALSE)
+    mid<- (x[2] - x[1])/2
+    halfmid<- mid/2
+    x2<- sort(c(x, x + halfmid, x + mid, x + mid + halfmid))
+    x2<- x2[which(x2 < lim)]
+    axis(side= side, at= x2, ...)
+    return(x2)
+} 
+
 filename2tracktype<- function(filename){
     "Determine what track type (coverage or annotation) should be assigned to
     this file given the extension
@@ -224,7 +245,8 @@ col_names<- recycle(inputlist, c(%(col_names)s))
 bg<- recycle( inputlist, c(%(bg)s) )
 ymax<- recycle( inputlist, c(%(ymax)s) )
 ymin<- recycle( inputlist, c(%(ymin)s) )
-xlim<- c(%(xlim1)s - 1, %(xlim2)s)
+regLim<- c(%(bstart)s - 1, %(bend)s) ## These are the interval extremes as found on the input --bed, before slop 
+xlim<- c(%(xlim1)s - 1, %(xlim2)s)   ## Coords after slop
 chrom<- '%(chrom)s'
 ylab<- recycle( inputlist, c(%(ylab)s) )
 vheights<- as.numeric(recycle( inputlist, c(%(vheights)s) ))
@@ -412,7 +434,7 @@ for(i in 1:nrow(plot_type)){
         mtext(side= 2, line= 3, text= ylab[i], cex= par('cex') * cex_axis, las= 0)
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[i], border= 'transparent')
         if('%(nogrid)s' == 'False'){
-            grid(col= 'darkgrey')
+            grid(col= 'darkgrey', lwd= 0.5, lty= 'dotted')
         }
         if(nrow(pdata) > 0){
             border<- ifelse(transparent.border(pdata, xlim, 1/10), 'transparent', col4track)
@@ -436,7 +458,7 @@ for(i in 1:nrow(plot_type)){
         ## If type is non-coverage (annotation)
         ## ------------------------------------
         par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar, xaxs= 'i')
-        plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '')
+        plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '', lwd= 0.2)
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= makeTransparent('blue', 20), border= 'transparent')
         offs<- 35
         thick_bottom<- offs - 30
@@ -456,21 +478,23 @@ for(i in 1:nrow(plot_type)){
         }
         text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= thick_top + 10, adj= c(0,0), labels= libname, col= col_names[i], cex= cex_names) #par('usr')[4] * 1
     }
+    points(x= regLim, y= rep(par('usr')[3], 2), cex= 2, pch= 17, col= 'red')
 }
 ## BOTTOM PANEL
 ## -----------
 ## x-axis labels, tickmarks and range: Note very low level
-baseline<- 90 ## Annotate bottom panel from this y-coord.
+baseline<- 85 ## Annotate bottom panel from this y-coord.
 par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(mar[1], mar[2], 0, mar[4]), tcl= 0.5, xaxs= 'i')
 plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '')
 par(xaxt= 's', xaxs= 'i')
 x<- axis(side= 3, labels= FALSE, tick= FALSE)
-segments(x0= x, x1= x, y0= 110, y1= 95) ## Give 110 to make sure it goes all the way to the top
+xrich<- axisRich(side= 3, tick= FALSE, labels= FALSE)
+segments(x0= xrich, x1= xrich, y0= 110, y1= 95, col= 'grey20', lwd= 0.2) ## Give 110 to make sure it goes all the way to the top
+segments(x0= x, x1= x, y0= 110, y1= 90) ## Give 110 to make sure it goes all the way to the top
 text(x= x, y= baseline, labels= formatC(x, format= 'd', big.mark= ','), cex= cex_axis, adj= c(1, 1), xpd= NA)
 w<- strheight(formatC(x[1], format= 'd', big.mark= ','), cex= cex_axis)
 ## 
 ## Range
-#options(scipen= 99) ## Do not use exp notation for large ranges
 xrange<- x[length(x)] - x[1]
 baseline2<- baseline - (w * 2)
 text(y= baseline2, x= mean(c(x[1], x[length(x)])), labels= paste(formatC(xrange, format= 'd', big.mark= ','), 'bp'), cex= cex_range, adj= c(0.5, 1))
@@ -482,49 +506,3 @@ if(nrow(refbases) > 0){
     text(x= refbases$end, y= baseline3, labels= refbases$base, adj= c(1, 1), col= '%(col_seq)s', family= 'mono', font= 1, cex= cex_seq)
 }
 dev.off()
-
-#read_colour_schema<- function(x){
-#    "Read file x containing the colour schema
-#    "
-#    if(x == ''){
-#        base<- c('A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n')
-#        col_match<- c('grey', 'grey', 'grey', 'grey', 'grey', 'grey', 'grey', 'grey', 'grey', 'grey')
-#        col_mismatch<- c('green', 'green', 'blue', 'blue', 'orange', 'orange', 'red', 'red', 'grey', 'grey')
-#        colour_schema<- data.frame(base, col_match, col_mismatch, stringsAsFactors= FALSE)
-#    } else {
-#        colour_schema<- read.table(x, header= TRUE, stringsAsFactors= FALSE, comment.char= '', sep= '\t')
-#        if(all(names(colour_schema) %%in%% c('base', 'col_match', 'col_mismatch')) == FALSE){
-#            stop(sprintf('Invalid colour_schema "%%s"', x))
-#        }
-#        if(all(sort(colour_schema$base) == c('a', 'A', 'c', 'C', 'g', 'G', 'n', 'N', 't', 'T')) == FALSE){
-#            stop(sprintf('Invalid bases found in colour_schema "%%s"', x))
-#        }
-#    }
-#    return(colour_schema)
-#}
-
-#regname2plotname<- function(regname){
-#    "DEPRECATED
-#    -----------
-#    Convert regname 'chrom_start_end[_name]'
-#    to a plotname with format 'chr:start-end [name]'
-#    Examples:
-#        regname2plotname('chr7_5566757_5566829_ACTB_2') #>>> 'chr7:5,566,757-5,566,829 ACTB_2'
-#        regname2plotname('chr7_5566757_5566829_ACTB')   #>>> 'chr7:5,566,757-5,566,829 ACTB'
-#        regname2plotname('chr7_5566757_5566829')        #>>> 'chr7:5,566,757-5,566,829'
-#    "
-#    oripen<- options('scipen')
-#    options(scipen= 99)
-#    pname<- strsplit(regname, '_')[[1]]
-#    chrom<- pname[1]
-#    start<- formatC(as.numeric(pname[2]), big.mark= ',', format= 'd')
-#    end<- formatC(as.numeric(pname[3]), big.mark= ',', format= 'd')
-#    options(scipen= oripen)
-#    if(length(pname) > 3){
-#        rname<- paste(pname[4:length(pname)], collapse= '_')
-#        plotname<- sprintf('%%s:%%s-%%s %%s', chrom, start, end, rname)
-#    } else {
-#        plotname<- sprintf('%%s:%%s-%%s', chrom, start, end)
-#    }
-#    return(plotname)
-#}
