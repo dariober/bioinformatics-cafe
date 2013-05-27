@@ -2,10 +2,6 @@
 
 TO DO:
 
-* Region names with ';' (and possibly other metachars) produce output files with such chars in the file name (e.g. `peak1;peak2.R`). These file names cause problems to subprocess.Popen (in fact to shell). Maybe quote them before passing to subprocess.Popen
-
-* Remove the use of multiprocessesing: LSF doesn't seem to like it.
-
 * Pre-filetering step: Execption thrown by `bedtools sort` if no lines are in input
 
 <wiki:toc max_depth="2" />
@@ -210,6 +206,26 @@ and coarse resolution (`--nwinds` opt).
 
 = Some tips =
 
+=== Supressing features ===
+
+If you find some of the graphics features annoying, here's how to turn them off:
+
+|| `--col_text_ann NA`    || Don't print the names of bed features (_e.g._ genes in annotation tracks) ||
+|| `--col_track NA`       || Don't draw coverage bars (_i.e._ the area under coverage profiles) ||
+|| `--col_track_rev NA`   || Don't use a different colour for reads on reverse strand||
+|| `--col_line NA`        || Don't add border profile to coverage tracks    || 
+|| `--bg NA`              || Don't use any background for plot area    ||
+|| `--grid NA`            || Don't draw grid lines ||
+|| `--nwinds 10000000000` || Don't group read counts or score from `--ibam` in windows (could generate huge pdf files!) ||
+|| `--slop 0`             || Don't extend `--bed` features for plotting. Plot them exactly as they are ||
+|| `--maxseq 0`           || Don't print sequence at the bottom of the plotting figure  ||
+|| `--col_seq NA`         || _Same effect as above_ ||
+|| `--names ''`           || Don't print the name (e.g. the file name) on each plot ||
+|| `--col_names NA`       || _Same effect as above_ ||
+|| `--no_col_bases`       || Don't colour individual nucleotides even if the region span is < maxseq ||
+|| --title ' '            || Don't print figure title _chr:start-end_ (actually just print a back space) ||
+|| `-o /dev/null/`        || Don't save the pdf output (if `--tmpdir` is None nothing is saved) ||
+
 === Colours ===
 
 The colours passed to `genomeGraphs.py` are in turn passed to R verbatim,
@@ -218,7 +234,7 @@ colours (_red_, _lightblue_ etc.) as well as the RGB representation (e.g. `#0000
 See this nice [http://research.stowers-institute.org/efg/R/Color/Chart/ColorChart.pdf chart]
 for many colour options.
 
-Transparent colours often show up better in graphics. To add transperncy to an R colour, use
+Transparent colours often show up better in graphics. To add transperency to an R colour, use
 this function (credit [http://stackoverflow.com/questions/8047668/transparent-equivalent-of-given-color stackoverflow])
 
 {{{
