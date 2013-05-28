@@ -15,6 +15,8 @@ def read_parfile(parfile):
     """Read the paramater file and return a dictionary with {'param': args}.
     """
     allowed_args= sorted(['ibam',
+                   'col_line',
+                   'lwd',
                    'col_track',
                    'col_track_rev',
                    'ymax',
@@ -24,7 +26,9 @@ def read_parfile(parfile):
                    'names',
                    'cex_names',
                    'col_names',
-                   'bg'])
+                   'col_grid',
+                   'bg',
+                   'rcode'])
     fin= open(parfile, "rU")
     fargs= csv.DictReader(fin, delimiter= '\t')
     fDict= {}
@@ -108,16 +112,6 @@ def slopbed(interval, slop):
         xinterval[1]= xleft
         xinterval[2]= xright
     return(xinterval)
-
-def slopBedFile(inbed, slop, outbed):
-    """Apply function slopbed to input file inbed.
-    inbed:
-        Input filename
-    slop:
-        
-    """
-    a= pybedtools.BedTool(inbed)
-    b = a.each(slopbed, slop)
 
 def assign_parfile(pardict, args):
     """Assign to the parser object args the arguments in dictionary pardict.
@@ -345,7 +339,7 @@ def prepare_reference_fasta(fasta_seq_name, maxseq, region, fasta):
     region_seq.close()
     return(True)
     
-def compressBedGraph(regionWindows, bedgraph_name, use_file_name, bedgraph_grp_fh, col_idx= 9, groupFun= 'mean'):
+def compressBedGraph(regionWindows, bedgraph_name, use_file_name, bedgraph_grp_fh, col_idx= 4 + len(pympileup.COUNT_HEADER), groupFun= 'mean'):
     """Compress a bedgraph by dividing it in n windows and averaging windows
     regionWindows:
         bed interval divided into n windows by pycoverage.makeWindows

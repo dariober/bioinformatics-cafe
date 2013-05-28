@@ -12,6 +12,21 @@ from validate_args import *
 import pympileup
 import pipes
 
+# MEMO: Add recyclable graphical parameters.
+# E.g. we want to add a new col parameter that has to be applied to each track.
+# Recycled if not enough items are passed to command line.
+# 
+# 1. Add arguments to argparse parser. Use nargs= '+' to make it a list:
+#   p.add_argument('--col_line', default= ['blue'], nargs= '+', ...)
+# 
+# 2. Add this arguments to RPlot function. Enclose the list in quoteStringList.
+#   This will send the arg to the R script:
+# RPlot(..., col_line= quoteStringList(args.col_line), ...)
+#
+# 3. In R_template.R: Get this argument by assigning to a var and recycle as
+#    necessary. col_line is now a vector c('blue', 'red', ...):
+# col_line<- recycle(length(inputlist), c(%(col_line)s))
+
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
     Produce coverage plots for one or more bam/bedgraph/gtf/bed files at the
@@ -34,7 +49,7 @@ SEE ALSO:
     Documentation at
     http://code.google.com/p/bioinformatics-misc/wiki/coverage_screenshots_docs
 
-    """, formatter_class= argparse.RawTextHelpFormatter)
+    """) # , formatter_class= argparse.RawTextHelpFormatter
 
 # -----------------------------------------------------------------------------
 input_args= parser.add_argument_group('Input options', '')
@@ -61,7 +76,7 @@ input_args.add_argument('--slop', '-s',
                    nargs= '+',
                    help='''Extend each interval in --bed input. If integer(s),
 extend by that many base left and/or right. If float(s), extend by that percent
-of interval size (e.g. 0.1 to extend by 10%). If one value is given, it will be
+of interval size (e.g. 0.1 to extend by 10%%). If one value is given, it will be
 applied to left and right. If two values, first will be applied to left and second
 to right. Must be >= 0.
                    ''')
@@ -152,7 +167,8 @@ and to plot each nucleotide in different colour. Default 100 (i.e. regions small
 than 100 bp will be printed with colour coded nucleotides and the sequence will
 be shown).''')
 
-plot_coverage.add_argument('--col_nuc', default= '', help='''_in prep_ File to the colour
+plot_coverage.add_argument('--col_nuc', nargs= '+', default= [''], help='''Colour for the four
+nucleotides. _in prep_ File to the colour
 code for counts of the ACTGN (counts on + strand) and actgn (counts on - strand).
 ''')
 
@@ -172,6 +188,10 @@ Irrelvant if --maxseq is exceeded or a reference is not given to --fasta.
 annotation_args= parser.add_argument_group('Track options',
     'Graphical options for the individual tracks.')
 
+annotation_args.add_argument('--col_line', default= ['blue'], nargs= '+',
+    help='''Colour of the profile line of each coverage track. Default blue''')
+annotation_args.add_argument('--lwd', default= [0.2], type= float, nargs= '+',
+    help='''Line width of the profile line of each coverage track''')
 annotation_args.add_argument('--cex', default= 1, type= float,
                              help='''Character expansion for all text. All the other
 cex parameters will be based on this''')
@@ -180,6 +200,10 @@ annotation_args.add_argument('--col_track', default= [''], nargs= '+', help='''C
 Default will assign grey to coverage and firebrick4 to annotation''')
 annotation_args.add_argument('--col_track_rev', default= [''], nargs= '+', help='''Relevant to bam files only: Colour for reads on reverse strand. Use NA
 to use the same colour as for forward reads (i.e. turn it off)''')
+
+annotation_args.add_argument('--rcode', default= [''], nargs= '+',
+    help='''A list of strings, one for each plot and recycled, that will be evaluated as R code at the end of each plot.
+Useful to annotate plots. E.g. "abline(h= 10)"''')
 
 # -----------------------------------------------------------------------------
 xaxis_args= parser.add_argument_group('Annotation of x-axis',
@@ -247,7 +271,7 @@ TODO: Make it recyclable/one for each region?''')
 
 figure_size_args.add_argument('--mar', default= [0, 4, 0.2, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.''')
 
-figure_size_args.add_argument('--nogrid', action= 'store_true', help='''Do not plot grid''')
+figure_size_args.add_argument('--col_grid', default= ['darkgrey'], nargs= '+', help='''Colour for grid(s), recycled.''')
 
 figure_size_args.add_argument('--pwidth', '-W',
                     default= 15,
@@ -396,6 +420,7 @@ def main():
             regname = regname + '_' + region.name
         regname= re.sub('[^a-zA-Z0-9_\.\-\+]', '_', regname) ## Get rid of metachar to make sensible file names
         xregion= slopbed(region, slop)
+        
         ## --------------------[ Prepare output file names ]-------------------
         
         fasta_seq_name= os.path.join(tmpdir, regname + '.seq.txt')
@@ -449,8 +474,9 @@ def main():
                         tmpfh.close()
                         if nlines > nwinds:
                             if not regionWindows:
-                                regionWindows= makeWindows(xregion, nwinds) 
-                            compressBedGraph(regionWindows, tmp_name, use_file_name= x, bedgraph_grp_fh= non_bam_fh, col_idx= 9, groupFun= args.group_fun)
+                                regionWindows= makeWindows(xregion, nwinds)
+                            compressBedGraph(regionWindows, tmp_name, use_file_name= x, bedgraph_grp_fh= non_bam_fh, col_idx= 4 + len(pympileup.COUNT_HEADER),
+                                groupFun= args.group_fun)
                         else:
                             fh= open(tmp_name)
                             for line in fh:
@@ -489,12 +515,14 @@ def main():
               vheights= quoteStringList(args.vheights),
               cex= args.cex,
               cex_axis= args.cex_axis,
+              col_line= quoteStringList(args.col_line),
+              lwd= quoteStringList(args.lwd),
               col_track= quoteStringList(args.col_track),
               col_track_rev= quoteStringList(args.col_track_rev),
-              col_nuc= args.col_nuc,
+              col_nuc= quoteStringList(args.col_nuc),
               no_col_bases= args.no_col_bases,
               bg= quoteStringList(args.bg),
-              nogrid= args.nogrid,
+              col_grid= quoteStringList(args.col_grid),
               col_text_ann= args.col_text_ann,
               names= quoteStringList(names),
               col_names= quoteStringList(args.col_names),
@@ -503,7 +531,8 @@ def main():
               cex_seq= args.cex_seq,
               col_seq= args.col_seq,
               mar= ', '.join([str(x) for x in args.mar]),
-              col_all= args.col_all
+              col_all= args.col_all,
+              rcode= quoteStringList(args.rcode)
               )
         
         if rgraph['stderr'] != '':

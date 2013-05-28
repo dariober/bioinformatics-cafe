@@ -14,22 +14,22 @@ library(tools)
 # TODO:
 # -----------------------------------------------------------------------------
 
-recycle<- function(x, y){
-    ## Recycles or trim vector y to be of the same length as x
+recycle<- function(n, y){
+    ## Recycle or trim vector y to be of length n
     ## Test:
     ## x<- c('a', 'b', 'c', 'd')
     ## y<- c('1', '2')
-    ## ylong<- recycle(x, y) #>>>  c('1', '2', '1', '2')
+    ## ylong<- recycle(length(x), y) #>>>  c('1', '2', '1', '2')
     if(is.null(y)){
-        yext<- rep(NA, length(x))
+        yext<- rep(NA, n)
         return(yext)
     }
-    if(length(y) >= length(x)){
-        return(y[1:length(x)])
+    if(length(y) >= n){
+        return(y[1:n])
     } else{
-        yext<- rep(y, times= floor(length(x) / length(y)))
-        if(length(yext) < length(x)){
-            yext<- c(yext, y[1:(length(x) %%%% length(y))])
+        yext<- rep(y, times= floor(n / length(y)))
+        if(length(yext) < n){
+            yext<- c(yext, y[1:(n %%%% length(y))])
         }
         return(yext)
     }
@@ -224,6 +224,46 @@ transparent.border<- function(pdata, xlim, r){
     }
 }
 
+lines.bdg<- function(bdg.start, bdg.end, bdg.score, ybottom= min(bdg.score), ...){
+    "Draw lines for bedgraph.
+    bdg.start,
+    bdg.end,
+    bdg.score:
+        Vectors of start, end and score of bedgrah features (i.e. 2nd, 3rd and 4th
+        column of a bedgraph file).
+    ybottom:
+        When bdg features have gaps, drop vertical lines down to this baseline.
+        (Typically 0 or `min(score)`)
+    ...:
+        Arguments passed to _segments_.
+    Return:
+        Indexes of where gaps start 
+        Side effect of drawing segments for bedgraph profile.
+    Example:
+        start<- c(seq(0, 30, by= 5), seq(80, 120, by= 10), seq(150, 250, by= 25))
+        end<- c(seq(5, 35, by= 5), seq(90, 130, by= 10), seq(175, 275, by= 25))
+        score<- (1:length(start))^2
+        plot(x= start, y= score, type= 'n', xlim= c(min(start), max(end)))
+        lines.bdg(start, end, score, col= 'red', lwd= 2)
+    "
+    # Difference between one bdg feature and the next.
+    nrows<- length(bdg.start)
+    disc<- bdg.start[2:nrows] - bdg.end[1:(nrows-1)] 
+    ## Where gaps are:
+    gaps<- which(diff(disc) > 0) + 1
+    nogaps<- which(!1:nrows %%in%% gaps)
+    ## Horiz. intervals
+    segments(x0= bdg.start, x1= bdg.end, y0= bdg.score, y1= bdg.score, ...)
+    ## Vertical lines for adjacent features
+    segments(x0= bdg.end[nogaps], x1= bdg.end[nogaps],
+             y0= bdg.score[nogaps], y1= c(bdg.score[2:nrows], NA)[nogaps], ...)
+    ## Vertical lines for discontinuities
+    segments(x0= bdg.end[gaps], x1= bdg.end[gaps], y0= rep(ybottom, length(gaps)), y1= bdg.score[gaps], ...)
+    segments(x0= bdg.start[gaps+1], x1= bdg.start[gaps+1], y0= rep(ybottom, length(gaps)), y1= bdg.score[gaps+1], ...)
+    return(gaps)
+}
+
+
 # ------------------------------------------------------------------------------
 # Intial settings
 # ------------------------------------------------------------------------------
@@ -236,25 +276,29 @@ cex_axis<- %(cex_axis)s * cex
 cex_names<- %(cex_names)s * cex 
 cex_seq<- %(cex_seq)s * cex
 cex_range<- %(cex_range)s * cex
-col_nuc<- "%(col_nuc)s"
+col_nuc<- recycle(4, c(%(col_nuc)s))
 no_col_bases<- ifelse("%(no_col_bases)s" == 'False', FALSE, TRUE)
-col_track<- recycle(inputlist, c(%(col_track)s))
-col_track_rev<- recycle(inputlist, c(%(col_track_rev)s))
-snames<- recycle(inputlist, c(%(names)s))        ## c() evaluates to NULL.
-col_names<- recycle(inputlist, c(%(col_names)s))
-bg<- recycle( inputlist, c(%(bg)s) )
-ymax<- recycle( inputlist, c(%(ymax)s) )
-ymin<- recycle( inputlist, c(%(ymin)s) )
+col_line<- recycle(length(inputlist), c(%(col_line)s))
+lwd<- as.numeric(recycle(length(inputlist), c(%(lwd)s)))
+col_track<- recycle(length(inputlist), c(%(col_track)s))
+col_track_rev<- recycle(length(inputlist), c(%(col_track_rev)s))
+snames<- recycle(length(inputlist), c(%(names)s))        ## c() evaluates to NULL.
+col_names<- recycle(length(inputlist), c(%(col_names)s))
+bg<- recycle(length(inputlist), c(%(bg)s) )
+col_grid<- recycle(length(inputlist), c(%(col_grid)s) )
+ymax<- recycle(length(inputlist), c(%(ymax)s) )
+ymin<- recycle(length(inputlist), c(%(ymin)s) )
 regLim<- c(%(bstart)s - 1, %(bend)s) ## These are the interval extremes as found on the input --bed, before slop 
 xlim<- c(%(xlim1)s - 1, %(xlim2)s)   ## Coords after slop
 chrom<- '%(chrom)s'
-ylab<- recycle( inputlist, c(%(ylab)s) )
-vheights<- as.numeric(recycle( inputlist, c(%(vheights)s) ))
+ylab<- recycle(length(inputlist), c(%(ylab)s) )
+vheights<- as.numeric(recycle(length(inputlist), c(%(vheights)s) ))
 title<- '%(title)s'
 mar<- c(%(mar)s)
 pwidth<- %(pwidth)s
 pheight<- %(pheight)s
 maxseq<- %(maxseq)s
+rcode<- recycle(length(inputlist), c(%(rcode)s) )
 
 # ------------------------------------------------------------------------------
 # DATA INPUT
@@ -302,15 +346,23 @@ refbases<- read.table('%(refbases)s', header= TRUE, sep= '\t', stringsAsFactors=
     colClasses= c('character', 'integer', 'integer', 'character'))
 refbases$base<- toupper(refbases$base)
 
-## Plotname
+## Plotname: region in named after the original bed feature, not the slopped one. Change-me?
 if(title == ''){
-    plotname<- makePlotName(chrom, xlim)
+    plotname<- makePlotName(chrom, regLim)
 } else if (grepl('^:region:.*', title, perl= TRUE)){
     mytitle<- sub('^:region:', '', title, perl= TRUE)
-    plotname<- makePlotName(chrom, xlim)
+    plotname<- makePlotName(chrom, regLim)
     plotname<- paste(plotname, mytitle, sep= '')
 } else {
     plotname<- title
+}
+
+## Colours for indvidual nucleotides
+defaulColours<- c(makeTransparent('green', 80), makeTransparent('blue', 80), makeTransparent('orange', 80), makeTransparent('red', 80))
+for(i in 1:length(col_nuc)){
+    if(col_nuc[i] == ''){
+        col_nuc[i]<- defaulColours[i]
+    }
 }
 # ------------------------------------------------------------------------------
 # Plotting
@@ -358,9 +410,9 @@ layout(lay.mat, heights= plot_heights)
 par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar, xaxs= 'i')
 plot(0, ylim= c(0,100), xlim= xlim, ylab= '', xlab= '', type= 'n')
 text(x= mean(xlim), y= 10, labels= plotname, cex= cex.for.height(plotname, 80), adj= c(0.5,0))
+
 ## MAIN PANELS
 ## ----------
-
 for(i in 1:nrow(plot_type)){
     file_name<- plot_type$file_name[i]
     type<- plot_type$feature[i]
@@ -389,7 +441,7 @@ for(i in 1:nrow(plot_type)){
                 colour_schema<- data.frame(
                     base= c('A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n'),
                     col_match= rep(col4track, 10),
-                    col_mismatch= c('green', 'green', 'blue', 'blue', 'orange', 'orange', 'red', 'red', col4track, col4track),
+                    col_mismatch= c(rep(col_nuc, each= 2), col4track, col4track),
                     stringsAsFactors= FALSE
                 )
             } else {
@@ -433,9 +485,10 @@ for(i in 1:nrow(plot_type)){
         plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(pymin, pymax), xlim= xlim, cex.axis= cex_axis)
         mtext(side= 2, line= 3, text= ylab[i], cex= par('cex') * cex_axis, las= 0)
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= bg[i], border= 'transparent')
-        if('%(nogrid)s' == 'False'){
-            grid(col= 'darkgrey', lwd= 0.5, lty= 'dotted')
-        }
+        grid(col= col_grid[i], lwd= 0.5, lty= 'dotted')
+        
+        ## Draw plot 
+        ## ---------
         if(nrow(pdata) > 0){
             border<- ifelse(transparent.border(pdata, xlim, 1/10), 'transparent', col4track)
             ytop<-    rep(0, nrow(pdata))
@@ -452,6 +505,7 @@ for(i in 1:nrow(plot_type)){
                 ## For bedgraph:
                 rect(xleft= pdata$start, ybottom= ybottom, xright= pdata$end, ytop= pdata$totZ, col= col4track, border= border)
             }
+            lines.bdg(pdata$start, pdata$end, bdg.score= pdata$totZ, ybottom= ybottom, col= col_line[i], lwd= lwd[i])
         }
         text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= col_names[i], cex= cex_names)
     } else {
@@ -479,6 +533,7 @@ for(i in 1:nrow(plot_type)){
         text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= thick_top + 10, adj= c(0,0), labels= libname, col= col_names[i], cex= cex_names) #par('usr')[4] * 1
     }
     points(x= regLim, y= rep(par('usr')[3], 2), cex= 2, pch= 17, col= 'red')
+    eval(parse(text= rcode[i]))
 }
 ## BOTTOM PANEL
 ## -----------
@@ -506,3 +561,71 @@ if(nrow(refbases) > 0){
     text(x= refbases$end, y= baseline3, labels= refbases$base, adj= c(1, 1), col= '%(col_seq)s', family= 'mono', font= 1, cex= cex_seq)
 }
 dev.off()
+
+# -----------------------------------------------------------------------------
+#                                  TRITUME
+# ----------------------------------------------------------------------------- 
+#
+#addGapsXY<- function(x, y, gap_size= 1, fill.y= NA){
+#    "Identify gaps in x and repeat x,min(y) where gaps occur.
+#    x:
+#        Vector of x-coordinates where gaps are to be identifies
+#    y:
+#        Vector of y-coordinates
+#    gap_size:
+#        Distance between adjacent x-points to consider them as gap. 
+#    fill.y:
+#        Value to use for y in coorespondence of x gaps.
+#    Return:
+#        Dataframe with x, y (coords) with NA where gaps occur in y-coords in gaps
+#        are filled with .
+#    Examples:
+#        ## xy data with gaps
+#        xv<- c(1:10, 21:30, 35:40, 50:60)
+#        yv<- round(runif(length(xv), min= 0, max= 100))
+#        ## Fill and mark gaps
+#        (xdat<- addGapsXY(xv, yv))
+#    "
+#    gaps<- which(diff(x) > gap_size) ## Where gaps are.
+#    gap_start<- gaps + 0.1
+#    gap_idx<- order(c(1:length(x), gap_start))
+#    gap_val<- sort(c(1:length(x), gap_start))
+#    x_fill<- c(x, x[gaps], x[gaps+1])[gap_idx]  ## x plus x-values to repeat
+#    y_fill<- c(y, rep(fill.y, length(gaps)*2))[gap_idx]
+#    gap_pos<- c(rep(TRUE, length(y)), rep(c(FALSE, FALSE), length(gaps)))[gap_idx]
+#    xdat<- data.frame(x= x_fill, y= y_fill, gaps= gap_pos, stringsAsFactors= FALSE)
+#    return(xdat)
+#}
+#
+#gap.points<- function(xdat, ybottom= par('usr')[3], type= 'l', ...){
+#    "Plot datapoints in dataframe xdat so that gaps go
+#    down to base y-axis. Plotting done by lines first and segments then.
+#    xdat:
+#        Dataframe produced by addGapsXY
+#    ybottom:
+#        Draw vertical drops down to this y-coord (default down to y-axis bottom
+#        limit)
+#    ...:
+#        Further arguments passed to points.
+#    Examples:
+#        ## xy data with gaps
+#        xv<- c(1:10, 21:30, 35:40, 50:60)
+#        yv<- round(runif(length(xv), min= 0, max= 100))
+#        ## Fill and mark gaps
+#        xdat<- addGapsXY(xv, yv)
+#        plot(xv, yv, type= 'l', ylim= c(0, max(yv)), col= 'grey95')
+#        gap.points(xdat, col= 'red', lwd= 2)
+#    "
+#    lines(xdat$x, xdat$y, ...)
+#    if(type %%in%% c('l', 'o', 'b')){
+#        gaps<- which(xdat$gaps == FALSE)
+#        xna<- xdat[c(which(xdat$gaps == FALSE) - 1, which(xdat$gaps == FALSE) + 2), ]
+#        xna<- xna[xna$gaps,]
+#        segments(x0= c(xdat$x[gaps-1], xdat$x[gaps+1]),
+#                 x1= c(xdat$x[gaps-1], xdat$x[gaps+1]),
+#                 y0= c(xdat$y[gaps-1], xdat$y[gaps+1]),
+#                 y1= rep(ybottom, length(gaps)*2),
+#                 ...
+#        )
+#    }
+#}
