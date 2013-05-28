@@ -198,7 +198,7 @@ annotation_args.add_argument('--lwd', default= [0.2], type= float, nargs= '+',
 annotation_args.add_argument('--cex', default= 1, type= float,
                              help='''Character expansion for all text. All the other
 cex parameters will be based on this''')
-annotation_args.add_argument('--col_text_ann', default= 'black', help='''Colour for annotation text (gene names)''')
+annotation_args.add_argument('--col_text_ann', default= ['black'], nargs= '+', help='''Colour for annotation text (gene names)''')
 annotation_args.add_argument('--col_track', default= [''], nargs= '+', help='''Colour for coverage and annotation tracks and for the N base.
 Default will assign grey to coverage and firebrick4 to annotation''')
 annotation_args.add_argument('--col_track_rev', default= [''], nargs= '+', help='''Relevant to bam files only: Colour for reads on reverse strand. Use NA
@@ -527,7 +527,7 @@ def main():
               no_col_bases= args.no_col_bases,
               bg= quoteStringList(args.bg),
               col_grid= quoteStringList(args.col_grid),
-              col_text_ann= args.col_text_ann,
+              col_text_ann= quoteStringList(args.col_text_ann),
               names= quoteStringList(names),
               col_names= quoteStringList(args.col_names),
               cex_names= args.cex_names,

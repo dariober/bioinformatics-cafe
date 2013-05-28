@@ -19,6 +19,7 @@ def read_parfile(parfile):
                    'lwd',
                    'col_track',
                    'col_track_rev',
+                   'col_text_ann',
                    'ymax',
                    'ymin',
                    'ylab',

@@ -280,6 +280,7 @@ col_nuc<- recycle(4, c(%(col_nuc)s))
 no_col_bases<- ifelse("%(no_col_bases)s" == 'False', FALSE, TRUE)
 col_line<- recycle(length(inputlist), c(%(col_line)s))
 lwd<- as.numeric(recycle(length(inputlist), c(%(lwd)s)))
+col_text_ann<- recycle(length(inputlist), c(%(col_text_ann)s))
 col_track<- recycle(length(inputlist), c(%(col_track)s))
 col_track_rev<- recycle(length(inputlist), c(%(col_track_rev)s))
 snames<- recycle(length(inputlist), c(%(names)s))        ## c() evaluates to NULL.
@@ -528,7 +529,7 @@ for(i in 1:nrow(plot_type)){
                         col= col4track, border= col4track)
             segments(y0= offs, y1= offs, x0= fextr$start, x1= fextr$end, col= col4track)
             lab<- paste(fextr$name, ifelse(fextr$strand == '.', '', fextr$strand))
-            text(x= rowMeans(fextr[, c('start', 'end')]), y= thick_top + 2, labels= lab, adj= c(0.5,0), col= '%(col_text_ann)s', cex= cex.for.height(lab, 98 - (thick_top + 2)))
+            text(x= rowMeans(fextr[, c('start', 'end')]), y= thick_top + 2, labels= lab, adj= c(0.5,0), col= col_text_ann[i], cex= cex.for.height(lab, 98 - (thick_top + 2)))
         }
         text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= thick_top + 10, adj= c(0,0), labels= libname, col= col_names[i], cex= cex_names) #par('usr')[4] * 1
     }
