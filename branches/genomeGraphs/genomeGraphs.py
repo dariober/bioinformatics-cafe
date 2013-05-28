@@ -12,7 +12,8 @@ from validate_args import *
 import pympileup
 import pipes
 
-# MEMO: Add recyclable graphical parameters.
+# HOWTO: Add recyclable graphical parameters
+# ------------------------------------------
 # E.g. we want to add a new col parameter that has to be applied to each track.
 # Recycled if not enough items are passed to command line.
 # 
@@ -26,6 +27,8 @@ import pipes
 # 3. In R_template.R: Get this argument by assigning to a var and recycle as
 #    necessary. col_line is now a vector c('blue', 'red', ...):
 # col_line<- recycle(length(inputlist), c(%(col_line)s))
+#
+# 4. Add this parameter to the list `allowed_args` in  pycoverage.read_parfile()
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -74,8 +77,8 @@ Use - to read from stdin.
 input_args.add_argument('--slop', '-s',
                    default= ['0.05', '0.05'],
                    nargs= '+',
-                   help='''Extend each interval in --bed input. If integer(s),
-extend by that many base left and/or right. If float(s), extend by that percent
+                   help='''Extend (zoom-out) each interval in --bed input. If integer(s),
+extend by that many bases left and/or right. If float(s), extend by that percent
 of interval size (e.g. 0.1 to extend by 10%%). If one value is given, it will be
 applied to left and right. If two values, first will be applied to left and second
 to right. Must be >= 0.
@@ -400,10 +403,11 @@ def main():
     inbed= pybedtools.BedTool(inbed).sort() ## inbed is args.bed file handle
     
     # ---------------------[ Pre-filter non-bam files ]-------------------------
-    xinbed= pybedtools.BedTool(inbed).each(slopbed, slop)
+    xinbed= pybedtools.BedTool(inbed).each(slopbed, slop).saveas()
     nonbam_dict= {}
     for nonbam in nonbamlist:
         nonbam_dict[nonbam]= prefilter_nonbam_multiproc(nonbam= nonbam, inbed= xinbed, tmpdir= tmpdir)
+
 #        proc_list.append({'nonbam':nonbam, 'inbed':inbed, 'tmpdir':tmpdir})
 #    pool = multiprocessing.Pool(processes= args.nproc)
 #    ori_new= pool.map(prefilter_nonbam_multiproc, proc_list)
