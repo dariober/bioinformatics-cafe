@@ -46,29 +46,56 @@ bismark_methylation_extractor should be nearly identical to 'bismark' format.
 args= parser.parse_args()
 # ------------------------------------------------------------------------------
 
-def pileup2methylation(mpileup, outfmt):
-   """Convert a row from mpileup (as list) to a methylation call.
-   mpileup= ['chr7', '3002089', 'C', '2', '.^~.', 'IA']
-   pileup2methylation(mpileup)
-   
+def cleanCallString(bases):
+   """Removes from the call string in mpileup (5th column) the ^ character and
+   the char next to it. Note TODO: Account for insertions/deletions.
+   bases:
+      String of read bases (5th column of mpileup)   
+   Return:
+      Same string as bases but with ^ and the following char removed
+   Example:
+      bases= '^A....,,.,.,...,,,.,....^k.'
+      cleanCallString(bases) >>> '....,,.,.,...,,,.,.....'
+   """
+   callString= ''
+   skip= False
+   for x in bases:
+      if x  == '^':
+         skip= True
+      elif skip:
+         skip= False
+      else:
+         callString += x         
+   return(callString)
+      
+def pileup2methylation(chrom, pos, callString, ref, outfmt):
+   """Count methylated and unmethylated calls.
+   chrom, pos:
+      Chromosome (string) and position (int) on the pileup
+   callString:
+      String of bases obtained by cleanCallString
+   ref:
+      Reference base as obtained from 3nd column of mpileup
+      
    Memo: mpileup input looks like this:
    chr7    3002089 C       2       .^~.    IA
    chr7    3002090 G       2       ..      HE
    chr7    3002114 C       2       ..      HE
 
    """
-   ref= mpileup[2]
-   callstring= mpileup[4]
+#   ref= mpileup[2]
+#   callstring= mpileup[4]
    cnt_M= 0 ## Count methylated
    cnt_m= 0 ## Count unmethylated
+
    if ref.upper() == 'G':
       strand= '-'
-      cnt_M += callstring.count(',')
-      cnt_m += callstring.count('a')
+      cnt_M += callString.count(',')
+      cnt_m += callString.count('a')
    elif ref.upper() == 'C':
       strand= '+'
-      cnt_M += callstring.count('.')
-      cnt_m += callstring.count('T')
+      cnt_M += callString.count('.')
+      cnt_m += callString.count('T')
    else:
       return(None)
    if (cnt_m + cnt_M) == 0:
@@ -76,10 +103,10 @@ def pileup2methylation(mpileup, outfmt):
    ## Use for first version of methylation2mpileup.py
    ## methList= [mpileup[0], mpileup[1], strand, str(cnt_M), str(cnt_m), ref]
    if outfmt == 'bismark':
-      methList= [mpileup[0], mpileup[1], strand, str(cnt_M), str(cnt_m)]
+      methList= [chrom, str(pos), strand, str(cnt_M), str(cnt_m)]
    elif outfmt == 'bedgraph':
       totreads= cnt_M + cnt_m
-      methList= [mpileup[0], str(int(mpileup[1])-1), mpileup[1], str(round(100*(float(cnt_M)/totreads), 4)), str(cnt_M), str(totreads), strand]
+      methList= [chrom, str(pos-1), str(pos), str(round(100*(float(cnt_M)/totreads), 4)), str(cnt_M), str(totreads), strand]
    else:
       sys.exit('Unexpected keyword for outfmt "%s"' %(outfmt))
    return(methList)
@@ -92,7 +119,8 @@ else:
 
 for line in fin:
    line= line.strip().split('\t')
-   methList= pileup2methylation(line, args.outfmt)
+   callString= cleanCallString(line[4])
+   methList= pileup2methylation(chrom= line[0], pos= int(line[1]), callString= callString, ref= line[2], outfmt= args.outfmt)
    if methList is None:
       pass
    else:
@@ -102,3 +130,5 @@ for line in fin:
          break
 fin.close()
 sys.exit()
+
+
