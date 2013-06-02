@@ -1,4 +1,4 @@
-#!/usr/bin/env test.py
+#!/usr/bin/env py.test
 
 """Run me:
 py.test ~/svn_checkout/bioinformatics-misc/trunk/genomeGraphs/test_genomeGraphs.py
@@ -8,6 +8,7 @@ import os
 import sys
 import subprocess as sp
 
+genomeGraph= '/home/berald01/svn_checkout/bioinformatics-misc/trunk/genomeGraphs/test_genomeGraphs.py'
 example_dir='/Users/berald01/Documents/genomeGraphs/example'
 os.chdir(example_dir)
 tmpdir= 'wdir'
