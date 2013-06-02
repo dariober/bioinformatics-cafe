@@ -223,7 +223,7 @@ If you find some of the graphics features annoying, here's how to turn them off:
 || `--names ''`           || Don't print the name (e.g. the file name) on each plot ||
 || `--col_names NA`       || _Same effect as above_ ||
 || `--no_col_bases`       || Don't colour individual nucleotides even if the region span is < maxseq ||
-|| --title ''             || Don't print figure title _chr:start-end_ (actually just print a back space) ||
+|| --title ''             || Don't print the figure title ||
 || `-o /dev/null/`        || Don't save the pdf output (if `--tmpdir` is None nothing is saved) ||
 
 === Colours ===
