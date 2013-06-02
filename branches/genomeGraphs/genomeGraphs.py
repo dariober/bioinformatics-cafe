@@ -191,9 +191,9 @@ Irrelvant if --maxseq is exceeded or a reference is not given to --fasta.
 annotation_args= parser.add_argument_group('Track options',
     'Graphical options for the individual tracks.')
 
-annotation_args.add_argument('--col_line', default= ['blue'], nargs= '+',
+annotation_args.add_argument('--col_line', default= ['darkblue'], nargs= '+',
     help='''Colour of the profile line of each coverage track. Default blue''')
-annotation_args.add_argument('--lwd', default= [0.2], type= float, nargs= '+',
+annotation_args.add_argument('--lwd', default= [0.01], type= float, nargs= '+',
     help='''Line width of the profile line of each coverage track''')
 annotation_args.add_argument('--cex', default= 1, type= float,
                              help='''Character expansion for all text. All the other
@@ -206,14 +206,14 @@ to use the same colour as for forward reads (i.e. turn it off)''')
 
 annotation_args.add_argument('--rcode', default= [''], nargs= '+',
     help='''A list of strings, one for each plot and recycled, that will be evaluated as R code at the end of each plot.
-Useful to annotate plots. E.g. "abline(h= 10)"''')
+Useful to annotate plots. E.g. "abline(h= 10)". Enclose each string in double-quotes and use single quotes for the R code inside (To be fixed).''')
 
 # -----------------------------------------------------------------------------
 xaxis_args= parser.add_argument_group('Annotation of x-axis',
     'Affect x-axis labelling, range and sequence of interval')
 
 xaxis_args.add_argument('--cex_axis', default= 1, type= float, help='''Character exapansion for the axis annotation.''')
-xaxis_args.add_argument('--cex_range', default= 1, type= float, help='''Character exapansion for the range of the x-axis''')
+# xaxis_args.add_argument('--cex_range', default= 1, type= float, help='''Character exapansion for the range of the x-axis''')
 xaxis_args.add_argument('--cex_seq', default= 1, type= float, help='''Character exapansion for the nucleotide sequence''')
 xaxis_args.add_argument('--col_seq', default= 'black', help='''Colour for the nucleotide sequence.''')
 
@@ -246,12 +246,28 @@ plot_layout.add_argument('--ylab', '-yl',
                     nargs= '+',
                     help='''Labels for Y-axis. Recycled.''')
 
+plot_layout.add_argument('--cex_lab', '-cl',
+                    default= [-1],
+                    type= float,
+                    nargs= '+',
+                    help='''Character expansion for labels of Y-axis. Recycled. Default to same as cex_axis.''')
+
 plot_layout.add_argument('--vheights',
                     default= [''],
                     type= str,
                     nargs= '+',
                     help='''List of proportional heights to be passed to R layout(). Recycled.
 E.g. if `4 2 1` will make the 1st track twice the size of the 2nd and 4 times the height of 3rd.''')
+
+plot_layout.add_argument('--mar_heights',
+                    default= [-1, -1],
+                    type= float,
+                    nargs= 2,
+                    help='''List of two proportional heights to assign to the top panel (where region name
+is printed) and bottom panel (where you have chromosome position, range, sequence)
+E.g. if `--vheights 4` and `--mar_heights 1 2` the top panel is 1/4th the size of the annotation track and
+the bottom 1/2. Negative values will switch to default.''')
+
 
 plot_layout.add_argument('--names', default= None, nargs= '+', help='''List of names for the samples. Default ('') is to use the names of the
 bam files with path and .bam extension stripped. Recycled as necessary.''')
@@ -263,16 +279,25 @@ Useful to colour-code samples according to experimemtal design.''')
 plot_layout.add_argument('--bg', nargs= '+', default= ['grey95'], help='''List of colours for the plot backgrounds. Recycled as necessary.
 Useful to colour code samples sharing the same conditions''')
 
+plot_layout.add_argument('--overplot', '-op', nargs= '+', default= ['NA'], type= int,
+    help='''_In prep_: List of characters to identify coverage tracks to be drawn on the same plot.
+Recycled.''')
+
 # -----------------------------------------------------------------------------
 figure_size_args= parser.add_argument_group('Global graphical optons',
     'These options affect all the tracks or the figure as a whole')
 
-figure_size_args.add_argument('--title', default= '',
+figure_size_args.add_argument('--title', default= None,
     help= '''Title for each region. Default are the region coords <chrom>:<start>-<end>
 You can add a custom title while keeping the coordinates using the syntax --title ':region: My title'
 TODO: Make it recyclable/one for each region?''')
 
-figure_size_args.add_argument('--mar', default= [0, 4, 0.2, 1], nargs= 4, type= float, help='''List of 4 floats giving the margins of each plot.''')
+figure_size_args.add_argument('--cex_title', default= 1, type= float,
+    help= '''Character expansion for --title. This is independent to --cex.''')
+
+
+figure_size_args.add_argument('--mar', default= 4, type= float, help='''Spacing on the left margin in line numbers. Default 4.
+Increase or decrease to give space to y-axis labels.''')
 
 figure_size_args.add_argument('--col_grid', default= ['darkgrey'], nargs= '+', help='''Colour for grid(s), recycled.''')
 
@@ -355,6 +380,9 @@ def main():
         print('\nFiles to analyze (%s found):\n%s\n' %(len(inputlist), ', '.join(inputlist)))
     if len(inputlist) == 0 and not args.replot:
         sys.exit('No file found!\n')
+    #if args.title is None:
+    #    args.title= ''
+    
     # Output settings
     # ---------------
     if (args.outdir is not None) and (args.onefile is not None):
@@ -396,12 +424,14 @@ def main():
         print(', '.join([str(x) for x in libsizes]))
     if args.bed == '-':
         inbed= sys.stdin
+        fh= stdin_inbed_to_fh(inbed)
+        inbed= open(fh.name)
+        os.remove(fh.name)
     elif args.bed.endswith('.gz'):
         inbed= gzip.open(args.bed)
     else:
         inbed= open(args.bed)
     inbed= pybedtools.BedTool(inbed).sort() ## inbed is args.bed file handle
-    
     # ---------------------[ Pre-filter non-bam files ]-------------------------
     xinbed= pybedtools.BedTool(inbed).each(slopbed, slop).saveas()
     nonbam_dict= {}
@@ -504,10 +534,12 @@ def main():
               nonbam= non_bam_name,
               refbases= fasta_seq_name,
               title= args.title,
+              cex_title= args.cex_title,
               pheight= args.pheight,
               pwidth= args.pwidth,
               psize= args.psize,
               ylab= quoteStringList(args.ylab),
+              cex_lab= quoteStringList(args.cex_lab),
               bstart= bstart,
               bend= bend,
               xlim1= xregion.start,
@@ -517,6 +549,7 @@ def main():
               ymin= quoteStringList(args.ymin),
               chrom= xregion.chrom,
               vheights= quoteStringList(args.vheights),
+              mar_heights= quoteStringList(args.mar_heights),
               cex= args.cex,
               cex_axis= args.cex_axis,
               col_line= quoteStringList(args.col_line),
@@ -531,12 +564,13 @@ def main():
               names= quoteStringList(names),
               col_names= quoteStringList(args.col_names),
               cex_names= args.cex_names,
-              cex_range= args.cex_range,
+              # cex_range= args.cex_range,
               cex_seq= args.cex_seq,
               col_seq= args.col_seq,
-              mar= ', '.join([str(x) for x in args.mar]),
+              mar= ', '.join([str(x) for x in [0, args.mar, 0.2, 1]]),
               col_all= args.col_all,
-              rcode= quoteStringList(args.rcode)
+              rcode= quoteStringList(args.rcode),
+              overplot= quoteStringList(args.overplot)
               )
         
         if rgraph['stderr'] != '':

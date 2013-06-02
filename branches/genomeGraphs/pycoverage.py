@@ -23,13 +23,15 @@ def read_parfile(parfile):
                    'ymax',
                    'ymin',
                    'ylab',
+                   'cex_lab',
                    'vheights',
                    'names',
                    'cex_names',
                    'col_names',
                    'col_grid',
                    'bg',
-                   'rcode'])
+                   'rcode',
+                   'overplot'])
     fin= open(parfile, "rU")
     fargs= csv.DictReader(fin, delimiter= '\t')
     fDict= {}
@@ -54,6 +56,21 @@ def read_parfile(parfile):
             else:
                 break
     return(fDict)
+
+def stdin_inbed_to_fh(stdin):
+    """Parse the lines in fh stdin to write them in bed format to tempfile.
+    Returns file tempfile.
+    Allowed input in stdin:
+    Tab separated "chr\tstart\tend\tother-fields"
+    Space sperated "chr start end other-fields"
+    """
+    bedlines=  stdin.readlines()
+    bedlines= [x.strip().split() for x in bedlines if x.strip() != '']
+    tmpf= tempfile.NamedTemporaryFile(delete= False)
+    for line in bedlines:
+        tmpf.write('\t'.join(line[0:3]) + '\n')
+    tmpf.close()
+    return(tmpf)
 
 class SlopError(Exception):
     pass

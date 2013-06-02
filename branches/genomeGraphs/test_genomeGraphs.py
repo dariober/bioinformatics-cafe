@@ -238,6 +238,18 @@ def test_sequence_and_pipe():
     nucseq= ''.join([x[3] for x in seqbed[1:]]) ## Get column 'base', skipping header.
     assert nucseq == 'GACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG' ## This sequence manually checked.
 
+def test_sequence_and_pipe2():
+    cmd= """echo 'chr7 5567130 5567189' | %(genomeGraphs)s -i bam/ds051.actb.bam -b - -f annotation/chr7.fa --tmpdir %(tmpdir)s -d %(outdir)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outdir':outdir}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert stderr == ''
+    seqbed= open(os.path.join(tmpdir, 'chr7_5567130_5567189.seq.txt')).readlines()
+    seqbed= [x.strip().split('\t') for x in seqbed]
+    assert seqbed[0] == ['chrom', 'start', 'end', 'base'] ## Check first line is this header
+    nucseq= ''.join([x[3] for x in seqbed[1:]]) ## Get column 'base', skipping header.
+    assert nucseq == 'GACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG' ## This sequence manually checked.
+
+
 def test_slopbed_pybedtool():
     """Test function slopbed with pybedtool interval feature 
     """
@@ -286,3 +298,11 @@ def test_slopbed_list():
         xf= pycoverage.slopbed(['chr1', '0', 212, 'actb'], [0.1, 1.13]) ## Left coord must remain 0
     except TypeError:
         assert True
+
+def test_stdin_inbed_to_fh():
+    inbed= open('actb.bed')
+    bedfh= pycoverage.stdin_inbed_to_fh(inbed)
+    inlist= open(bedfh.name).readlines()
+    os.remove(bedfh.name)
+    assert len(inlist) == 5
+    assert inlist[1] == 'chr7\t5500000\t5566830\n'
