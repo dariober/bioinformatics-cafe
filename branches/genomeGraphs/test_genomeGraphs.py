@@ -9,12 +9,13 @@ import sys
 import subprocess as sp
 import pybedtools
 import pycoverage
+import inspect
 
 genomeGraphs='~/svn_checkout/bioinformatics-misc/branches/genomeGraphs/genomeGraphs.py'
 example_dir='/Users/berald01/Documents/genomeGraphs/example'
 os.chdir(example_dir)
-tmpdir= 'wdir'
-outdir= 'pdf'
+tmpdir= 'pytest_wdir'
+outdir= 'pytest_pdf'
 
 def test_only_one_gtf():
     cmd= '%(genomeGraphs)s -i annotation/genes.gtf.gz -b actb.bed --tmpdir %(tmpdir)s -d %(outdir)s' %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outdir':outdir}
@@ -227,8 +228,7 @@ def test_plot_params():
     assert stderr == ''
 
 def test_sequence_and_pipe():
-    ## _MEMO_: On shell remember to use `echo -e` to correctly read \t!!
-    cmd= """echo 'chr7\t5567130\t5567189' | %(genomeGraphs)s -i bam/ds051.actb.bam -b - -f annotation/chr7.fa --tmpdir %(tmpdir)s -d %(outdir)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outdir':outdir}
+    cmd= """echo 'chr7\t5567130\t5567189' | %(genomeGraphs)s -i bam/ds051.actb.bam -b - --slop 0 0 -f annotation/chr7.fa --tmpdir %(tmpdir)s -d %(outdir)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outdir':outdir}
     p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
     stdout, stderr= p.communicate()
     assert stderr == ''
@@ -236,10 +236,11 @@ def test_sequence_and_pipe():
     seqbed= [x.strip().split('\t') for x in seqbed]
     assert seqbed[0] == ['chrom', 'start', 'end', 'base'] ## Check first line is this header
     nucseq= ''.join([x[3] for x in seqbed[1:]]) ## Get column 'base', skipping header.
+    print(nucseq)
     assert nucseq == 'GACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG' ## This sequence manually checked.
 
 def test_sequence_and_pipe2():
-    cmd= """echo 'chr7 5567130 5567189' | %(genomeGraphs)s -i bam/ds051.actb.bam -b - -f annotation/chr7.fa --tmpdir %(tmpdir)s -d %(outdir)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outdir':outdir}
+    cmd= """echo 'chr7 5567130 5567189' | %(genomeGraphs)s -i bam/ds051.actb.bam -b - --slop 1 1 -f annotation/chr7.fa --tmpdir %(tmpdir)s -d %(outdir)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outdir':outdir}
     p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
     stdout, stderr= p.communicate()
     assert stderr == ''
@@ -247,7 +248,7 @@ def test_sequence_and_pipe2():
     seqbed= [x.strip().split('\t') for x in seqbed]
     assert seqbed[0] == ['chrom', 'start', 'end', 'base'] ## Check first line is this header
     nucseq= ''.join([x[3] for x in seqbed[1:]]) ## Get column 'base', skipping header.
-    assert nucseq == 'GACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGG' ## This sequence manually checked.
+    assert nucseq == 'TGACTATTAAAAAAACAACAATGTGCAATCAAAGTCCTCGGCCACATTGTGAACTTTGGGG' ## This sequence manually checked.
 
 
 def test_slopbed_pybedtool():
@@ -305,4 +306,159 @@ def test_stdin_inbed_to_fh():
     inlist= open(bedfh.name).readlines()
     os.remove(bedfh.name)
     assert len(inlist) == 5
-    assert inlist[1] == 'chr7\t5500000\t5566830\n'
+    assert inlist[1] == 'chr7\t5500000\t5566830\tACTB\n'
+
+def test_overplotting_RGB_in_one_graph():
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        -op 1 1 1 \
+        --col_line red green blue \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0
+
+def test_overplotting_RB_in_one_graph_G_alone():
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        --title 'Red and blue in top plot. Green alone. R at ~1.5; B at ~3.5; G at ~2.5' \
+          -op        1   2     1 \
+        --col_line red green blue \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    print(stderr)
+    assert p.returncode == 0
+
+def test_overplotting_G_alone_RB_in_one_graph():
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        -op        2   1     2 \
+        --col_line red green blue \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0
+
+def test_overplotting_G_alone_RB_in_one_graph_ymax():
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        --ymax max \
+        -op        2   1     2 \
+        --col_line red green blue \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0
+
+def test_overplotting_G_alone_RB_in_one_graph_ylim_to_5_and_4():
+    """Memo: the plotting order is given by -op not by the input list.
+    """
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        --ymax         4     5 \
+        -op        2   1     2 \
+        --col_line red green blue \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0
+
+def test_overplotting_RGB_in_one_graph_annot():
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        -op 1 1 1 \
+        --col_line red green blue \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+           actb.bed \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0
+
+def test_vheight_all_equal():
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        -vh 1 1 1 1 \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+           actb.bed \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0
+
+def test_vheight_4x4x2x1x():
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        -vh 4 4 2 1 \
+        --title 'First and second plot 2x the third and 4x the fourth' \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+           actb.bed \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0
+
+def test_vheight_4x1x_recycled():
+    """1st 4x the 2nd and 3rd 4x the 4th.
+    """
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        -vh 4 1 \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+           actb.bed \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0
+    
+def test_mar_height_1top_1bottom():
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        -mh 1 1 \
+        --title ':region: <- region coords here\nTop and bottom margin the same height.\nQuite large.' \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+           actb.bed \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0
+
+def test_mar_height_01top_03bottom_cex_resized():
+    outfile= inspect.stack()[0][3] + '.pdf'
+    cmd= """%(genomeGraphs)s \
+        -mh 0.2 0.6 \
+        --title 'Bottom mar 3x top.\nTop cex resized because on two lines' \
+        -i bedgraph/profile.odd.bedGraph \
+           bedgraph/profile.odd_plus1.bedGraph \
+           bedgraph/profile.odd_plus2.bedGraph \
+           actb.bed \
+        -b actb.bed --tmpdir %(tmpdir)s -o %(outfile)s"""  %{'genomeGraphs': genomeGraphs, 'tmpdir': tmpdir, 'outfile': os.path.join(outdir, outfile)}
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert p.returncode == 0

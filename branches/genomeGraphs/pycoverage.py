@@ -68,7 +68,7 @@ def stdin_inbed_to_fh(stdin):
     bedlines= [x.strip().split() for x in bedlines if x.strip() != '']
     tmpf= tempfile.NamedTemporaryFile(delete= False)
     for line in bedlines:
-        tmpf.write('\t'.join(line[0:3]) + '\n')
+        tmpf.write('\t'.join(line[0:4]) + '\n')
     tmpf.close()
     return(tmpf)
 

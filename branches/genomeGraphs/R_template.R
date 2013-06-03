@@ -479,13 +479,16 @@ refbases$base<- toupper(refbases$base)
 ## -----------------------------------------------------------------------------------------
 if(title == 'None'){
     plotname<- makePlotName(chrom, regLim)
-} else if (grepl('^:region:.*', title, perl= TRUE)){
-    mytitle<- sub('^:region:', '', title, perl= TRUE)
-    plotname<- makePlotName(chrom, regLim)
-    plotname<- paste(plotname, mytitle, sep= '')
 } else {
-    plotname<- title
+    plotname<- gsub(':region:', makePlotName(chrom, regLim), title, fixed= TRUE)
 }
+#} else if (grepl('^:region:.*', title, perl= TRUE)){
+#    mytitle<- sub('^:region:', '', title, perl= TRUE)
+#    plotname<- makePlotName(chrom, regLim)
+#    plotname<- paste(plotname, mytitle, sep= '')
+#} else {
+#    plotname<- title
+#}
 
 ## Colours for indvidual nucleotides
 ## ---------------------------------

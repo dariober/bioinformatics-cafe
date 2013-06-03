@@ -252,14 +252,14 @@ plot_layout.add_argument('--cex_lab', '-cl',
                     nargs= '+',
                     help='''Character expansion for labels of Y-axis. Recycled. Default to same as cex_axis.''')
 
-plot_layout.add_argument('--vheights',
+plot_layout.add_argument('--vheights', '-vh',
                     default= [''],
                     type= str,
                     nargs= '+',
                     help='''List of proportional heights to be passed to R layout(). Recycled.
 E.g. if `4 2 1` will make the 1st track twice the size of the 2nd and 4 times the height of 3rd.''')
 
-plot_layout.add_argument('--mar_heights',
+plot_layout.add_argument('--mar_heights', '-mh',
                     default= [-1, -1],
                     type= float,
                     nargs= 2,
