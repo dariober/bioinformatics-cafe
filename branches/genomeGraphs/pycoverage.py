@@ -29,6 +29,7 @@ def read_parfile(parfile):
                    'cex_names',
                    'col_names',
                    'col_grid',
+                   'col_mark',
                    'bg',
                    'rcode',
                    'overplot'])

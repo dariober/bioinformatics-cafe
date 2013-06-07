@@ -26,7 +26,7 @@ import pipes
 #
 # 3. In R_template.R: Get this argument by assigning to a var and recycle as
 #    necessary. col_line is now a vector c('blue', 'red', ...):
-# col_line<- recycle(length(inputlist), c(%(col_line)s))
+# plot_paramas$col_line<- recycle(nrow(pot_params), c(%(col_line)s))
 #
 # 4. Add this parameter to the list `allowed_args` in  pycoverage.read_parfile()
 
@@ -216,6 +216,8 @@ xaxis_args.add_argument('--cex_axis', default= 1, type= float, help='''Character
 # xaxis_args.add_argument('--cex_range', default= 1, type= float, help='''Character exapansion for the range of the x-axis''')
 xaxis_args.add_argument('--cex_seq', default= 1, type= float, help='''Character exapansion for the nucleotide sequence''')
 xaxis_args.add_argument('--col_seq', default= 'black', help='''Colour for the nucleotide sequence.''')
+xaxis_args.add_argument('--col_mark', default= ['red'], nargs= '+', help='''Colour for the two symbols (triangles) marking the limits of the bed region.
+    Default red. Recycled''')
 
 # -----------------------------------------------------------------------------
 plot_layout= parser.add_argument_group('Plot layout', '')
@@ -552,6 +554,7 @@ def main():
               mar_heights= quoteStringList(args.mar_heights),
               cex= args.cex,
               cex_axis= args.cex_axis,
+              col_mark= quoteStringList(args.col_mark),
               col_line= quoteStringList(args.col_line),
               lwd= quoteStringList(args.lwd),
               col_track= quoteStringList(args.col_track),

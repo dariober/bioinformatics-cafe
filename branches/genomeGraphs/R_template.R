@@ -382,6 +382,7 @@ plot_params$col_track<- recycle(nrow(plot_params), c(%(col_track)s))
 plot_params$col_track_rev<- recycle(nrow(plot_params), c(%(col_track_rev)s))
 plot_params$snames<- recycle(nrow(plot_params), c(%(names)s))        ## c() evaluates to NULL.
 plot_params$col_names<- recycle(nrow(plot_params), c(%(col_names)s))
+plot_params$col_mark<- recycle(nrow(plot_params), c(%(col_mark)s))
 plot_params$bg<- recycle(nrow(plot_params), c(%(bg)s) )
 plot_params$col_grid<- recycle(nrow(plot_params), c(%(col_grid)s) )
 plot_params$ymax<- recycle(nrow(plot_params), c(%(ymax)s) )
@@ -667,7 +668,9 @@ for(i in 1:nrow(plot_params)){
             rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= plot_params$bg[i], border= 'transparent')
             grid(col= plot_params$col_grid[i], lwd= 0.5, lty= 'dotted')
             text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= plot_params$col_names[i], cex= cex_names)
-            points(x= regLim, y= rep(par('usr')[3], 2), cex= 2, pch= 17, col= 'red')
+            ## Marks
+            points(x= regLim, y= rep(par('usr')[3], 2), cex= 2, pch= 17, col= plot_params$col_mark[i])
+            ## Additional features
             eval(parse(text= plot_params$rcode[i]))
         }
         ## Draw plot 
