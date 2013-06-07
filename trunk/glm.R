@@ -1,7 +1,13 @@
-glmBS<- function(bsobj= NULL, cnt_M= NULL, cnt_c= NULL, library_id= NULL, bs= NULL, locus= NULL, contrast, thres= 10, ...){
+trans.arcsine <- function(x){
+     "Transforms percentage data to linear via arcsine
+     "
+  asin(sign(x) * sqrt(abs(x)))
+}
+
+glmBS<- function(bsobj= NULL, cnt_M= NULL, cnt_c= NULL, library_id= NULL, bs= NULL, locus= NULL, contrast, thres= 10, family= 'binomial', ...){
 "
 _____________________________ Description ______________________________
-Fit a glm with binomial error family to the each experiment or locus.
+Fit a glm with to the each experiment or locus.
 
 _______________________________ Arguments ______________________________
 bsobj:
@@ -22,6 +28,10 @@ contrast:
          The contrast to apply to the levels of bs. Must be of length 2
          and with the same strings as in bs. E.g. c('BS', 'oxBS') to compare BS-oxBS
          or c('redBS', 'BS') to compare redBS-BS
+family:
+          String for Family of probablility distribution. Default is binomial but consider
+          quasibinomial or gaussian instead. Valid options: 'gaussian', ''binomia', 'quasibinomial';
+          If 'gaussian', counts are converted to percentage and asin(sqrt) transformed.
 thres:
          Don't analyze loci with less than these many reads in total. These loci
          don't appear at all in the output (to be chnaged?)
@@ -31,7 +41,7 @@ Data frame with the following columns:
 locus:
          The locus tested
 pct.cond1.M, pct.cond2.M:
-         Avg percentage methylated reads in condition 1 and 2 respectively. 1 and 2 assign
+         Avg PERCENTAGE methylated reads in condition 1 and 2 respectively. 1 and 2 assign
          according to `contrast`.
          The average is calculated by summing the total reads and methylated reads
          from the same condition and then dividing by the number of libs in the condition.
@@ -43,6 +53,11 @@ estimate, pvalue:
          of difference from 0 as obtained from glm()
 fdr:
          pvalue adjusted by method 'fdr'.
+
+____________________________ See also __________________________________
+
+http://en.wikipedia.org/wiki/Generalized_linear_model
+http://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=3&ved=0CEEQFjAC&url=http%3A%2F%2Fwww.stat.umn.edu%2Fgeyer%2F5931%2Fmle%2Fglm.pdf&ei=7d-xUc6TAvSl0wWdzoGYCQ&usg=AFQjCNHaB9LhsQZnKol2Fl7IwwEd5bongw&sig2=qaAmsLYBC2Gxux_3939a5Q&bvm=bv.47534661,d.d2k&cad=rja
 "
     if(length(contrast) != 2){
          stop(sprintf('Only two contrasts allowed. Found %s', length(contrast)))
@@ -88,10 +103,20 @@ fdr:
          if(sum(bsdf$cnt_M, bsdf$cnt_c) < thres){
              e<- NA
              p<- NA
-         } else{
-             lrfit <- glm(cbind(cnt_M, cnt_c) ~ bs, family = binomial, data= bsdf, ...)
+         } else if(family %in% c('binomial', 'quasibinomial')){
+             lrfit <- glm(cbind(cnt_M, cnt_c) ~ bs, family = eval(parse(text= family)), data= bsdf, ...)
              e<- summary(lrfit)$coef[, "Estimate"][2]
-             p<- summary(lrfit)$coef[, "Pr(>|z|)"][2]
+             pv<- grep('Pr\\(>\\|t|z\\|\\)', colnames(summary(lrfit)$coef), perl= TRUE)
+             p<- summary(lrfit)$coef[, pv][2]
+         } else if(family %in% c('gaussian')){
+             y.pct<- bsdf$cnt_M / rowSums(bsdf[, c('cnt_M', 'cnt_c')])
+             y.asqr<- trans.arcsine(y.pct)
+             lrfit <- glm(y.asqr ~ bsdf$bs, family = eval(parse(text= family)), ...)
+             e<- summary(lrfit)$coef[, "Estimate"][2]
+             pv<- grep('Pr\\(>\\|t|z\\|\\)', colnames(summary(lrfit)$coef), perl= TRUE)
+             p<- summary(lrfit)$coef[, pv][2]               
+         } else {
+               stop(sprintf('Unsopported family function: "%s"', family))
          }
         estimate<- append(estimate, e)
         pvalue<- append(pvalue, p)
