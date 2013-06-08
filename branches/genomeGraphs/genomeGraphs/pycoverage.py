@@ -10,6 +10,7 @@ import csv
 import pympileup
 import copy
 import genomeGraphs
+import pycoverage
 
 def read_parfile(parfile):
     """Read the paramater file and return a dictionary with {'param': args}.

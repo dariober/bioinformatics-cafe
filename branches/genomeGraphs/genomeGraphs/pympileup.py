@@ -6,6 +6,7 @@ import subprocess
 import gzip
 import re
 import genomeGraphs
+import pympileup
 
 COUNT_HEADER= ['A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n', 'Z', 'z']
 
@@ -76,10 +77,10 @@ def mpileup_java_cmd(bamlist, region, fasta= None, mpileup= 'samtools mpileup'):
         f= '-f %s' %(fasta)
     else:
         f= ''
-    mpileupParserPath= os.path.join(os.path.split(pympileup.__file__)[0], 'java_code/mpileupToNucCounts')
+    mpileupParserJar= os.path.join(os.path.split(pympileup.__file__)[0], 'mpileupToNucCounts.jar')
     
-    cmd= '%(mpileup)s %(f)s -BQ0 -d10000000 %(r)s %(bamlist)s | java -classpath %(mpileupParserPath)s mpileupParser' %{'mpileup': mpileup,
-            'f': f, 'r': r, 'bamlist': ' '.join(bamlist), 'mpileupParserPath': mpileupParserPath}
+    cmd= '%(mpileup)s %(f)s -BQ0 -d10000000 %(r)s %(bamlist)s | java -jar %(mpileupParserJar)s' %{'mpileup': mpileup,
+            'f': f, 'r': r, 'bamlist': ' '.join(bamlist), 'mpileupParserJar': mpileupParserJar}
     return(cmd)
 
                 
