@@ -93,6 +93,52 @@ def test_file_headers():
             expected_header.append(bam + '.' + x)
     assert header == expected_header
 
+def test_mpileupToNucCounts():
+    """Test jar against chosen mpileup lines 
+    ex1 comes from ds051.act.bam
+    ----------------------------
+    IGV checked:
+    # Total count: 458
+    # A: 0
+    # a: 42
+    # C: 336
+    # c: 80
+    # G/g/T/t/N/n: 0
+    
+    ex2 is a copy of ex1 with inserted `+100ggggggggggT[ 100 times T]`
+    
+    Since +100 is followed by `g x 10` and `T x 100` you exepect the g's and 90 T's
+    skipped and last ten T's added to the dictionary.
+
+    Output from ex1: 
+    {'chrom': 'chr7', 'pos': 5567254, 'base': 'C', 0: {'A': 0, 'a': 42, 'C': 336, 'c': 80, 'G': 0, 'g': 0, 'T': 0, 't': 0, 'N': 0, 'n': 0, 'Z': 336, 'z': 122}, }
+    """
+    ### ex1
+    cmd= 'cat ex1.mpileup | java -jar ../genomeGraphs/mpileupToNucCounts.jar'
+    print(cmd)
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert stderr == '' 
+    outDict= eval(stdout.strip())
+    assert outDict[0]['a'] == 42
+    assert outDict[0]['C'] == 336
+    assert outDict[0]['c'] == 80
+    assert (outDict[0]['Z'] + outDict[0]['z']) == 458
+
+    ### ex2
+    cmd= 'cat ex2.mpileup | java -jar ../genomeGraphs/mpileupToNucCounts.jar'
+    print(cmd)
+    p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
+    stdout, stderr= p.communicate()
+    assert stderr == '' 
+    outDict= eval(stdout.strip())
+    assert outDict[0]['a'] == 42
+    assert outDict[0]['C'] == 336
+    assert outDict[0]['c'] == 80
+    assert outDict[0]['T'] == 10
+    assert (outDict[0]['Z'] + outDict[0]['z']) == 468
+
+    
 def test_bam_coverage_eq_igv():
     """Confirm that the counts obtained from the BAM files is consistent with
     IGV.
