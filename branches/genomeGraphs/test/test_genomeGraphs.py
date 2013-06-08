@@ -1,7 +1,11 @@
 #!/usr/bin/env py.test
 
-"""Run me:  
+"""Run me:
 py.test test_genomeGraphs.py
+
+_MEMO_:
+All the file output goes to test_out/
+Before testing delete the content of dir test_out/ but leave test_out itself
 """
 import shutil
 import os

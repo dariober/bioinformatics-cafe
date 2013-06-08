@@ -1,0 +1,1 @@
+ibam	ymax	col_track	vheights	names	ylabbam/ds051.actb.bam	indiv	dodgerblue	5	bam	bamannotation/genes.gtf.gz	100	grey	2	genes	genesbam/ds052.actb.bam	indiv	darkgreen	5	bam	bamannotation/genes.gtf.gz	100	grey	2	genes	genesbam/ds053.actb.bam	indiv	brown	5	bam	bamannotation/genes.gtf.gz	100	grey	2	genes	genes
