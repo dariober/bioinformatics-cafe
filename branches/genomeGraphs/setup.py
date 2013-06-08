@@ -19,7 +19,7 @@ setup(
    name = 'genomeGraphs',
    version = '0.1.0',
    author = 'Dario Beraldi',
-   author_email = 'dario.beraldi@gmail.com',
+   author_email = 'dario.beraldi<at>gmail<dot>com',
    url= '',
    description = "Command-line oriented genome viewer",
    classifiers = [
