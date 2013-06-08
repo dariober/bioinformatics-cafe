@@ -16,7 +16,7 @@ import java.util.*;
 * Create jar executable with
 * --------------------------
 * cd /dir/to/with-all-*.class-files
-* jar cmf manifest.txt mpileupToNucCounts.jar *.class
+* jar cmfv manifest.txt mpileupToNucCounts.jar *.class
 *
 * Where manifest.txt contains one line with (must end with newline):
 * ------
@@ -69,15 +69,31 @@ class Pile {
 			callDict.put(k, 0);
 		}
 
-		boolean skip= false;
+		boolean skip= false;         // Skip after ^
+		boolean getIndel= false;     // Switch to start accumulating ints following +/-
+		StringBuilder indel = new StringBuilder();  // String of ints following +/-. Converted to int() will give indel length
+		Integer nskip= 0;            
 
 		for (int i = 0, n = bases.length(); i < n; i++) {
-			String b = Character.toString(bases.charAt(i));
-			if(b  == "^"){
+			Character c = bases.charAt(i);
+			String b = Character.toString(c);
+			if (nskip > 0){
+				nskip -= 1;
+			} else if (b  == "^"){
 				skip= true;
 			} else if(skip){
 				skip= false;
-			} else if(callDict.containsKey(b)){
+			} else if (b.equals("+") || b.equals("-")){
+				getIndel= true;
+			} else if (getIndel){
+				if (Character.isDigit(c)) {
+					indel.append(b);
+				} else {
+					nskip = Integer.parseInt(indel.toString()) - 1;
+					indel.setLength(0);  // Empty stringBuilder of ints
+					getIndel= false;
+				}
+			} else if (callDict.containsKey(b)){
 				callDict.put(b, callDict.get(b) + 1);
 			}
 			else {
