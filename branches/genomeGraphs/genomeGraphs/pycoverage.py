@@ -4,12 +4,12 @@ import os
 import tempfile
 import subprocess
 import glob
-import pycoverage
 import gzip
 import re
 import csv
 import pympileup
 import copy
+import genomeGraphs
 
 def read_parfile(parfile):
     """Read the paramater file and return a dictionary with {'param': args}.

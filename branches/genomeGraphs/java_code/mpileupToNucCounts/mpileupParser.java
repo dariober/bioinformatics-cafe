@@ -5,6 +5,28 @@ import java.io.InputStreamReader;
 import java.lang.String;
 import java.util.*;
 
+/*
+*  _MEMO_
+* Compile java
+* ------------
+* cd /to/mpileupParser.java
+* javac mpileupParser.java
+*
+* 
+* Create jar executable with
+* --------------------------
+* cd /dir/to/with-all-*.class-files
+* jar cmf manifest.txt mpileupToNucCounts.jar *.class
+*
+* Where manifest.txt contains one line with (must end with newline):
+* ------
+* Main-Class: mpileupParser
+*
+* ------
+* mpileupParser is the class with function `public static void main`
+*/
+
+
 class Pile {
 
 	public String extractLineCoords(String[] pileupLine){

@@ -3,12 +3,10 @@ import pybedtools
 import os
 import tempfile
 import subprocess
-import pycoverage
 import gzip
 import re
-import pympileup
+import genomeGraphs
 
-##COUNT_HEADER= ['depth', 'A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n', 'Z', 'z']
 COUNT_HEADER= ['A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n', 'Z', 'z']
 
 def getLibrarySizes(bams, samtools_path= ''):
