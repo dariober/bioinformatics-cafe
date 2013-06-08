@@ -2,8 +2,6 @@
 
 TO DO:
 
-* Pre-filetering step: Execption thrown by `bedtools sort` if no lines are in input
-
 <wiki:toc max_depth="2" />
 
 = Introduction  & Description =
