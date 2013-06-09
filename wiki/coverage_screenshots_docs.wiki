@@ -1,4 +1,4 @@
-#summary UNDER CONSTRUCTION: Documentation for genomeGraphs.py
+#summary UNDER CONSTRUCTION: Documentation for genomeGraphs
 
 TO DO:
 
@@ -10,14 +10,14 @@ TO DO:
 http://bioinformatics-misc.googlecode.com/svn/wiki/images/screenshot.jpg
 ----
 
-*genomeGraphs.py* produces coverage files and plots for one or more input files
+*genomeGraphs* produces coverage files and plots for one or more input files
 at the intervals specified in a bed file. Plots are written in pdf format, one per
 region or they can be concatenated in a single file.
 
 Plots can be annotated according to one or more GTF, BED or bed-like files and decorated with the individual
 nucleotides if a corresponding reference FASTA file is provided.
 
-In contrast to most genome browsers (IGV, IGB etc.) `genomeGraphs.py`
+In contrast to most genome browsers (IGV, IGB etc.) `genomeGraphs`
 is deliberately designed to be avoid any graphical user interface so that it can be
 included in script and pipelines and can be run on enviroments not designed to
 support GUIs (e.g. computer farms). The graphical output can be customized via
@@ -36,10 +36,10 @@ the data without going through the expensive operation of counting depth and bas
 
 = System Requirements & Installation =
 
-`genomeGraphs.py` lives at http://bioinformatics-misc.googlecode.com/svn/trunk/genomeGraphs.py.
+`genomeGraphs` lives at http://bioinformatics-misc.googlecode.com/svn/trunk/genomeGraphs.
 A package to download is at [_in prep_].
 
-All the components that make `genomeGraphs.py` are freely available from
+All the components that make `genomeGraphs` are freely available from
 the net.
 
     * *python 2.7* Version 2.5+ should do, 3.x not yet.
@@ -55,34 +55,65 @@ the net.
 
 == Installation ==
 
-Assuming the requirements above are satisfied there isn't really any installation to be done.
-Just download, unzip, and copy `genomeGraphs.py` to a directory of your convenience
+Assuming the requirements above are satisfied, download and install `genomeGraphs` like any other python package. 
+
 {{{
 tar zxvf genomeGraphs-x.x.x.tar.gz
 cd genomeGraphs-x.x.x
-cp genomeGraphs.py ~/bin/
+
+## For a system-wide installation (requires root access):
+python setup.py install --install-scripts /usr/local/bin/
+
+## For a user-based installation (no need of root access):
+python setup.py install --install-scripts $HOME/bin/ --user 
 }}}
+
+Use the `--install-scripts` option to put the executable script `genomeGraphs` in a directory of your choice, e.g. one on your `PATH`. 
 
 = Accepted input =
 
-File extension matters as file type and hence the behaviour of `genomeGraphs.py`
-is determined by the extension.
-With the exception of FASTA files, all other inputs can be gzip'd.
+=== Files to plot ===
 
-    * *bam* files *sorted* and *indexed* (see above how to). These files are plotted
-    as coverage tracks either as count of reads or reads per million.
-    
-    * *bedGraph* files 
+File passed to *`--ibam/-i`* option can be:
 
-    * *BED* file of regions to compute and plot coverage for. Bed file should be tab separated and have at least three columns for chrom, start and end position. An addtional column with the feature name might be included and will be part of the output file names. Addtional columns are ignored.
+    * *`bam`* files _sorted_ and _indexed_ (see below how to). File extension must be `.bam`
 
-    * _Optional_ *GTF/GFF/BED* file with annotation to be displayed. Such files can be obtained from UCSC, ENSEMBL or custom made. Make sure chromosome names are consistent across files!
- 
-    * _Optional_ *FASTA* file of the reference sequence used to produce the alignments. Only needed to display the sequence of the interval.
+    * *`bedGraph`* files. Extension must be `.bedGraph`
 
-See also [https://genome.ucsc.edu/FAQ/FAQformat.html UCSC] for description if file formats.
+    * *`BED/GTF/GFF`* format. BED files must be tab separated, no header lines, with at least three columns for chrom, start and end position.
 
-_MEMO_ You can sort and index a bam file, assuming you have samtools (http://samtools.sourceforge.net/), with
+These files can be listed one by one, using glob (e.g. `-i *.bam *.bed`) or via `stdin` e.g. 
+{{{
+genomeGraphs -i *.bam -b ...
+## Or
+ls *.bam | genomeGraphs -i - -b ...
+}}} 
+
+=== Region files ===
+
+The file specifying which regions should be plotted (*`--bed/-b`* option) must be:
+
+    * *`BED/GTF/GFF`* format. If present, the value in the 4th column of the bed files is used as feature name (e.g. gene name).
+
+Regions can be read from `stdin` e.g. 
+
+{{{
+cat actb.beb | genomeGraphs -b - -i ...
+## Or
+echo "chr1 0 1000" | genomeGraphs -b - -i ...
+}}}
+
+=== Additional files ===
+
+The reference sequence file (*`--fasta/-f`*) must be in standard FASTA format.
+
+The extension of the input files determine how plots are produced: bam files are shown as read pileups, bedgraphs as profiles of the fourth column, which therefore has to be numeric. bed, gtf and any other file (in bed format no matter the extension) are shown as annotation.
+
+With the exception of BAM and FASTA, input files can be gzip'd and in this case the extension must end in `.gz` (e.g. `myfile.bedGraph.gz`).
+
+See also [https://genome.ucsc.edu/FAQ/FAQformat.html UCSC] for description of file formats.
+
+_MEMO_ You can sort and index a bam file with samtools (http://samtools.sourceforge.net/):
 
 {{{
 samtools sort myfile.bam myfile_sort
@@ -113,7 +144,7 @@ Files are named according to the bed interval from which they come (`chrom_start
 
 For example, the following execution
 {{{
-genomeGraphs.py --ibam *.bam --gtf genes.gtf.gz --bed actb.bed --rpm 
+genomeGraphs --ibam *.bam genes.gtf.gz --bed actb.bed --rpm 
 }}}
 
 will plot the coverage of all the bam files in the current directory at the
@@ -127,7 +158,7 @@ Consider this before passing the whole of human refseq to coverge_sscreenshots.
 ----
 http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr7_5566757_5566829_ACTB.jpg
 
-Example output from `genomeGraphs.py` with annotation and colour code nucleotide counts.
+Example output from `genomeGraphs` with annotation and colour code nucleotide counts.
 ----
 
 = Usage & Examples =
@@ -142,7 +173,7 @@ cat actb.bed
 }}}
 To see all the available options and get help
 {{{    
-genomeGraphs.py -h
+genomeGraphs -h
 }}}
 
 == Example 1: Vanilla ==
@@ -151,7 +182,7 @@ The minimum necessary to produce coverage plots is bam files *sorted* and *index
 a bed file of positions to capture. (In fact, bam files are not necessary if you want to re-plot
 existing data, see below)
 {{{
-genomeGraphs.py -i bam/ds0*.bam -b actb.bed
+genomeGraphs -i bam/ds0*.bam -b actb.bed
 }}}
 Default settings plot raw read counts scaling each region to the maximum of all the
 files.
@@ -162,7 +193,7 @@ Now, rescale coverage to reads per million (RPM) and set the y-axis to 40000 rpm
 of exons and CDSs in the target intervals and report the underlying nucleotide sequence. Sequence is
 reported if the target region is smaller than `--max_fa` bp. Finally, concatenate the files in a single pdf (requires `PyPDF2 <https://pypi.python.org/pypi/PyPDF2/>`_ package)
 {{{
-genomeGraphs.py -i bam/ds0*.bam \
+genomeGraphs -i bam/ds0*.bam \
     -b actb.bed \
     -g genes.gtf \
     -f chr7.fa \
@@ -180,7 +211,7 @@ want is to change the graphical output. If we saved the intermediate output file
 from a previous run by seeting `--tmpdir`, we can re-use them with option `--replot`
 and change the graphical settings to our liking.
 {{{
-genomeGraphs.py -b actb.bed --tmpdir wdir --rpm \
+genomeGraphs -b actb.bed --tmpdir wdir --rpm \
     --col_cov pink \
     --pwidth 12 \
     --psize 12 \
@@ -227,7 +258,7 @@ If you find some of the graphics features annoying, here's how to turn them off:
 
 === Colours ===
 
-The colours passed to `genomeGraphs.py` are in turn passed to R verbatim,
+The colours passed to `genomeGraphs` are in turn passed to R verbatim,
 therefore any R colour name or format is valid. R understands most English names of
 colours (_red_, _lightblue_ etc.) as well as the RGB representation (e.g. `#0000FF`, `00255`).
 See this nice [http://research.stowers-institute.org/efg/R/Color/Chart/ColorChart.pdf chart]
