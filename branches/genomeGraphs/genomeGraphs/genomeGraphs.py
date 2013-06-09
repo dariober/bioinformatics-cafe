@@ -30,31 +30,32 @@ import pympileup
 # 4. Add this parameter to the list `allowed_args` in  pycoverage.read_parfile()
 
 parser = argparse.ArgumentParser(description= """
+
 DESCRIPTION
 
+    genomeGraphs is a command line oriented genome viewer.
 
-
-    Produce coverage plots for one or more bam/bedgraph/gtf/bed files at the
-    intervals specified in a bed file. 
+    It produces pdf files of coverage plots for one or more bam/bedgraph/gtf/bed
+    files at the intervals specified in a bed file. 
     
-    Plots can be annotated according to a gtf or bed file and decorated with the individual
-    nucleotides if a corresponding reference FASTA file is provided.
+    Plots can be annotated according to a gtf or bed file and decorated with the
+    individual nucleotides if a corresponding reference FASTA file is provided.
     
-    Intermediate output files, including the R script, can be saved for future inspection.
+    Intermediate output files, including the R script, can be saved for future
+    inspection.
 
 EXAMPLE:
-    ## Plot coverage of all the bam files in current dir in the region(s) in file actb.bed
-    ## Annotate plot given a GTF file.
-    genomeGraphs.py --ibam *.bam --bed actb.bed
 
-    ## Keep intermediate files:
-    genomeGraphs.py --ibam ds05*.bam --bed actb.bed --tmpdir actb
+    Plot coverage of all the bam files in current dir in the region(s) in file
+    actb.bed.
+    
+        genomeGraphs -i *.bam -b actb.bed
 
 SEE ALSO:
+    
     Documentation at
     http://code.google.com/p/bioinformatics-misc/wiki/coverage_screenshots_docs
-
-    """, prog= 'genomeGraphs') # , formatter_class= argparse.RawTextHelpFormatter
+    """, prog= 'genomeGraphs', formatter_class= argparse.RawDescriptionHelpFormatter) # , formatter_class= argparse.RawTextHelpFormatter
 
 # -----------------------------------------------------------------------------
 
@@ -82,11 +83,11 @@ Use - to read from stdin.
 input_args.add_argument('--slop', '-s',
                    default= ['0.05', '0.05'],
                    nargs= '+',
-                   help='''Extend (zoom-out) each interval in --bed input. If integer(s),
-extend by that many bases left and/or right. If float(s), extend by that percent
-of interval size (e.g. 0.1 to extend by 10%%). If one value is given, it will be
-applied to left and right. If two values, first will be applied to left and second
-to right. Must be >= 0.
+                   help='''One or two integeres or floats to extend (zoom-out) each
+interval in --bed input. If integer(s), extend by that many bases left and/or right.
+If float(s), extend by that percent of interval size (e.g. 0.1 to extend by 10%%).
+If one value is given, it will be applied to left and right. If two values, first
+will be applied to left and second to right. Must be >= 0.
                    ''')
 
 
@@ -111,7 +112,7 @@ output_args.add_argument('--outdir', '-d',
                    required= False,
                    default= None,
                    help='''Output directory for the pdf files. Default to current
-dir. NB: Not to be confused with --tmpdir where temp file go.
+dir. NB: Not to be confused with --tmpdir where working files go.
                    ''')
 
 output_args.add_argument('--onefile', '-o',
@@ -137,7 +138,7 @@ resolution while larger values more jagged profile. Default 1000.
 If nwinds < maxseq,  nwinds is reset to maxseq.  
 ''')
 
-output_args.add_argument('--replot',
+output_args.add_argument('--replot', 
                    action= 'store_true',
                    help='''Re-draw plots using the output files from a previous
 execution. This option allows to reformat the plots without going thorugh the time
@@ -165,7 +166,8 @@ valid options.
 ''')
 
 # -----------------------------------------------------------------------------
-plot_coverage= parser.add_argument_group('Plot of coverage', '')
+plot_coverage= parser.add_argument_group('Coverage options', '''
+These options affect all and only the coverage tracks''')
 
 plot_coverage.add_argument('--maxseq', '-m',
                     default= 100,
@@ -193,8 +195,10 @@ Irrelvant if --maxseq is exceeded or a reference is not given to --fasta.
                    ''')
 
 # -----------------------------------------------------------------------------
-annotation_args= parser.add_argument_group('Track options',
-    'Graphical options for the individual tracks.')
+annotation_args= parser.add_argument_group('Track options', '''
+Graphical options to draw coverage and annotation profiles. Multiple arguments
+recycled. E.g. `--col_line blue red` to make blue tracks 1st, 3rd, 5th, ... and
+red tracks 2nd, 4th, 6th, ...''')
 
 annotation_args.add_argument('--col_line', default= ['darkblue'], nargs= '+',
     help='''Colour of the profile line of each coverage track. Default blue''')
@@ -214,18 +218,10 @@ annotation_args.add_argument('--rcode', default= [''], nargs= '+',
 Useful to annotate plots. E.g. "abline(h= 10)". Enclose each string in double-quotes and use single quotes for the R code inside (To be fixed).''')
 
 # -----------------------------------------------------------------------------
-xaxis_args= parser.add_argument_group('Annotation of x-axis',
-    'Affect x-axis labelling, range and sequence of interval')
-
-xaxis_args.add_argument('--cex_axis', default= 1, type= float, help='''Character exapansion for the axis annotation.''')
-# xaxis_args.add_argument('--cex_range', default= 1, type= float, help='''Character exapansion for the range of the x-axis''')
-xaxis_args.add_argument('--cex_seq', default= 1, type= float, help='''Character exapansion for the nucleotide sequence''')
-xaxis_args.add_argument('--col_seq', default= 'black', help='''Colour for the nucleotide sequence.''')
-xaxis_args.add_argument('--col_mark', default= ['red'], nargs= '+', help='''Colour for the two symbols (triangles) marking the limits of the bed region.
-    Default red. Recycled''')
-
-# -----------------------------------------------------------------------------
-plot_layout= parser.add_argument_group('Plot layout', '')
+plot_layout= parser.add_argument_group('Plot layout', '''
+Most of these options take one argument per plot with arguments recyled if not
+enough. E.g. `--ylab Count RPM` to label "Count" the 1st, 3nd, ... plot and "RPM"
+the 2nd, 4th ... plot''')
 
 plot_layout.add_argument('--ymax', '-Y',
                     default= ['indiv'],
@@ -264,7 +260,7 @@ plot_layout.add_argument('--vheights', '-vh',
                     type= str,
                     nargs= '+',
                     help='''List of proportional heights to be passed to R layout(). Recycled.
-E.g. if `4 2 1` will make the 1st track twice the size of the 2nd and 4 times the height of 3rd.''')
+E.g. if `4 2 1` will make the 1st track twice the height of the 2nd and 4 times the height of 3rd.''')
 
 plot_layout.add_argument('--mar_heights', '-mh',
                     default= [-1, -1],
@@ -272,27 +268,44 @@ plot_layout.add_argument('--mar_heights', '-mh',
                     nargs= 2,
                     help='''List of two proportional heights to assign to the top panel (where region name
 is printed) and bottom panel (where you have chromosome position, range, sequence)
-E.g. if `--vheights 4` and `--mar_heights 1 2` the top panel is 1/4th the size of the annotation track and
+E.g. if `--vheights 4` and `--mar_heights 1 2` the top panel is 1/4th the annotation track and
 the bottom 1/2. Negative values will switch to default.''')
 
 
 plot_layout.add_argument('--names', default= None, nargs= '+', help='''List of names for the samples. Default ('') is to use the names of the
-bam files with path and .bam extension stripped. Recycled as necessary.''')
+input files. Recycled as necessary.''')
 plot_layout.add_argument('--cex_names', default= 1, type= float, help='''Character exapansion for the names of the samples''')
 plot_layout.add_argument('--col_names', default= ['#0000FF50'], nargs= '+',
     help='''List of colours for the name of each samples. Colours recycled as necessary.
 Useful to colour-code samples according to experimemtal design.''')
 
-plot_layout.add_argument('--bg', nargs= '+', default= ['grey95'], help='''List of colours for the plot backgrounds. Recycled as necessary.
-Useful to colour code samples sharing the same conditions''')
+plot_layout.add_argument('--bg', nargs= '+', default= ['grey95'],
+    help='''List of colours for the plot backgrounds. Recycled as necessary.''')
+
+plot_layout.add_argument('--col_grid', default= ['darkgrey'], nargs= '+',
+    help='''Grid colour. Recycled.''')
+
+plot_layout.add_argument('--col_mark', default= ['red'], nargs= '+', help='''Colour for the two symbols (triangles) marking the limits of the bed region.
+    Default red. Recycled''')
 
 plot_layout.add_argument('--overplot', '-op', nargs= '+', default= ['NA'], type= int,
-    help='''_In prep_: List of characters to identify coverage tracks to be drawn on the same plot.
-Recycled.''')
+    help='''List of integers to identify *coverage* tracks to be drawn on the same plot.
+Annotation tracks are not affected. Recycled. E.g. to have the 1st and 3rd input
+file on the same plot and the 2nd and 4th on the same plot, use `-op 1 2 1 2`''')
 
 # -----------------------------------------------------------------------------
-figure_size_args= parser.add_argument_group('Global graphical optons',
-    'These options affect all the tracks or the figure as a whole')
+
+xaxis_args= parser.add_argument_group('Annotation of x-axis', '''
+Affect x-axis labelling, range and sequence of interval''')
+
+xaxis_args.add_argument('--cex_axis', default= 1, type= float, help='''Character exapansion for the axis annotation.''')
+# xaxis_args.add_argument('--cex_range', default= 1, type= float, help='''Character exapansion for the range of the x-axis''')
+xaxis_args.add_argument('--cex_seq', default= 1, type= float, help='''Character exapansion for the nucleotide sequence''')
+xaxis_args.add_argument('--col_seq', default= 'black', help='''Colour for the nucleotide sequence.''')
+
+# -----------------------------------------------------------------------------
+figure_size_args= parser.add_argument_group('Global graphical options', '''
+These options the output figure as a whole''')
 
 figure_size_args.add_argument('--title', default= None,
     help= '''Title for each region. Default are the region coords <chrom>:<start>-<end>
@@ -305,8 +318,6 @@ figure_size_args.add_argument('--cex_title', default= 1, type= float,
 
 figure_size_args.add_argument('--mar', default= 4, type= float, help='''Spacing on the left margin in line numbers. Default 4.
 Increase or decrease to give space to y-axis labels.''')
-
-figure_size_args.add_argument('--col_grid', default= ['darkgrey'], nargs= '+', help='''Colour for grid(s), recycled.''')
 
 figure_size_args.add_argument('--pwidth', '-W',
                     default= 15,
