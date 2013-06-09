@@ -246,7 +246,7 @@ If you find some of the graphics features annoying, here's how to turn them off:
 || `--bg NA`              || Don't use any background for plot area    ||
 || `--grid NA`            || Don't draw grid lines ||
 || `--col_mark NA`        || Don't plot the triangles marking the extremes of the input bed region ||
-|| `--nwinds 10000000000` || Don't group read counts or score from `--ibam` in windows (could generate huge pdf files!) ||
+|| `--nwinds 1000000` || Don't group read counts or score from `--ibam` in windows (could generate huge pdf files!) ||
 || `--slop 0`             || Don't extend `--bed` features for plotting. Plot them exactly as they are ||
 || `--maxseq 0`           || Don't print sequence at the bottom of the plotting figure  ||
 || `--col_seq NA`         || _Same effect as above_ ||
