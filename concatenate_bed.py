@@ -1,10 +1,10 @@
-#!/home/berald01/.local/bin/python
-
+#!/usr/bin/env python
 
 import os
 import argparse
 import sys
 import re
+import gzip
 
 parser = argparse.ArgumentParser(description= """
 
@@ -117,7 +117,10 @@ for f in args.input:
             file_id= re.sub(r, '', file_id)
     print('Concatenating: %s; File ID: %s' %(f, file_id))
 
-    fin= open(f)
+    if f.endswith('.gz')
+        fin= gzip.open(f)
+    else:
+        fin= open(f)
         
     for line in fin:
         if n < args.skip:
