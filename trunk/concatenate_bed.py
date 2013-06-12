@@ -103,8 +103,10 @@ if args.output in args.input:
 #if args.header:
 #    print(args.header)
 
-fout= open(args.output, 'w')
-
+if args.output.endswith('.gz'):
+    fout= gzip.open(args.output, 'wb')
+else:
+    fout= open(args.output, 'w')
 ncols= 0 ## Keep track of the number of columns in eah line in order to fill in short rows
 concbed= []
 for f in args.input:
@@ -117,7 +119,7 @@ for f in args.input:
             file_id= re.sub(r, '', file_id)
     print('Concatenating: %s; File ID: %s' %(f, file_id))
 
-    if f.endswith('.gz')
+    if f.endswith('.gz'):
         fin= gzip.open(f)
     else:
         fin= open(f)

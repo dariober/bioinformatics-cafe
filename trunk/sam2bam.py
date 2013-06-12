@@ -78,6 +78,11 @@ def main():
    args= parser.parse_args()
    
    sam= args.input
+   if sam == '-':
+       sam= sys.stdin.readlines()
+       if len(sam) > 1:
+           sys.exit('Only one input file allowed!. Got %s' %(sam))
+       sam= sam[0].strip()
    if not sam.endswith('.sam'):
        sys.exit('Input file "%s" does not have extension .sam' %(sam))
    
