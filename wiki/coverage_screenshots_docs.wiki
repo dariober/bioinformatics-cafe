@@ -2,6 +2,8 @@
 
 TO DO:
 
+  * IMPORTANT: Error if -i files has no overlap with -b 
+
 <wiki:toc max_depth="2" />
 
 = Introduction  & Description =
