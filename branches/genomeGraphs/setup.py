@@ -6,7 +6,6 @@ _MEMO_ For a fresh re-install
 
 cd /go//to/setup.py
 
-rm -r /Users/berald01/.local/lib/python2.7/site-packages/genomeGraphs
 python setup.py sdist
 cd dist/
 tar zxvf genomeGraphs-0.1.0.tar.gz

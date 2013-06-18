@@ -451,7 +451,9 @@ def main():
         inbed= open(args.bed)
     inbed= pybedtools.BedTool(inbed).sort() ## inbed is args.bed file handle
     # ---------------------[ Pre-filter non-bam files ]-------------------------
-    xinbed= pybedtools.BedTool(inbed).each(slopbed, slop).saveas()
+    xinbed= pybedtools.BedTool(inbed).each(slopbed, slop).merge().saveas()
+    ## BigWigs: Pass them through bigWigToBedGraph.py and replace the output name
+    ## in nonbamlist. exts: .bw, .bigWig, .bigwig 
     nonbam_dict= {}
     for nonbam in nonbamlist:
         nonbam_dict[nonbam]= prefilter_nonbam_multiproc(nonbam= nonbam, inbed= xinbed, tmpdir= tmpdir)
