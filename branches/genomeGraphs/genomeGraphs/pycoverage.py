@@ -180,7 +180,11 @@ def prefilter_nonbam_multiproc(inbed, nonbam, tmpdir):
     fn= tempfile.NamedTemporaryFile(dir= tmpdir, suffix= '_' + bname, delete= False)
     x_name= fn.name
     pynonbam= pybedtools.BedTool(nonbam)
-    nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True).sort().saveas(x_name)
+    nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True)
+    if nonbam_x_inbed.count() == 0:
+        pass        
+    else:
+        nonbam_x_inbed= nonbam_x_inbed.sort().saveas(x_name)
     #ori_new= (nonbam, x_name)
     return(x_name)
 
@@ -311,26 +315,32 @@ def prepare_nonbam_file(infile_name, outfile_handle, region, use_file_name):
     Return:
         Number of intervals that overlap `region` (n lines)
     """
-    infile= pybedtools.BedTool(infile_name) 
-    region_x_infile= pybedtools.BedTool().intersect(a= infile, b= pybedtools.BedTool(str(region), from_string= True), sorted= True)
+    infile= pybedtools.BedTool(infile_name)
     nlines= 0
-    for line in region_x_infile:
-        if line.name == '':
-            name= 'NA'
-        else:
-            name= line.name
-        if line.strand == '':
-            strand= '.'
-        else:
-            strand= line.strand
-        if infile_name.endswith('.gtf') or infile_name.endswith('.gtf.gz'):
-            outline= [line.chrom, line.start - 1, line.end, use_file_name] + ['NA'] * len(pympileup.COUNT_HEADER) + [line.fields[2], name, strand] ## NA for padding depthACTGNZactgnz
-        elif infile_name.lower().endswith('.bedgraph') or infile_name.lower().endswith('.bedgraph.gz'):
-            outline= [line.chrom, line.start, line.end, use_file_name] + ['0'] * (len(pympileup.COUNT_HEADER)-1) + [line.name, 'coverage', 'NA', strand] ## The column to plot is line.name, ['0']*9 is for padding
-        else:
-            outline= [line.chrom, line.start, line.end, use_file_name, ] + ['NA'] * len(pympileup.COUNT_HEADER) + ['generic', line.name, strand]
-        outfile_handle.write('\t'.join([str(x) for x in outline]) + '\n')
-        nlines += 1
+
+    if infile.head(n= 1, as_string= True) == '' :
+        """If there are no intersecting features return 0
+        """
+        pass
+    else:
+        region_x_infile= pybedtools.BedTool().intersect(a= infile, b= pybedtools.BedTool(str(region), from_string= True), sorted= True)
+        for line in region_x_infile:
+            if line.name == '':
+                name= 'NA'
+            else:
+                name= line.name
+            if line.strand == '':
+                strand= '.'
+            else:
+                strand= line.strand
+            if infile_name.endswith('.gtf') or infile_name.endswith('.gtf.gz'):
+                outline= [line.chrom, line.start - 1, line.end, use_file_name] + ['NA'] * len(pympileup.COUNT_HEADER) + [line.fields[2], name, strand] ## NA for padding depthACTGNZactgnz
+            elif infile_name.lower().endswith('.bedgraph') or infile_name.lower().endswith('.bedgraph.gz'):
+                outline= [line.chrom, line.start, line.end, use_file_name] + ['0'] * (len(pympileup.COUNT_HEADER)-1) + [line.name, 'coverage', 'NA', strand] ## The column to plot is line.name, ['0']*9 is for padding
+            else:
+                outline= [line.chrom, line.start, line.end, use_file_name, ] + ['NA'] * len(pympileup.COUNT_HEADER) + ['generic', line.name, strand]
+            outfile_handle.write('\t'.join([str(x) for x in outline]) + '\n')
+            nlines += 1
     return(nlines)
 
 def prepare_reference_fasta(fasta_seq_name, maxseq, region, fasta):

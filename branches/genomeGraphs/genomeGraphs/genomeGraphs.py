@@ -59,7 +59,7 @@ SEE ALSO:
 
 # -----------------------------------------------------------------------------
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.1.0')
+parser.add_argument('--version', action='version', version='%(prog)s 0.1.1a')
 
 input_args= parser.add_argument_group('Input options', '')
 
