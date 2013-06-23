@@ -70,8 +70,8 @@ read.bsdata<- function(infiles, library_ids= FALSE, ...){
     ## Get union of all positions. Make it BED fo#rmat
     allPos<- unique(bsdata[, c('chrom', 'start', 'end', 'locus', 'strand')])
     allPos$score<- '.'
-    BSobj@loci<- allPos[, c('chrom', 'start', 'end', 'locus', 'score', 'strand')] ## order(allPos$chrom, allPos$start, allPos$end)
-    #rm(allPos)
+    BSobj@loci<- as.ffdf(allPos[, c('chrom', 'start', 'end', 'locus', 'score', 'strand')]) ## order(allPos$chrom, allPos$start, allPos$end)
+    rm(allPos)
     ## Matrix of total counts
     cat('Creating matrix of total counts...\n')
     tot_reads<- reshape(bsdata[, c('locus', 'library_id', 'tot_reads')], timevar= 'library_id', v.names= 'tot_reads', idvar= 'locus', direction= 'wide')

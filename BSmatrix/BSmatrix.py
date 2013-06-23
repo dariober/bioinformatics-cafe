@@ -125,6 +125,10 @@ for x in input:
 if len(outnames) != len(set(outnames)):
     sys.exit("Duplicate output IDs found in %s" %(outfiles))
 
+print('\nInput file => library name:/n')
+for i,o in zip(input, outnames):
+    print(i + ' =>  ' + o)
+
 ## Prepare OUTPUT FILES
 ## --------------------
 if not os.path.exists(args.outdir):
@@ -137,26 +141,33 @@ if '/' in args.prefix or args.prefix.strip().startswith('.') or args.prefix.star
     sys.exit('Invalid prefix. Got "%s" ' %(args.prefix))
     
 outprefix= os.path.join(args.outdir, args.prefix)
+
 floci= outprefix + '.loci.gz'
+fpctmet= outprefix + '.pct_met.mat.gz'
+fcntmet= outprefix + '.cnt_met.mat.gz'
+ftotreads= outprefix + '.tot_reads.mat.gz'
+
 try:
     fout_loci= gzip.open(floci, 'wb')
-    fout_cnt_met= gzip.open(outprefix + '.cnt_met.mat.gz', 'wb')
-    fout_tot_reads= gzip.open(outprefix + '.tot_reads.mat.gz', 'wb')
-    fout_pct_met= gzip.open(outprefix + '.pct_met.mat.gz', 'wb')
+    fout_pct_met= gzip.open(fpctmet, 'wb')
+    fout_cnt_met= gzip.open(fcntmet, 'wb')
+    fout_tot_reads= gzip.open(ftotreads, 'wb')
 except IOError:
     sys.exit('I cannot create output files in dir "%s" with prefix "%s".' %(args.outdir, args.prefix))
 
 fout_loci.write('\t'.join(['chrom', 'start', 'end', 'locus', 'score', 'strand']) + '\n')
 
-fout_cnt_met.write('\t'.join(['locus'] + outnames) + '\n')
 fout_pct_met.write('\t'.join(['locus'] + outnames) + '\n')
+fout_cnt_met.write('\t'.join(['locus'] + outnames) + '\n')
 fout_tot_reads.write('\t'.join(['locus'] + outnames) + '\n')
 
+print('\nOutput files:\n%s' %('\n'.join([floci, fpctmet, fcntmet, ftotreads])))
 ## ----------------------------
 ## 1. Create union of positions
 ## ----------------------------
 
 ## See http://stackoverflow.com/questions/12460943/merging-pre-sorted-files-without-reading-everything-into-memory
+print('\nGenerating union of all positions...')
 decorated = [
     [ ( extract_key(line), bdgLine_to_locusLine(line) ) for line in f if line.strip() != '']
     for f in input_fin]
@@ -174,7 +185,7 @@ for x in input_fin:
 
 ## 2. Re-pass through all the files to generate matrices (rows are from the union)
 ## -----------------------------------------------------------------------------
-
+print('\nGenerating matrices...')
 fout_loci= gzip.open(floci)
 x= fout_loci.readline()
 input_fin= listOpener(input)
