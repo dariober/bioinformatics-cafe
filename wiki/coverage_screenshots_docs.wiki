@@ -2,22 +2,8 @@
 
 TO DO:
 
-  * IMPORTANT: Fixed: _Error if -i files has no overlap with -b_
-  * Error with pileup line
-{{{
-amtools mpileup  -BQ0 -d10000000 -r chr10:57687082-57689256 /lustre/sblab/berald01/repository/bam_clean/grm002_Rep1.130622.clean.mm9.bwa.bam /lustre/sblab/berald01/repository/bam_clean/grm003_Rep2.130622.clean.mm9.bwa.bam /lustre/sblab/berald01/repository/bam_clean/grm004_Rep3.130622.clean.mm9.bwa.bam | head -n 623 | java -jar /cstHome/home/berald01/svn_checkout/bioinformatics-misc/branches/genomeGraphs/genomeGraphs/mpileupToNucCounts.jar
-
-Exception in thread "main" java.lang.NumberFormatException: For input string: ""
-	at java.lang.NumberFormatException.forInputString(NumberFormatException.java:48)
-	at java.lang.Integer.parseInt(Integer.java:470)
-	at java.lang.Integer.parseInt(Integer.java:499)
-	at Pile.condenseBasesToHashMapCount(mpileupParser.java:92)
-	at Pile.extractNucCountsFromPileupLine(mpileupParser.java:126)
-	at mpileupParser.main(mpileupParser.java:182)
-
-## Line 623 is:
-chr10	57687705	N	2	C^-C	AC	1	C	E	2	Cc	GG
-}}}
+  * Fixed ~~Error if -i files has no overlap with -b~~
+  * Fixed (use `String.equals()` instead of `==`) ~~Error with pileup line `echo -e "chr10\t57687705\tN\t2\tC^-C"`~~
 
 <wiki:toc max_depth="2" />
 
