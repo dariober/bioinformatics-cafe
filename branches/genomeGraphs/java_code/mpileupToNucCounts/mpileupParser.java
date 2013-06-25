@@ -79,7 +79,7 @@ class Pile {
 			String b = Character.toString(c);
 			if (nskip > 0){
 				nskip -= 1;
-			} else if (b  == "^"){
+			} else if (b.equals("^")){
 				skip= true;
 			} else if(skip){
 				skip= false;
