@@ -105,6 +105,12 @@ input_args.add_argument('--parfile', '-pf',
                     default= None,
                     help='''_In prep_: Parameter file to get arguments from.''')
 
+input_args.add_argument('--sorted',
+                    action= 'store_true',
+                    help='''Use bedtools' "chromsweep" algorithm to input -i *and* -b
+sorted by position `sort -k1,1 -k2,2n`.''')
+
+
 # -----------------------------------------------------------------------------
 output_args = parser.add_argument_group('Output options', '')
 
@@ -456,7 +462,7 @@ def main():
     ## in nonbamlist. exts: .bw, .bigWig, .bigwig 
     nonbam_dict= {}
     for nonbam in nonbamlist:
-        nonbam_dict[nonbam]= prefilter_nonbam_multiproc(nonbam= nonbam, inbed= xinbed, tmpdir= tmpdir)
+        nonbam_dict[nonbam]= prefilter_nonbam_multiproc(nonbam= nonbam, inbed= xinbed, tmpdir= tmpdir, sorted= args.sorted)
 
 #        proc_list.append({'nonbam':nonbam, 'inbed':inbed, 'tmpdir':tmpdir})
 #    pool = multiprocessing.Pool(processes= args.nproc)

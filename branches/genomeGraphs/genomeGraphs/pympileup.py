@@ -1,3 +1,6 @@
+"""Functions to extract coverage and nucleotide counts from bam files.
+"""
+
 import sys
 import pybedtools
 import os

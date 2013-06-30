@@ -159,7 +159,7 @@ def dedupFileList(x):
             inputlist.append(a)
     return(inputlist)
 
-def prefilter_nonbam_multiproc(inbed, nonbam, tmpdir):
+def prefilter_nonbam_multiproc(inbed, nonbam, tmpdir, sorted):
     """For each filename in nonbamlist do the intersection with the regions in
     inbed. Produce filtered files to tmpdir and return a dict of original filenames
     and the filtered name
@@ -170,6 +170,8 @@ def prefilter_nonbam_multiproc(inbed, nonbam, tmpdir):
     tmpdir:
         Where intersected files will go. Output name is
         tmpdir/x_<original name w/o .gz>
+    sorted:
+        True/False passed to intersectbed(sorted) to use chromsweep algorithm
     Return:
         Name of the (temp) file with the filetered regions.
 #        dict of original names:filtered names
@@ -180,7 +182,7 @@ def prefilter_nonbam_multiproc(inbed, nonbam, tmpdir):
     fn= tempfile.NamedTemporaryFile(dir= tmpdir, suffix= '_' + bname, delete= False)
     x_name= fn.name
     pynonbam= pybedtools.BedTool(nonbam)
-    nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True)
+    nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True, sorted= sorted)
     if nonbam_x_inbed.count() == 0:
         pass        
     else:
