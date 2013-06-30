@@ -462,6 +462,7 @@ def main():
     ## in nonbamlist. exts: .bw, .bigWig, .bigwig 
     nonbam_dict= {}
     for nonbam in nonbamlist:
+        print('Pre-parsing %s' %(nonbam))
         nonbam_dict[nonbam]= prefilter_nonbam_multiproc(nonbam= nonbam, inbed= xinbed, tmpdir= tmpdir, sorted= args.sorted)
 
 #        proc_list.append({'nonbam':nonbam, 'inbed':inbed, 'tmpdir':tmpdir})
