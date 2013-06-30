@@ -178,17 +178,17 @@ def prefilter_nonbam_multiproc(inbed, nonbam, tmpdir, sorted):
 #        E.g. {'bedgraph/profile.bedGraph.gz': 'wdir/x_profile.bedGraph', 'annotation/genes.gtf.gz': 'wdir/x_genes.gtf'}
 #        Output files are *sorted*
     """
-    ## MEMO: mergeBed default returns only columns "chrom, start, end"
     bname= re.sub('\.gz$', '', os.path.split(nonbam)[1])
     fn= tempfile.NamedTemporaryFile(dir= tmpdir, suffix= '_' + bname, delete= False)
     x_name= fn.name
     pynonbam= pybedtools.BedTool(nonbam)
     ncol= len(list(pynonbam[0]))
+    ncolbed= len(list(inbed[0]))
     if not sorted:
         nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True, sorted= sorted)
     else:
-        ## 3 is the no. cols in a.file
-        nonbam_x_inbed= pybedtools.BedTool().intersect(b= pynonbam, a= inbed, wb= True, sorted= sorted).cut(range(3, ncol+3))
+        ## With sorted input the b.file is the "big one".
+        nonbam_x_inbed= pybedtools.BedTool().intersect(b= pynonbam, a= inbed, wb= True, sorted= sorted).cut(range(ncolbed, ncol+ncolbed))
     if nonbam_x_inbed.count() == 0:
         pass        
     else:
