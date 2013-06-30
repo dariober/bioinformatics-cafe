@@ -107,8 +107,9 @@ input_args.add_argument('--parfile', '-pf',
 
 input_args.add_argument('--sorted',
                     action= 'store_true',
-                    help='''Use bedtools' "chromsweep" algorithm to input -i *and* -b
-sorted by position `sort -k1,1 -k2,2n`.''')
+                    help='''Use bedtools' "chromsweep" algorithm to input -i
+sorted by position `sort -k1,1 -k2,2n`. Note that the -b input is always internally (re)sorted
+by bedtools.''')
 
 
 # -----------------------------------------------------------------------------
