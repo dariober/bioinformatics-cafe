@@ -16,7 +16,7 @@ cd ../../
 
 setup(
    name = 'genomeGraphs',
-   version = '0.1.1a',
+   version = '0.1.0',
    author = 'Dario Beraldi',
    author_email = 'dario.beraldi<at>gmail<dot>com',
    url= '',

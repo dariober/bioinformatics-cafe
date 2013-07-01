@@ -182,13 +182,21 @@ def prefilter_nonbam_multiproc(inbed, nonbam, tmpdir, sorted):
     fn= tempfile.NamedTemporaryFile(dir= tmpdir, suffix= '_' + bname, delete= False)
     x_name= fn.name
     pynonbam= pybedtools.BedTool(nonbam)
-    ncol= len(list(pynonbam[0]))
+    ncolbdg= len(list(pynonbam[0]))
     ncolbed= len(list(inbed[0]))
     if not sorted:
         nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True, sorted= sorted)
     else:
-        ## With sorted input the b.file is the "big one".
-        nonbam_x_inbed= pybedtools.BedTool().intersect(b= pynonbam, a= inbed, wb= True, sorted= sorted).cut(range(ncolbed, ncol+ncolbed))
+        ## With sorted input the b.file is the "big one" (e.g. bedgraph).
+        ## We need to rows from the b-file which are the columns after the a-file. Use cut to get these columns
+        ## Since a b-feature can span several a-features, use sort | uniq the remove duplicate rows coming from the b-file
+        nonbam_x_inbed= pybedtools.BedTool().intersect(b= pynonbam, a= inbed, wb= True, sorted= sorted).cut(range(ncolbed, ncolbdg+ncolbed)).saveas()
+        cmd= 'sort -k1,1 -k2,2n -k3,3n %(bed)s | uniq > %(bedu)s; mv %(bedu)s %(bed)s' %{'bed': nonbam_x_inbed.fn, 'bedu': nonbam_x_inbed.fn + '.uniq'}
+        p= subprocess.Popen(cmd, shell= True, stderr= subprocess.PIPE, stdout= subprocess.PIPE)
+        stdout, stderr= p.communicate()
+        if p.returncode != 0:
+            print(sterr)
+            sys.exit('\n\nError executing \n%s\n' %(cmd))
     if nonbam_x_inbed.count() == 0:
         pass        
     else:

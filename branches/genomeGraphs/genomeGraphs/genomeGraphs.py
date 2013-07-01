@@ -11,6 +11,8 @@ from pycoverage import *
 from validate_args import *
 import pympileup
 
+VERSION= '0.1.0a'
+
 # HOWTO: Add recyclable graphical parameters
 # ------------------------------------------
 # E.g. we want to add a new col parameter that has to be applied to each track.
@@ -59,7 +61,7 @@ SEE ALSO:
 
 # -----------------------------------------------------------------------------
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.1.1a')
+parser.add_argument('--version', action='version', version='%(prog)s '  + VERSION)
 
 input_args= parser.add_argument_group('Input options', '')
 
