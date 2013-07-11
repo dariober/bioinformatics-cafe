@@ -2,115 +2,124 @@
 
 library(ff)
 library(ffbase)
-
-### Object to store BS data in format similar to limma
+# library(bigmemory)
+# library(foreach)
+# library(doMC)
 
 setOldClass("ff_matrix")
+setOldClass("ffdf")
+
+
+name.reader<- function(m){
+	"Get colnames from input file (matrix), skipping first column (this is row names)"
+	dfsample<- read.table(m, sep= '\t', nrows= 1, colClasses= 'character')
+	colNames<- as.character(dfsample[1,2:ncol(dfsample)])
+	return(colNames)
+}
+
 
 BSdata<- setClass("BSdata", representation(
-                                        loci= 'data.frame',
-                                        tot_reads= 'ff_matrix',
-                                        cnt_met= 'ff_matrix',
-                                        pct_met= 'ff_matrix',
+## Object to store BS data in format similar to limma
+                                        loci= 'ffdf',
+                                        tot_reads= 'ffdf',
+                                        cnt_met= 'ffdf',
+                                        pct_met= 'ffdf',
                                         design= 'data.frame'))
-                                        
-read.bsdata<- function(infiles, library_ids= FALSE, ...){
-    # ---------------------------------------------------
-    # Read the concatenated output of mpileup2methylation.py to a BSdata object
-    # infiles:
-    #     Vector of files to read. Header line absent (use header=TRUE otherwise).
-    #     Columns are expected to be:
-    #     chrom	start	end	pct.met	cnt.met	tot_reads	strand	[library_id]
-    # library_ids:
-    #     Vector of (unique) library IDs assigned to each file in x
-    # save.name:
-    #     Name of file where the image will be saved by calling ffsave.image().
-    # ...:
-    #     Further arguments passed to read.table e.g. header
-    #
-    # MEMO: use Sys.glob('*.bedGraph.gz') to create a vectior of files with given glob pattern.
-    # ---------------------------------------------------
-  
-    BSobj<- BSdata()
-    
-    if(length(library_ids)!=length(unique(library_ids))){
-        stop(sprintf('Duplicate library_ids found in %s', library_ids))
-    }    
-    if(length(infiles)!=length(unique(infiles))){
-        stop(sprintf('Duplicate input files found in %s', infiles))
-    } 
-    if(length(infiles)!=length(library_ids)){
-        stop('Number of input files does not equal number of library IDs')
-    }
-    colClasses<- c('factor', 'integer', 'integer', 'numeric', 'integer', 'integer', 'factor')
-    colNames<-  c('chrom', 'start', 'end', 'pct.met', 'cnt.met', 'tot_reads', 'strand')
-    ftempl= FALSE
-    for(i in seq(1, length(infiles))){
-        xfile<- infiles[i]
-        libid<- library_ids[i]
-	cat(sprintf('Reading file: %s; ID: %s\n', xfile, libid))
-	if(!ftempl){
- 	    ## Read in the first file as "template"
-	    bsdata<- read.table.ffdf(x= NULL, file= xfile, sep= '\t', col.names= colNames, colClasses= colClasses, ...)
-            bsdata$library_id<- as.ff(as.factor(rep(libid, nrow(bsdata))), vmode= 'short')
-            ftempl<- TRUE
-	} else {
-	    newdata<- read.table.ffdf(x= NULL, file= xfile, sep= '\t', col.names= colNames, colClasses= colClasses, ...)
-            newdata$library_id<- as.ff(as.factor(rep(libid, nrow(newdata))), vmode= 'short')
-            #bsdata<- read.table.ffdf(x= bsdata, file= xfile, sep= '\t', colClasses= colClasses, col.names= colNames, ...)
-            bsdata<- ffdfappend(bsdata, newdata, recode= FALSE, adjustvmode= FALSE)
-	}
-	# bsdata<- read.table(x, sep= '\t', colClasses= c('character', 'integer', 'integer', 'numeric', 'integer', 'integer', 'character', 'character'), ...)	
-    }
-    #rm(newdata)
-    # bsdata<- read.table(x, sep= '\t', colClasses= c('character', 'integer', 'integer', 'numeric', 'integer', 'integer', 'character', 'character'), ...)
-    # names(bsdata)[1:8]<- c('chrom', 'start', 'end', 'pct.met', 'cnt.met', 'tot_reads', 'strand', 'library_id')
-    cat('Generating union of all positions...\n')
-    bsdata$locus<- as.ff(as.factor( paste(bsdata$chrom[1:nrow(bsdata)], bsdata$start[1:nrow(bsdata)], bsdata$end[1:nrow(bsdata)], sep= '_')), vmode= 'integer') ## paste(bsdata$chrom, bsdata$start, bsdata$end, sep= '_')
-    ## Get union of all positions. Make it BED fo#rmat
-    allPos<- unique(bsdata[, c('chrom', 'start', 'end', 'locus', 'strand')])
-    allPos$score<- '.'
-    BSobj@loci<- as.ffdf(allPos[, c('chrom', 'start', 'end', 'locus', 'score', 'strand')]) ## order(allPos$chrom, allPos$start, allPos$end)
-    rm(allPos)
-    ## Matrix of total counts
-    cat('Creating matrix of total counts...\n')
-    tot_reads<- reshape(bsdata[, c('locus', 'library_id', 'tot_reads')], timevar= 'library_id', v.names= 'tot_reads', idvar= 'locus', direction= 'wide')
-    rownames(tot_reads)<- tot_reads$locus
-    tot_reads<- as.matrix(tot_reads[, 2:ncol(tot_reads)], storage.mode= 'integer')
-    colnames(tot_reads)<- sub('^tot_reads\\.', '', colnames(tot_reads), perl= TRUE)
-    tot_reads[is.na(tot_reads)]<- as.integer(0)
-    tot_reads<- as.ff(tot_reads)
-	BSobj@tot_reads<- tot_reads
-    nr<- nrow(BSobj@tot_reads)
-    nc<- ncol(BSobj@tot_reads)
-    #rm(tot_reads)
-       
-    
-    ## Matrix of methylated counts
-    cat('Creating matrix of methylated counts...\n')
-    cnt.met<- reshape(bsdata[, c('locus', 'library_id', 'cnt.met')], timevar= 'library_id', v.names= 'cnt.met', idvar= 'locus', direction= 'wide')
-    rownames(cnt.met)<- cnt.met$locus
-    cnt.met<- as.matrix(cnt.met[, 2:ncol(cnt.met)], storage.mode= 'integer')
-    colnames(cnt.met)<- sub('^cnt.met\\.', '', colnames(cnt.met), perl= TRUE)
-    cnt.met[is.na(cnt.met)]<- as.integer(0)
-    cnt.met<- as.ff(cnt.met)
-	BSobj@cnt_met<- cnt.met
-    #rm(cnt.met)
-    if (!all(rownames(BSobj@cnt_met) == rownames(BSobj@tot_reads))){
-        stop('Unexpected row names')
-    }
-    if (!all(BSobj@loci$locus == rownames(BSobj@tot_reads))){
-        stop('Unexpected locus names or orders')
-    }
-    
-    ## Matrix of percentage methylated
-    pct_met<- as.ff(100*(BSobj@cnt_met[1:nr, 1:nc] / BSobj@tot_reads[1:nr, 1:nc]))
-	BSobj@pct_met<- pct_met
-    
-    ## Library names extracted from column headers go to design
-    BSobj@design<- data.frame(index= 1:ncol(BSobj@tot_reads), library_id= colnames(BSobj@tot_reads), bs= rep(NA, ncol(BSobj@tot_reads)))
 
-    return(BSobj)
+read.bsdata<- function(prefix, gzip= TRUE, mat= c('loci', 'pct_met', 'cnt_met', 'tot_reads'), ...){
+	"Read the output files from BSmatrix.py and put them in a BSdata object
+
+	ARGS:
+	prefix:
+		Prefix of the input files produced by BSmatrix.py. It is expected to find
+			<prefix>.loci.gz
+			<prefix>.cnt_met.mat.gz
+			<prefix>.pct_met.mat.gz
+			<prefix>.tot_reads.mat.gz	
+		Input files can be either gzipped or not.
+	gzip:
+		Logical. Are the input files gzipped? (I.e. ending in .gz). Default TRUE
+	mat:
+		Which matrices should be read? Default is all of them:
+		c('loci', 'pct_met', 'cnt_met', 'tot_reads').
+		For speed of reading consider leaving out pct_met
+	...:
+		Further arguments passed to read.table, e.g. nrows.
+	VALUE:
+		BSdata object
+	"
+    BSobj<- BSdata()
+
+	if( gzip ){
+		gz= '.gz'
+	} else {
+		gz= ''
+	}
+	
+	## File suffixes
+	sfx<- list(
+		loci= paste('.loci', gz, sep= ''),
+		pct_met= paste('.pct_met.mat', gz, sep= ''),
+		cnt_met= paste('.cnt_met.mat', gz, sep= ''),
+		tot_reads= paste('.tot_reads.mat', gz, sep= '')
+	)
+	inf<- sfx
+	for(i in 1:length(inf)){
+		"Input files"
+		inf[[i]]<- paste(prefix, inf[[i]], sep= '')
+	}
+	for(f in inf){
+		if( !file.exists(f) ){
+			stop(sprintf('File "%s" not found', f))
+		}
+	}
+	dfsample<- read.table(inf$cnt_met, sep= '\t', nrows= 1)
+
+	if ('loci' %in% mat){
+		cat(sprintf('Reading file "%s"...\n', inf$loci))
+		BSobj@loci<- read.table.ffdf(file= inf$loci, header= TRUE, ...)
+	}
+	if ('tot_reads' %in% mat){
+		cat(sprintf('Reading total file "%s"...\n', inf$tot_reads))
+		BSobj@tot_reads<- read.table.ffdf(file= inf$tot_reads, header= TRUE, colClasses= c('factor', rep('integer', ncol(dfsample)-1)), ...) 
+		row.names(BSobj@tot_reads)<- BSobj@tot_reads$locus
+		BSobj@tot_reads<- as.ffdf(BSobj@tot_reads[, 2:ncol(BSobj@tot_reads)])
+	}
+
+	if ('cnt_met' %in% mat){
+		cat(sprintf('Reading file matrix "%s"...\n', inf$cnt_met))
+		BSobj@cnt_met<- read.table.ffdf(file= inf$cnt_met, header= TRUE, colClasses= c('factor', rep('integer', ncol(dfsample)-1)), ...) 
+		row.names(BSobj@cnt_met)<- BSobj@cnt_met$locus
+		BSobj@cnt_met<- as.ffdf(BSobj@cnt_met[, 2:ncol(BSobj@cnt_met)])
+	}
+	
+	if ('pct_met' %in% mat){
+		cat(sprintf('Reading file matrix "%s"...\n', inf$pct_met))
+		BSobj@pct_met<- read.table.ffdf(file= inf$pct_met, header= TRUE, colClasses= c('factor', rep('double', ncol(dfsample)-1)), ...) 
+		row.names(BSobj@pct_met)<- BSobj@pct_met$locus
+		BSobj@pct_met<- as.ffdf(BSobj@pct_met[, 2:ncol(BSobj@pct_met)])
+	}
+	## Some checks:
+	#stopifnot(ncol(BSobj@tot_reads) == ncol(BSobj@cnt_met))
+	#stopifnot(ncol(BSobj@cnt_met) == ncol(BSobj@pct_met))
+	
+	#stopifnot(nrow(BSobj@tot_reads) == nrow(BSobj@cnt_met))
+	#stopifnot(nrow(BSobj@cnt_met) == nrow(BSobj@pct_met))
+	#stopifnot(nrow(BSobj@loci) == nrow(BSobj@cnt_met))
+	
+	#stopifnot(colnames(BSobj@tot_reads) == colnames(BSobj@cnt_met))
+	#stopifnot(colnames(BSobj@cnt_met) == colnames(BSobj@pct_met))
+
+	## design df
+	BSobj@design<- data.frame(
+		library_id= colnames(BSobj@tot_reads),
+		bs= rep(NA, ncol(BSobj@tot_reads))
+	)
+	
+	cat(sprintf('\n%s samples\n', ncol(BSobj@tot_reads)))
+	cat(sprintf('%s loci\n', nrow(BSobj@loci)))
+	
+	return(BSobj)
 }
 
 save.BSdata<- function(BSobj, outname){
@@ -128,8 +137,6 @@ save.BSdata<- function(BSobj, outname){
 	assign(paste(bsobj, 'pct_met', sep= '.'), BSobj@pct_met)
 	ffsave(list= c(bsobj, paste(bsobj, 'tot_reads', sep= '.'), paste(bsobj, 'cnt_met', sep= '.'), paste(bsobj, 'pct_met', sep= '.')), file= outname)
 }
-
-
 
 makeBSdataLong<- function(bsobj){
     "Make a long format of bsdata obj"
@@ -191,10 +198,10 @@ BSdataApply<- function(bsobj, slots= c('tot_reads', 'cnt_met', 'pct_met'), FUN, 
     bsapp<- bsobj
     for(s in slots){
         m<- slot(bsobj, s)
-        if(class(m)[1] != 'ff_matrix'){
+        if(class(m)[1] != 'ffdf'){
             stop(sprintf('Slot "%s" is not a matrix', s))
         }
-        slot(bsapp, s)<- as.ff(FUN(m, ...))
+        slot(bsapp, s)<- as.ffdf(FUN(m, ...)) ## MEMO: use as.ff() if obj is ff_matrix
     }
     checkMatrices(bsapp)
     return(bsapp)
@@ -232,5 +239,92 @@ BSmatrix2begraph<- function(bsobj, m, outdir= '.', header= FALSE){
     }
 }
 
+#read.bsdata<- function(prefix, gzip= TRUE, ...){
+#	"Read the output files from BSmatrix.py and put them in a BSdata object
+#
+#	ARGS:
+#	prefix:
+#		Prefix of the input files produced by BSmatrix.py. It is expected to find
+#			<prefix>.loci.gz
+#			<prefix>.cnt_met.mat.gz
+#			<prefix>.pct_met.mat.gz
+#			<prefix>.tot_reads.mat.gz	
+#		Input files can be either gzipped or not.
+#	gzip:
+#		Logical. Are the input files gzipped? (I.e. ending in .gz). Default TRUE
+#	...:
+#		Further arguments passed to read.table, e.g. nrows. (Not implemented)
+#	VALUE:
+#		BSdata object
+#	"
+#    BSobj<- BSdata()
+#
+#	if( gzip ){
+#		gz= '.gz'
+#	} else {
+#		gz= ''
+#	}
+#	
+#	## File suffixes
+#	sfx<- list(
+#		loci= paste('.loci', gz, sep= ''),
+#		pct_met= paste('.pct_met.mat', gz, sep= ''),
+#		cnt_met= paste('.cnt_met.mat', gz, sep= ''),
+#		tot_reads= paste('.tot_reads.mat', gz, sep= '')
+#	)
+#	inf<- sfx
+#	for(i in 1:length(inf)){
+#		"Input files"
+#		inf[[i]]<- paste(prefix, inf[[i]], sep= '')
+#	}
+#	for(f in inf){
+#		if( !file.exists(f) ){
+#			stop(sprintf('File "%s" not found', f))
+#		}
+#	}
+#	cat(sprintf('Reading file "%s"...\n', inf$loci))
+#	BSobj@loci<- read.table(file= inf$loci, header= TRUE, sep= '\t', colClasses= c('character', 'integer', 'integer', 'character', 'character', 'character'), nrows= -1)
+#
+#	cat(sprintf('Reading total file "%s"...\n', inf$tot_reads))
+#	colNames<- name.reader(inf$tot_reads)
+#	BSobj@tot_reads<- read.big.matrix(filename= inf$tot_reads, header= FALSE, skip= 1, sep= '\t', type= 'short', has.row.names= TRUE, col.names= colNames)
+#
+#	cat(sprintf('Reading file matrix "%s"...\n', inf$cnt_met))
+#	colNames<- name.reader(inf$cnt_met)
+#	BSobj@cnt_met<- read.big.matrix(filename= inf$cnt_met, header= FALSE, skip= 1, sep= '\t', type= 'short', has.row.names= TRUE, col.names= colNames)
+#
+#	cat(sprintf('Reading file matrix "%s"...\n', inf$pct_met))
+#	colNames<- name.reader(inf$pct_met)
+#	BSobj@pct_met<- read.big.matrix(filename= inf$pct_met, header= FALSE, skip= 1, sep= '\t', type= 'double', has.row.names= TRUE, col.names= colNames)
+#
+#		## Some checks:
+##	stopifnot(ncol(BSobj@tot_reads) == ncol(BSobj@cnt_met))
+##	stopifnot(ncol(BSobj@cnt_met) == ncol(BSobj@pct_met))
+#	
+##	stopifnot(nrow(BSobj@tot_reads) == nrow(BSobj@cnt_met))
+##	stopifnot(nrow(BSobj@cnt_met) == nrow(BSobj@pct_met))
+##	stopifnot(nrow(BSobj@loci) == nrow(BSobj@cnt_met))
+#	
+##	stopifnot(colnames(BSobj@tot_reads) == colnames(BSobj@cnt_met))
+##	stopifnot(colnames(BSobj@cnt_met) == colnames(BSobj@pct_met))
+#
+#	## design df
+#	BSobj@design<- data.frame(
+#		library_id= colNames,
+#		bs= rep(NA, length(colNames))
+#	)
+#	
+##	cat(sprintf('\n%s samples\n', ncol(BSobj@tot_reads)))
+##	cat(sprintf('%s loci\n', nrow(BSobj@loci)))
+#	
+#	return(BSobj)
+#}
 
 
+#BSdata<- setClass("BSdata", representation(
+## Object to store BS data in format similar to limma
+#                                        loci= 'data.frame',
+#                                        tot_reads= 'big.matrix',
+#                                        cnt_met= 'big.matrix',
+#                                        pct_met= 'big.matrix',
+#                                        design= 'data.frame'))
