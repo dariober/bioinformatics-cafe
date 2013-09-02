@@ -38,6 +38,8 @@ glmForeach<- function(i, bsobj, cond.1, cond.2, bs, thres, glm.family= 'binomial
     cond2.cnt_M<- sum(cnt_M[cond.2])         
     cond2.cnt_m<- sum(cnt_m[cond.2])
 
+    bs<- bs[c(cond.1, cond.2)]
+    
     if(sum(cnt_T) < thres){
         e<- NA
         p<- NA
@@ -149,6 +151,54 @@ glmBS.2<- function(bsobj, bs, contrast, thres= 10, family= 'binomial', nthreads=
         glmOut$fdr<- p.adjust(glmOut$pvalue, method= adjust.method)
     }
     return(glmOut)
+}
+
+extractSignifPval<- function(score, pval, pthresh= 0.05){
+    "Identify the positive significant scoreerences by comparing the distribution
+    of positive pvalues against negatve pvalues
+    
+    ________________________________ ARGS _____________________________________
+    score:
+        Numeric vector of estimates, typically contianing positive and negative estimates
+    pval:
+        Vector of pvalues (or any numeric usable for ranking).
+    pthresh:
+        Regard signifcant adjusted pvalues below this threshold
+
+    _______________________________ RETURN ____________________________________
+    Vector of TRUE/FALSE where TRUE means the pvalue is significant.
+
+    _______________________________ DETAILS ___________________________________
+    - Get the scores, -ve or +ve, with pvalue < pthresh.
+    - Rank the positive score by pvalue.
+    - Assign FALSE (non significant) to the scores with rank greater than the
+      number of -ve pvalues.
+    "
+    if(length(score) != length(pval)){
+        stop('Vectors score and pval must be of equal length')
+    }
+    if(!is.numeric(score) | !is.numeric(pval)){
+        stop('Vectors score and pval must be numeric')
+    }
+    if( max(pval) > 1 | min(pval) < 0){
+        stop('Values in pval must be between 0 and 1')
+    }
+    if(!is.numeric(pthresh) | pthresh < 0){
+        stop('pthresh must be positive numeric')
+    }
+    pneg<- pval[which(score < 0)] ## Pvalues of negative estimates.
+    ppos<- pval[which(score > 0)]
+    
+    ## Count negative peaks at p<0.05, positive peaks at p<0.05.
+    ## The difference is the top positive peaks accepted
+    neg_thresh<- length(pneg[which(pneg < pthresh)])
+    pos_thresh<- length(ppos[which(ppos < pthresh)])
+    
+    ## Add 1 to pval of -ve scores to rank them *after* the +ve scores
+    score_rank<- rank( ifelse(score < 0, pval+1, pval) )
+    ## Signif. the top ranking sites
+    pval_sign<- ifelse(score_rank < (pos_thresh - neg_thresh), TRUE, FALSE)
+    return(pval_sign)
 }
 
 # -------------------------------------------------------------------------------
