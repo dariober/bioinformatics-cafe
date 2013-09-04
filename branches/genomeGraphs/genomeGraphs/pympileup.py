@@ -75,7 +75,7 @@ def mpileup_java_cmd(bamlist, region, fasta= None, mpileup= 'samtools mpileup'):
     1: {'A': 0, 'a': 0, 'C': 1, 'c': 0, 'G': 0, 'g': 0, 'T': 0, 't': 0, 'N': 0, 'n': 0, 'Z': 1, 'z': 0},}
     The numeric keys are one for each bamfile passed to mpileup
     """
-    r= '-r ' + region.chrom + ':' + str(region.start + 1) + '-' + str(region.end)
+    r= '-r ' + "'" + region.chrom + ':' + str(region.start + 1) + '-' + str(region.end) + "'"
     if fasta:
         f= '-f %s' %(fasta)
     else:
