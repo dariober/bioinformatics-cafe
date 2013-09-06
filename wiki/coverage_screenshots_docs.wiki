@@ -3,6 +3,8 @@
 TO DO:
 
   * If an interval extends right to the end of a chromosome, the fasta sequence cannto be fetched with default settings because --slop will extend the region beyond the chrom and bedtools skips the feature. (Temp fix: set --slop 0 in such cases)
+  
+  * If the index of a bam file is not found, throw a friendly message rather than the cryptic one currently thrown   
 
   * Fixed ~~Error if -i files has no overlap with -b~~
   * Fixed (use `String.equals()` instead of `==`) ~~Error with pileup line `echo -e "chr10\t57687705\tN\t2\tC^-C"`~~
