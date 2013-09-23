@@ -6,6 +6,8 @@ import string
 import argparse
 import operator
 
+VERSION='0.1.0'
+
 parser = argparse.ArgumentParser(description="""
 
 DESCRIPTION
@@ -110,6 +112,9 @@ search. E.g. use --seqnames chr1 chr2 chrM to search only these crhomosomes.
 Default is to search all the sequences in input.
                    ''',
                    required= False)
+
+parser.add_argument('--version', '-v', action='version', version='%(prog)s ' + VERSION)
+
 
 args = parser.parse_args()
 
