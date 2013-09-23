@@ -174,6 +174,7 @@ decorated = [
 merged = heapq.merge(*decorated)
 undecorated = imap(itemgetter(-1), merged)
 thisline= ''
+print('Outputting')
 for x in undecorated:
     if x != thisline:
         fout_loci.write(x + '\n')
