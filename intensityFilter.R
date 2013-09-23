@@ -9,9 +9,10 @@
 z.score<- function(x){
     ## Return z-scores for vector x
     z<- (x - mean(x))/sd(x)
+    return(z)
 }
 
-intensityFilter(x, y, nbins= 10){
+localZ<- function(x, y, nbins= 10){
     # Return z-score of y for each bin along x
     # x:
     #   Vector of intensities. Typically logCPM (x-axis in MA plot). 
@@ -30,8 +31,11 @@ intensityFilter(x, y, nbins= 10){
     if (!is.numeric(nbins) | length(nbins) != 1 | nbins < 2){
         stop("nbins must be one single integer equal or greater than 2")
     }
+    if(length(x) != length(y)){
+        stop("Length of x and y differ")
+    }
     qq<- quantile(x, p= seq(0, 1, length.out= nbins))
-    zx<- vector(length= length(x))
+    zx<- vector(length= length(y))
     for( i in 1:(length(qq)-1) ){
         if ( i == (length(qq)-1) ){
             qidx<- which(x >= qq[i])
@@ -39,9 +43,9 @@ intensityFilter(x, y, nbins= 10){
         else {
             qidx<- which(x >= qq[i] & x < qq[i+1])
         }
-        zx[qidx]<- z.score(x[qidx])
+        zx[qidx]<- z.score(y[qidx])
     }
-    if (length(zx) != length(x)){
+    if (length(zx) != length(y)){
         stop("Unexpected length of z-score vector")
     }
     return(zx)
