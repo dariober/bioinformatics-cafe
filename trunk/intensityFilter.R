@@ -35,6 +35,7 @@ getLocalSlice<- function(x, target, n= NULL){
     if(is.null(n)){
         n= length(x)/10
     }
+    n<- round(n, 0)
     xleft<- target - floor(n/2)
     xright<- target + ceiling(n/2)
     if (xleft < 1){
@@ -49,16 +50,24 @@ getLocalSlice<- function(x, target, n= NULL){
 }
 
 localZ.2<- function(x, y, nbins= 10){
-    #
-    #
-    #
+    # Same purpose and args as localZ but using a moving window centered around each
+    # data point. I.e. z-score for gene a is computed using the genes surrounding a.
+    # It is more accurate than localZ but much slower (half minute for 15000
+    # datapoints).
+    # -------------------------------------------------------------------------
+    ## Number of datapoints surrounding the target point
+    n<- round(length(x) / nbins, 0) 
     xrank<- rank(x)
     zx<- vector(length= length(y))
-    for (i in xrank){
-        slice<- y[getLocalSlice(x= xrank, target= xrank[i], n= nbins)]
+    for (i in 1:length(xrank)){
+        if(i %% 1000 == 0){
+            print(i)
+        }
+        slice<- y[getLocalSlice(x= xrank, target= xrank[i], n= n)]
         zscore<- (y[i] - mean(slice))/sd(slice)
         zx[i]<- zscore
     }
+    return(zx)
 }
 
 localZ<- function(x, y, nbins= 10){
@@ -68,7 +77,7 @@ localZ<- function(x, y, nbins= 10){
     # y:
     #   Vector to be normalized. Typically logFC (y-axis in MA plot).
     # nbins:
-    #   Divide x vector into this many bins, each of them containing the
+    #   Divide the x vector into this many bins, each of them containing the
     #   same number of datapoints. z-scores are calculated within each bin.
     # --------------------------------------------------------------------------
     if (!is.numeric(x)){
