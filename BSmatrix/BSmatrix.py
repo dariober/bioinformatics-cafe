@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
+"""
+Note: f.tell() and f.seek() on gzip files is extremely slow. Do not use
+gzip files.
+"""
+
 import argparse
-import gzip
 import os
 import sys
 import glob
@@ -31,6 +35,7 @@ CAVEATS & ASSUMPTIONS:
     sort -k1,1 -k2,2n -k3,3n
     For sorting chromosome only (positions already sorted):
     sort -k1,1 -s
+    - Input must be unzipped (processing gzip possible but slooooower)
 
 """, prog= 'BSmatrix.py', formatter_class= argparse.RawDescriptionHelpFormatter) # , formatter_class= argparse.RawTextHelpFormatter
 
@@ -73,10 +78,11 @@ def listOpener(inputList):
     input_fin= []
     for x in inputList:
         try:
-            if x.endswith('.gz'):
-                fin= gzip.open(x)
-            else:
-                fin= open(x)
+            fin= open(x)
+#            if x.endswith('.gz'):
+#                fin= gzip.open(x)
+#            else:
+#                fin= open(x)
         except IOError:
             sys.exit('Cannot open file "%s" for reading.' %(x))
         input_fin.append(fin)
@@ -125,7 +131,7 @@ for x in input:
 if len(outnames) != len(set(outnames)):
     sys.exit("Duplicate output IDs found in %s" %(outfiles))
 
-print('\nInput file => library name:/n')
+print('\nInput file => library name:')
 for i,o in zip(input, outnames):
     print(i + ' =>  ' + o)
 
@@ -142,16 +148,16 @@ if '/' in args.prefix or args.prefix.strip().startswith('.') or args.prefix.star
     
 outprefix= os.path.join(args.outdir, args.prefix)
 
-floci= outprefix + '.loci.gz'
-fpctmet= outprefix + '.pct_met.mat.gz'
-fcntmet= outprefix + '.cnt_met.mat.gz'
-ftotreads= outprefix + '.tot_reads.mat.gz'
+floci= outprefix + '.loci'
+fpctmet= outprefix + '.pct_met.mat'
+fcntmet= outprefix + '.cnt_met.mat'
+ftotreads= outprefix + '.tot_reads.mat'
 
 try:
-    fout_loci= gzip.open(floci, 'wb')
-    fout_pct_met= gzip.open(fpctmet, 'wb')
-    fout_cnt_met= gzip.open(fcntmet, 'wb')
-    fout_tot_reads= gzip.open(ftotreads, 'wb')
+    fout_loci= open(floci, 'w')
+    fout_pct_met= open(fpctmet, 'w')
+    fout_cnt_met= open(fcntmet, 'w')
+    fout_tot_reads= open(ftotreads, 'w')
 except IOError:
     sys.exit('I cannot create output files in dir "%s" with prefix "%s".' %(args.outdir, args.prefix))
 
@@ -168,8 +174,12 @@ print('\nOutput files:\n%s' %('\n'.join([floci, fpctmet, fcntmet, ftotreads])))
 
 ## See http://stackoverflow.com/questions/12460943/merging-pre-sorted-files-without-reading-everything-into-memory
 print('\nGenerating union of all positions...')
+
+#with input_fin[0] as f0, input_fin[1] as f1, input_fin[2] as f2, input_fin[3] as f3, input_fin[4] as f4, input_fin[5] as f5:
+#with input_fin as sources:
+#with fout_loci as dest:
 decorated = [
-    [ ( extract_key(line), bdgLine_to_locusLine(line) ) for line in f if line.strip() != '']
+    ( ( extract_key(line), bdgLine_to_locusLine(line) ) for line in f if line.strip() != '' )
     for f in input_fin]
 merged = heapq.merge(*decorated)
 undecorated = imap(itemgetter(-1), merged)
@@ -178,8 +188,12 @@ print('Outputting')
 for x in undecorated:
     if x != thisline:
         fout_loci.write(x + '\n')
+        nlines += 1
+        if nlines % 500000 == 0:
+            print('%s lines to locus file' %(nlines))
+#        if nlines > 50000:
+#            break
     thisline= x
-
 fout_loci.close()
 for x in input_fin:
     x.close()
@@ -187,11 +201,12 @@ for x in input_fin:
 ## 2. Re-pass through all the files to generate matrices (rows are from the union)
 ## -----------------------------------------------------------------------------
 print('\nGenerating matrices...')
-fout_loci= gzip.open(floci)
+fout_loci= open(floci)
 x= fout_loci.readline()
 input_fin= listOpener(input)
 
 chromList= [None] * len(input_fin) ## This is to check that current chrom is >= previous
+m= 0
 for line in fout_loci:
     line= line.strip().split('\t')
     pos= [line[0], int(line[1]), int(line[2])]
@@ -231,7 +246,9 @@ for line in fout_loci:
             pctmetLine.append('0')
             cntmetLine.append('0')
             totLine.append('0')
-
+    m += 1
+    if m % 1000000 == 0:
+        print('%s/%s lines processed' %(m,nlines))
     fout_pct_met.write('\t'.join([str(x) for x in pctmetLine]) + '\n')
     fout_cnt_met.write('\t'.join([str(x) for x in cntmetLine]) + '\n')
     fout_tot_reads.write('\t'.join([str(x) for x in totLine]) + '\n')
@@ -239,8 +256,9 @@ for line in fout_loci:
 for fin in input_fin:
     xline= fin.readline().strip()
     if xline != '':
+        print('Not all lines read from one or more input files! New line read:')
         print(xline)
-        sys.exit('Not all lines read from one or more input files!')
+        sys.exit(1)
     fin.close()
 fout_loci.close()
 fout_cnt_met.close()
