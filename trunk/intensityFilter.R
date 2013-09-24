@@ -4,6 +4,16 @@
 # large fold changes are seen at low intensity genes.
 #
 # See SEQanswers, post #34 in http://seqanswers.com/forums/showthread.php?t=9998
+#
+## Example usage:
+## Assuming a table of differentially expressed genes (logFC) and intensities (logCPM)
+## has been generated with edgeR using topTags():
+#
+# detable<- topTags(lrt, n= nrow(d))$table
+# 
+## Calculate z-score. See below differece between localZ and localZ.2:
+# detable$zScore<- localZ(detable$logCPM, detable$logFC, nbins= 20)
+# detable$zScore<- localZ.2(detable$logCPM, detable$logFC, nbins= 20)
 # -----------------------------------------------------------------------------
 
 z.score<- function(x){
