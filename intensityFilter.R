@@ -12,6 +12,55 @@ z.score<- function(x){
     return(z)
 }
 
+getLocalSlice<- function(x, target, n= NULL){
+    # Get datapoints in x surrounding the datapoint target
+    # x:
+    #   Vector of datapoint rank to slice. Typically the intensity or rank(logCPM).
+    # target:
+    #   The datapoint rank in x around which to get the slice
+    # n:
+    #   The number of x datapoints around target to return. Default to
+    #   length(x)/10. 
+    #
+    # Return: Logical vector of the same length as x with TRUE for the elements
+    # of x included in the slice.
+    # getLocalSlice(x= 1:100, target= 20, n= 10)
+    # --------------------------------------------------------------------------
+    if (n > max(x)){
+        stop("Number of local datapoints (n) greater than max rank")
+    }
+    if (target %in% x == FALSE){
+        stop("Datapoint target not in vector x")
+    }
+    if(is.null(n)){
+        n= length(x)/10
+    }
+    xleft<- target - floor(n/2)
+    xright<- target + ceiling(n/2)
+    if (xleft < 1){
+        xright <- n + 1
+        xleft<- 1
+    } else if(xright > max(x)) {
+        xleft<- max(x) - n
+        xright<- max(x)
+    }
+    slice<- x %in% xleft:xright
+    return(slice)
+}
+
+localZ.2<- function(x, y, nbins= 10){
+    #
+    #
+    #
+    xrank<- rank(x)
+    zx<- vector(length= length(y))
+    for (i in xrank){
+        slice<- y[getLocalSlice(x= xrank, target= xrank[i], n= nbins)]
+        zscore<- (y[i] - mean(slice))/sd(slice)
+        zx[i]<- zscore
+    }
+}
+
 localZ<- function(x, y, nbins= 10){
     # Return z-score of y for each bin along x
     # x:
