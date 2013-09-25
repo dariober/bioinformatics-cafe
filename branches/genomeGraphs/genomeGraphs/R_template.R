@@ -663,7 +663,8 @@ for(i in 1:nrow(plot_params)){
             } else {
                 cex_lab<-  cex * cex_lab
             }
-            text(x= par('usr')[1] - marWidth, y= (par('usr')[4] - par('usr')[3])/2,
+            ylabYpos<- par('usr')[4] - ( (par('usr')[4] - par('usr')[3])/2 )
+            text(x= par('usr')[1] - marWidth, y= ylabYpos,
                  labels= plot_params$ylab[i], cex= cex_lab, srt= 90, xpd= NA, adj= c(0.5, 0))
             rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= plot_params$bg[i], border= 'transparent')
             grid(col= plot_params$col_grid[i], lwd= 0.5, lty= 'dotted')
