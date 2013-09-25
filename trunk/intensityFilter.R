@@ -11,18 +11,17 @@
 #
 # detable<- topTags(lrt, n= nrow(d))$table
 # 
-"
-source('~/svn_checkout/bioinformatics-misc/intensityFilter.R')
-set.seed(1234)
-logCPM<- rnorm(n= 10000, mean= 5, sd= 1)
-set.seed(12345)
-logFC<- rnorm(n= 10000, mean= 0, sd= 0.1)^3
-smoothScatter(logCPM, logFC, nrpoints= 1000)
-z3<- localZ.3(logCPM, logFC, nbins= 10)
-z<- localZ.2(logCPM, logFC, nbins= 10)
-
-points(logCPM, logFC, col= ifelse(abs(z3) > 2, 'red', NA), pch= 19)
-"
+# EXAMPLE
+#source('~/svn_checkout/bioinformatics-misc/intensityFilter.R')
+#set.seed(1234)
+#logCPM<- sort(rnorm(n= 10000, mean= 5, sd= 1))
+#set.seed(12345)
+#logFC<- sapply(length(logCPM):1, function(i) rnorm(n= 1, mean= 0, sd= i^(1/1.5)))
+#z<- localZ(logCPM, logFC, nbins= 10)
+#
+#smoothScatter(x= logCPM, y= logFC, nrpoints= 1000)
+#points(logCPM, logFC, col= ifelse(abs(z) > 1.5, 'red', NA), pch= 19, cex= 0.5)
+#
 ## Calculate z-score. See below differece between localZ and localZ.2:
 # detable$zScore<- localZ(detable$logCPM, detable$logFC, nbins= 20)
 # -----------------------------------------------------------------------------
