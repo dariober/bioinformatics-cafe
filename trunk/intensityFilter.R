@@ -25,7 +25,6 @@ points(logCPM, logFC, col= ifelse(abs(z3) > 2, 'red', NA), pch= 19)
 "
 ## Calculate z-score. See below differece between localZ and localZ.2:
 # detable$zScore<- localZ(detable$logCPM, detable$logFC, nbins= 20)
-# detable$zScore<- localZ.2(detable$logCPM, detable$logFC, nbins= 20)
 # -----------------------------------------------------------------------------
 
 z.score<- function(x){
