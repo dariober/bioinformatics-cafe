@@ -290,3 +290,20 @@ like this:
 {{{
 convert -density 300 chr7_5566757_5566829_ACTB.pdf chr7_5566757_5566829_ACTB.jpg
 }}}
+
+=== Opening pdf from shell ===
+
+The utility *`gnome-open`* should be present on most Linux systems. The following
+
+{{{
+gnome-open chr1_43824445_43824745.pdf
+}}}
+
+will pop-up an X11 window with the pdf image.
+
+One Macs use:
+
+{{{
+open chr1_43824445_43824745.pdf
+}}}
+
