@@ -19,7 +19,7 @@ DESCRIPTION
     and reverse strand using the quadruplex rule described at
     http://en.wikipedia.org/wiki/G-quadruplex#Quadruplex_prediction_techniques.
     
-    The default regex is '([gG]{3}\w{1,7}){3,}[gG]{3}' and along with its
+    The default regex is '([gG]{3,}\w{1,7}){3,}[gG]{3,}' and along with its
     complement they produce the same output as in
     http://www.quadruplex.org/?view=quadbaseDownload
     
@@ -77,7 +77,7 @@ parser.add_argument('--regex', '-r',
                    type= str,
                    help='''Regex to be searched in the fasta input.
 Matches to the reverse complement will have - strand.
-The default regex is '([gG]{3}\w{1,7}){3,}[gG]{3}' which searches
+The default regex is '([gG]{3,}\w{1,7}){3,}[gG]{3,}' which searches
 for G-quadruplexes.                                   
                    ''',
                    default= '([gG]{3,}\w{1,7}){3,}[gG]{3,}')
