@@ -54,6 +54,8 @@ for i in range(0, len(fin)):
                 fout.close()
             ## Create output dir and open output file
             chromDir= os.path.join(outdir, chrom)
+            if not os.path.exists(chromDir):
+                 os.makedirs(chromDir)
             outfname= os.path.join(chromDir, os.path.split(infiles[i])[1])            
             fout= open(outfname, 'w')
             fout.write(headers[i] + '\n')
