@@ -184,6 +184,7 @@ decorated = [
 merged = heapq.merge(*decorated)
 undecorated = imap(itemgetter(-1), merged)
 thisline= ''
+nlines= 0
 print('Outputting')
 for x in undecorated:
     if x != thisline:
