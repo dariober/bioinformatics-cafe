@@ -182,9 +182,8 @@ def main():
         print(cmd)
         p= subprocess.Popen(cmd, shell= True)
         p.wait()
-        if ' --noextract ' in args.fastqc:
+        if '--noextract' in args.fastqc:
             shutil.rmtree(fastqc_dir)
-
 if __name__ == '__main__':
     main()
     sys.exit()
