@@ -37,7 +37,10 @@ glmForeach<- function(i, bsobj, cond.1, cond.2, bs, thres, glm.family= 'binomial
     cond1.cnt_m<- sum(cnt_m[cond.1])
     cond2.cnt_M<- sum(cnt_M[cond.2])         
     cond2.cnt_m<- sum(cnt_m[cond.2])
-
+    
+    ## Re-sort counts and factors to have cond1 first and cond2 second. 
+    cnt_M<- cnt_M[c(cond.1, cond.2)]
+    cnt_m<- cnt_m[c(cond.1, cond.2)]
     bs<- bs[c(cond.1, cond.2)]
     
     if(sum(cnt_T) < thres){
@@ -65,7 +68,8 @@ glmForeach<- function(i, bsobj, cond.1, cond.2, bs, thres, glm.family= 'binomial
         cnt.cond2.M= cond2.cnt_M,
         cnt.cond2.m= cond2.cnt_m,
         estimate= as.numeric(e),
-        pvalue= as.numeric(p))
+        pvalue= as.numeric(p)
+        )
     return(x)
 }
 
