@@ -205,6 +205,38 @@ extractSignifPval<- function(score, pval, pthresh= 0.05){
     return(pval_sign)
 }
 
+histPosNeg<- function(x, pval, posBorder= 'firebrick4', freq= TRUE, xlab= 'P-value', ...){
+    # Plot two histograms on the same plot for the pvalues of the positive and negative scores
+    # E.g. plot the histogram of pvalues for -ve % hmC and +ve % hmC.
+    # x:
+    #   Vector of percentages or in general a vetcor of positive and negative numbers.
+    #   The actual value is not used, only the sign is used to separate pvalues.
+    # pval:
+    #   pvalues associated to x. The histograms are based on this vector.
+    # ...:
+    #   Futher args to pass to hist()
+    # --------------------------------------------------------------------------
+    if (length(x) != length(pval)){
+        stop("Different length for x and pval vectors")
+    }
+    pneg<- pval[which(x <= 0)]
+    ppos<- pval[which(x > 0)]
+    
+    ## y limits of histogrm
+    if (freq == TRUE){
+        f<- "counts"
+    } else {
+        f<- "density"
+    }
+    hneg<- max(hist(pneg, plot= FALSE)[[f]])
+    hpos<- max(hist(ppos, plot= FALSE)[[f]])
+    hlim<- c(0, max(c(hneg, hpos)))
+    
+    ## Plot
+    hist(pneg, col= 'grey80', border= NA, ylim= hlim, freq= freq, xlab= xlab, ...)
+    hist(ppos, col= 'transparent', border= posBorder, add= TRUE, freq= freq, xlab= xlab, ...)
+}
+
 # -------------------------------------------------------------------------------
 # DEPRECATED VERSIONS
 # -------------------------------------------------------------------------------
