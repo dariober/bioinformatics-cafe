@@ -50,7 +50,7 @@ mtext(side= 1, text= 'Read depth', font= 2, outer= TRUE)
 mtext(side= 2, text= 'Frequency', outer= TRUE, font= 2)
 mtext(side= 3, text= sprintf('%s Depth of coverage at CpG sites', CHROM), outer= TRUE, font= 2, line= 0)
 dev.off()
-system(sprintf('scp tot_reads.hist.pdf $mac_office:$cri_public_projects/20120522-oxbsseq-mesc/Documents/slx-6278/genome/%s', CHROM))
+## system(sprintf('scp tot_reads.hist.pdf $mac_office:$cri_public_projects/20120522-oxbsseq-mesc/Documents/slx-6278/genome/%s', CHROM))
 
 # Methylation 
 # -----------
@@ -72,7 +72,7 @@ mtext(side= 1, text= '% methylated', font= 2, outer= TRUE)
 mtext(side= 2, text= 'Frequency', outer= TRUE, font= 2)
 mtext(side= 3, text= sprintf('%s CpG sites with depth %sx to quantile(%s)', CHROM, m, Q), outer= TRUE, font= 2, line= 0)
 dev.off()
-system(sprintf('scp pct_met.hist.pdf $mac_office:$cri_public_projects/20120522-oxbsseq-mesc/Documents/slx-6278/genome/%s', CHROM))
+## system(sprintf('scp pct_met.hist.pdf $mac_office:$cri_public_projects/20120522-oxbsseq-mesc/Documents/slx-6278/genome/%s', CHROM))
 
 # Filter positions with not-too-high coverage
 # -------------------------------------------
@@ -87,16 +87,16 @@ hist(rowMeans(cpg.2@pct_met[,]),
     main= sprintf('%s Methylation averaged across %s libraries\nn= %s', CHROM, ncol(cpg.2@tot_reads), nrow(cpg.2@tot_reads)), 
     xlab= '% methylation', ylab= 'No. CpG', breaks= 20)
 dev.off()
-system(sprintf('scp hist_depth_comb_libs.pdf $mac_office:$cri_public_projects/20120522-oxbsseq-mesc/Documents/slx-6278/genome/%s', CHROM))
+## system(sprintf('scp hist_depth_comb_libs.pdf $mac_office:$cri_public_projects/20120522-oxbsseq-mesc/Documents/slx-6278/genome/%s', CHROM))
 
 # GLM 
 # ---
 # bsobj<- BSdataApply(cpg.2, FUN= function(x) x[1:10000,])
 
 ## UNCOMMENT TO REPEAT GLM
-# glmbs<- glmBS.2(bsobj= cpg.2, bs= cpg.2@design$bs, contrast= c('BS', 'oxBS'), family= 'binomial', nthreads= NPROCS)
-# row.names(glmbs)<- row.names(cpg.2@cnt_met)
-# write.table(glmbs, file= 'glmbs.txt', row.names= FALSE, col.names= TRUE, sep= '\t', quote= FALSE)
+glmbs<- glmBS.2(bsobj= cpg.2, bs= cpg.2@design$bs, contrast= c('BS', 'oxBS'), family= 'binomial', nthreads= NPROCS)
+row.names(glmbs)<- row.names(cpg.2@cnt_met)
+write.table(glmbs, file= 'glmbs.txt', row.names= FALSE, col.names= TRUE, sep= '\t', quote= FALSE)
 
 ## UNCOMMENT TO GET PREVIOUS GLM
 glmbs<- read.table('glmbs.txt', header= TRUE, sep= '\t', stringsAsFactors= FALSE)
@@ -116,6 +116,6 @@ par(las= 0, mfrow= c(1, 2))
     points(pch= 17, col= 'blue', x= 0.05, y= 0)
     legend('topleft', legend=c('Pval +ve %', 'Pval -ve %'), col= c('red', 'grey70'), pch= 15, bg= 'white')
 dev.off()
-system(sprintf('scp hist_pvals_glmbn.paired.pdf $mac_office:$cri_public_projects/20120522-oxbsseq-mesc/Documents/slx-6278/genome/%s', CHROM))
+## system(sprintf('scp hist_pvals_glmbn.paired.pdf $mac_office:$cri_public_projects/20120522-oxbsseq-mesc/Documents/slx-6278/genome/%s', CHROM))
 
 quit(save= 'no')
