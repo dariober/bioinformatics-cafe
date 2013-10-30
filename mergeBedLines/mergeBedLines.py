@@ -84,6 +84,7 @@ def main():
 
     lineGroup= []  
     curChrom= None
+    n= 0
     for line in bed:
         line= line.strip().split('\t')[0:3]
         lineChrom= line[0]
@@ -100,10 +101,14 @@ def main():
         if curChrom != lineChrom:
             curChrom= lineChrom
             lineGroup= [line]
-    
+        n += 1
+        if n % 250000 == 0:
+            sys.stderr.write(str(n) + ' processed\n')
+        
     if lineGroup != []:
         print(mergeWindow(lineGroup))
-        
+    sys.stderr.write(str(n) + ' processed\n')
+    
 if __name__ == '__main__':
     main()
     sys.exit()
