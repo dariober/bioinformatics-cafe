@@ -122,6 +122,6 @@ awk 'BEGIN{OFS= "\\t"} {print $1, $2, $3}' %s \\
 """ %(sys.argv[1], sys.argv[2], sorted)
 
 sys.stderr.write(cmd + '\n')
-# execute(cmd)
+execute(cmd)
 
 sys.exit()
