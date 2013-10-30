@@ -7,42 +7,29 @@ import gzip
 parser = argparse.ArgumentParser(description= """
 
 DESCRIPTION
-    Merge (group) lines in bed files in sliding windows with optional step.
+    Merge (group) lines in a bed file in sliding windows with optional step.
     Merging is done by *number* of lines not distance. 
     
 EXAMPLE
-    cat in.bed 
-1     chr1	3204562	3207049
-2     chr1	3411782	3411982
-3     chr1	3660632	3661579
-4     chr1	4280926	4283093
-5     chr1	4333587	4340172
-6     chr1	4341990	4342162
-7     chr1	4341990	4342162
-8     chr1	4342282	4342918
-9     chr1	4342282	4342918
-10    chr1	4350280	4350395
-    ...
-    mergeBedLines.py -i in.bed -n 5
-    chr1    3204562 4340172 5       chr1_3204562_4340172    .
-    chr1    4341990 4350395 5       chr1_4341990_4350395    .
-    ...
-    mergeBedLines.py -i in.bed -n 5 -s 2
-    chr1    3204562 4340172 5       chr1_3204562_4340172    .
-    chr1    4280926 4342918 5       chr1_4280926_4342918    .
-    chr1    4341990 4399322 5       chr1_4341990_4399322    .
-    ...
+    mergeBedLines.py -i sample.bed -n 10 -s 5
+
+    chr1	0	38	chr1_0_38	10	.
+    chr1	20	50	chr1_20_50	8	.
+    chr2	100	122	chr2_100_122	6	.
+    chr3	1000	1020	chr3_1000_1020	10	.
+    chr3	1010	1022	chr3_1010_1022	6	.
 
 NOTE:
-    There is no check wheather the file is sorted by position!
-
+    There is no check whether the file is sorted by position!
+    You can check this with:
+    sort -c -k1,1 -k2,2n -k3,3n sample.bed
 
 
 """, formatter_class= argparse.RawTextHelpFormatter)
 
 parser.add_argument('--bed', '-i',
                    required= True,
-                   help='''Input bed file with lines to group''')
+                   help='''Input bed file with lines to group, can be gzipped. Use - to read from stdin.''')
 
 parser.add_argument('--nlines', '-n',
                    required= True,
@@ -54,8 +41,8 @@ parser.add_argument('--step', '-s',
                    type= int,
                    required= False,
                    default= 0,
-                   help='''Step size by these many these many lines. Default 0: 
-windows are not ovconsecutive without overlap.
+                   help='''Step forward by these many lines after each window. Default 0: 
+windows are consecutive without overlap.
                    ''')
 
 # ------------------------------------------------------------------------------
@@ -89,6 +76,7 @@ def main():
         sys.exit('Size of windows must be greater than step.')
     
     if args.step <= 0:
+        "Step <= 0 means do not overlap. I.e. step == window size"
         step= args.nlines
     else:
         step= args.step
@@ -97,7 +85,7 @@ def main():
     lineGroup= []  
     curChrom= None
     for line in bed:
-        line= line.strip().split('\t')
+        line= line.strip().split('\t')[0:3]
         lineChrom= line[0]
         if curChrom is None:
             curChrom= lineChrom
