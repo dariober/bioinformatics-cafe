@@ -16,7 +16,11 @@ Features bed is expected to have columns chrom, start, end (additional columns
 ignored). Must be unzipped.
 
 USAGE
-groupBedgraphByFeature.py <features-bed> <metGraph>
+groupBedgraphByFeature.py [-sorted] <features-bed> <metGraph>
+
+-sorted:
+    Use -sorted option in intersectBed. I.e. input files are sorted by position in the same way.
+    There is no check for correct sorting.
 
 OUTPUT FORMAT
 Sorted by chrom, start, end:
@@ -83,9 +87,17 @@ def checkMetGraph(metgraph):
 #            float(pct)
 #        except ValueError:
 #            sys.exit("Invalid percentage format")
-        if n > 1000000:
+        if n > 100000:
             break
+        n += 1
     bdg.close()
+
+if '-sorted' in sys.argv:
+    sorted= '-sorted'
+    idx= sys.argv.index('-sorted') 
+    del(sys.argv[idx])
+else:
+    sorted= ''
 
 if len(sys.argv) != 3 or sys.argv[1] in ['-h', '--help']:
     print(docstring)
@@ -94,6 +106,7 @@ if len(sys.argv) != 3 or sys.argv[1] in ['-h', '--help']:
 if sys.argv[1].endswith('.gz'):
     sys.exit("Feature file must be unzipped")
 
+sys.stderr.write('Checking sample lines from bedgraph file...' + '\n')
 checkMetGraph(sys.argv[2])
 
 cmd= """
@@ -101,15 +114,14 @@ set -e
 set -o pipefail
 
 awk 'BEGIN{OFS= "\\t"} {print $1, $2, $3}' %s \\
-| intersectBed -a - -b %s -wa -wb  \\
+| intersectBed -a - -b %s -wa -wb %s \\
 | awk 'BEGIN {OFS= "\\t"} {print $1, $2, $3, $8, $9}' \\
 | sort -k1,1 -k2,2n -k3,3n \\
 | groupBy -i - -g 1,2,3 -c 4,5 -o sum,sum \
 | awk 'BEGIN{OFS="\\t"} {print $1, $2, $3, $4/$5, $4, $5, "."}' \
-""" %(sys.argv[1], sys.argv[2])
+""" %(sys.argv[1], sys.argv[2], sorted)
 
 sys.stderr.write(cmd + '\n')
-
-execute(cmd)
+# execute(cmd)
 
 sys.exit()
