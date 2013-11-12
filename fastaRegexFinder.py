@@ -221,6 +221,7 @@ chr= re.sub('^>', '', line)
 line= (ref_seq_fh.readline()).strip()
 gquad_list= []
 while True:
+    sys.stderr.write('Processing %s\n' %(chr))
     while line.startswith('>') is False:
         ref_seq.append(line)
         line= (ref_seq_fh.readline()).strip()
