@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-import re
+import regex as re
 import sys
 import string
 import argparse
 import operator
 
-VERSION='0.1.0'
+VERSION='0.2.0'
 
 parser = argparse.ArgumentParser(description="""
 
@@ -81,6 +81,12 @@ The default regex is '([gG]{3,}\w{1,7}){3,}[gG]{3,}' which searches
 for G-quadruplexes.                                   
                    ''',
                    default= '([gG]{3,}\w{1,7}){3,}[gG]{3,}')
+
+parser.add_argument('--overlapped', '-o',
+                   action= 'store_true',
+                   help='''Return *all* overalapping matches. By default only non-overlapping matches are returned.
+                   ''')
+
 
 parser.add_argument('--matchcase', '-m',
                    action= 'store_true',
@@ -222,14 +228,14 @@ while True:
             break
     ref_seq= ''.join(ref_seq)
     if args.seqnames == [None] or chr in args.seqnames:
-        for m in re.finditer(psq_re_f, ref_seq):
+        for m in re.finditer(psq_re_f, ref_seq, overlapped= args.overlapped):
             matchstr= trimMatch(m.group(0), args.maxstr)
             quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_for'
             gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '+', matchstr])
         if args.noreverse is False:
             ref_seq= revcomp(ref_seq)
             seqlen= len(ref_seq)
-            for m in re.finditer(psq_re_f, ref_seq):
+            for m in re.finditer(psq_re_f, ref_seq, overlapped= args.overlapped):
                 matchstr= trimMatch(revcomp(m.group(0)), args.maxstr)
                 mstart= seqlen - m.end()
                 mend= seqlen - m.start()
