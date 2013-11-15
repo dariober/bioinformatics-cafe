@@ -367,6 +367,19 @@ lines.bdg<- function(bdg.start, bdg.end, bdg.score, ybottom= min(bdg.score), ...
     return(gaps)
 }
 
+points.bdg<- function(bdg.start, bdg.end, bdg.score, ...){
+    "Draw points in the middle of each bedgraph interval and at y-axis given by bedgraph score
+    bdg.start,
+    bdg.end,
+    bdg.score:
+        Vectors of start, end and score of bedgrah features (i.e. 2nd, 3rd and 4th
+        column of a bedgraph file).
+    ...:
+        Args to points
+    "
+    xmid<- rowMeans(cbind(bdg.start, bdg.end))
+    points(x= xmid, y= bdg.score, pch= 19, ...)
+}
 
 # ------------------------------------------------------------------------------
 # Intial parameters
@@ -693,6 +706,7 @@ for(i in 1:nrow(plot_params)){
                 rect(xleft= pdata$start, ybottom= ybottom, xright= pdata$end, ytop= pdata$totZ, col= col4track, border= border)
             }
             lines.bdg(pdata$start, pdata$end, bdg.score= pdata$totZ, ybottom= ybottom, col= plot_params$col_line[i], lwd= plot_params$lwd[i])
+            points.bdg(pdata$start, pdata$end, bdg.score= pdata$totZ, col= plot_params$col_line[i], pch= 19)
         }
     } else {
         ## If type is non-coverage (annotation)
