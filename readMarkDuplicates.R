@@ -18,7 +18,7 @@ readMarkDuplicates<- function(x){
     }
     
     ## Histogram
-    header<- grep('BINx\tVALUE', mdup)
+    header<- grep('BIN\tVALUE', mdup)
     if(length(header) > 0){
         histDup<- mdup[header:length(mdup)]
         histDup<- t(sapply(strsplit(histDup, '\t'), function(x) x[1:2]))
