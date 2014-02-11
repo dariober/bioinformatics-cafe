@@ -48,8 +48,60 @@ parser.add_argument('--tab', '-tab',
                    help='''Write output in TAB delimited format. Default is FASTA format.
        
                    ''')
+
+parser.add_argument('--strand', '-s',
+                    action= 'store_true',
+                   help='''Force strandedness. If the feature occupies the antisense,
+strand, the sequence will be reverse complemented.
+- By default, strand information is ignored.
+                   ''')
+
         
 args= parser.parse_args()
+
+def DNAreverseComplement(x):
+    """Reverse complemnt DNA string.
+    Converison table from http://arep.med.harvard.edu/labgc/adnan/projects/Utilities/revcomp.html
+    DNAreverseComplement('ACTGNactgn') -> ncagtNCAGT
+    """
+    rcDict= {
+        'A': 'T',
+        'T': 'A',
+        'U': 'A',
+        'G': 'C',
+        'C': 'G',
+        'Y': 'R',
+        'R': 'Y',
+        'S': 'S',
+        'W': 'W',
+        'K': 'M',
+        'M': 'K',
+        'B': 'V',
+        'D': 'H',
+        'H': 'D',
+        'V': 'B',
+        'N': 'N',
+        'a': 't',
+        't': 'a',
+        'u': 'a',
+        'g': 'c',
+        'c': 'g',
+        'y': 'r',
+        'r': 'y',
+        's': 's',
+        'w': 'w',
+        'k': 'm',
+        'm': 'k',
+        'b': 'v',
+        'd': 'h',
+        'h': 'd',
+        'v': 'b',
+        'n': 'n'}
+    rcomp= []
+    for c in x:
+        rcomp.append(rcDict[c])
+    rcomp= rcomp[::-1]
+    return(''.join(rcomp))
 
 ## Open input/output files
 ## -----------------------
@@ -98,6 +150,10 @@ for line in bed:
     chrom= line[0]
     s= int(line[1])
     e= int(line[2])
+    if args.strand:
+        strand= line[5]
+    else:
+        strand= None
 
     if args.name:
         try:
@@ -106,8 +162,13 @@ for line in bed:
             sys.exit('\nCould not find name field (4th column) in file "%s" for line:\n%s' %(args.bed, '\t'.join(line)))
     else:
         name= chrom + ':' + line[1] + '-' + line[2]
-    
+        if args.strand:
+            name= name + ':' + "(" + strand + ")"
+
+    ## Get sequence    
     faseq= genome[chrom][s:e]
+    if args.strand and strand == '-':
+        faseq= DNAreverseComplement(faseq)
     
     if args.tab:
         fout.write(name + '\t' + faseq + '\n')
