@@ -113,11 +113,17 @@ parser.add_argument('--seqnames', '-s',
                    type= str,
                    nargs= '+',
                    default= [None],
-                   help='''List of fasta sequences in --fasta to
+                   required= False,
+		   help='''List of fasta sequences in --fasta to
 search. E.g. use --seqnames chr1 chr2 chrM to search only these crhomosomes.
 Default is to search all the sequences in input.
-                   ''',
-                   required= False)
+                   ''')
+parser.add_argument('--quiet', '-q',
+                   action= 'store_true',
+                   help='''Do not print progress report (i.e. sequence names as they are scanned).                                   
+                   ''')
+
+
 
 parser.add_argument('--version', '-v', action='version', version='%(prog)s ' + VERSION)
 
@@ -221,7 +227,8 @@ chr= re.sub('^>', '', line)
 line= (ref_seq_fh.readline()).strip()
 gquad_list= []
 while True:
-    sys.stderr.write('Processing %s\n' %(chr))
+    if not args.quiet:
+        sys.stderr.write('Processing %s\n' %(chr))
     while line.startswith('>') is False:
         ref_seq.append(line)
         line= (ref_seq_fh.readline()).strip()
