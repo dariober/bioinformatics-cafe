@@ -246,7 +246,7 @@ and coarse resolution (`--nwinds` opt).
 
 If you find some of the graphics features annoying, here's how to turn them off:
 
-|| `--col_text_ann NA`    || Don't print the names of bed features (_e.g._ genes in annotation tracks) ||
+|| `--col_text_ann NA` or `--col_text_ann transparent`    || Don't print the names of bed features (_e.g._ genes in annotation tracks) ||
 || `--col_track NA`       || Don't draw coverage bars (_i.e._ the area under coverage profiles) ||
 || `--col_track_rev NA`   || Don't use a different colour for reads on reverse strand||
 || `--col_line NA`        || Don't add border profile to coverage tracks    || 
@@ -306,4 +306,3 @@ One Macs use:
 {{{
 open chr1_43824445_43824745.pdf
 }}}
-
