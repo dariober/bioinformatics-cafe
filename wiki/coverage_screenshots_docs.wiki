@@ -309,4 +309,4 @@ open chr1_43824445_43824745.pdf
 
 = Bugs & Gotchas =
 
-* Bam files are parsed via `samtools mpileup` which is hard-coded to skip reads marked as duplicate. If you have such reads and you want to count them, either unset the 1024 flag or look at this suggestion http://seqanswers.com/forums/showthread.php?t=22752.
+ * Bam files are parsed via `samtools mpileup` which is hard-coded to skip reads marked as duplicate. If you have such reads and you want to count them, either unset the 1024 flag or look at this suggestion http://seqanswers.com/forums/showthread.php?t=22752.
