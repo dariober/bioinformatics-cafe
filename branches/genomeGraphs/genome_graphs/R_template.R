@@ -74,18 +74,41 @@ setOverplotting<- function(overplot, n){
     return(overplot)
 }
 
-makeTransparent<- function(someColor, alpha=100){
-    "Given a colour name (e.g. 'red'), make it transparent.
-    someColor:
-    Vector of colour names to make transparent e.g. c('red', 'blue')
-    alpha:
-    Alpha transparency. 100 fully opaque, 0 fully transparent.
-    Credit: http://stackoverflow.com/questions/8047668/transparent-equivalent-of-given-color
-    "
-    newColor<-col2rgb(someColor)
-    apply(newColor, 2, function(curcoldata){rgb(red=curcoldata[1], green=curcoldata[2],
-    blue=curcoldata[3],alpha=alpha, maxColorValue=255)})
+makeTransparent<- function(col, alpha= 50) {
+  # Convert colour spcified as name or in other way to equivalent trasparent.
+  # col:
+  #    Vector of colours
+  # alpha:
+  #   Alpha transparency [0, 100]
+  # See also (taken from) http://stackoverflow.com/questions/8047668/transparent-equivalent-of-given-color
+  #
+  alpha<- alpha/100
+  if(alpha<0 | alpha>1) stop("alpha must be between 0 and 1")
+
+  alpha = floor(255*alpha) 
+  newColor = col2rgb(col= col, alpha=FALSE)
+
+  .makeTransparent = function(col, alpha) {
+    rgb(red=col[1], green=col[2], blue=col[3], alpha=alpha, maxColorValue=255)
+  }
+
+  newColor = apply(newColor, 2, .makeTransparent, alpha=alpha)
+
+  return(newColor)
 }
+
+#makeTransparent<- function(someColor, alpha=100){
+#    "Given a colour name (e.g. 'red'), make it transparent.
+#    someColor:
+#    Vector of colour names to make transparent e.g. c('red', 'blue')
+#    alpha:
+#    Alpha transparency. 100 fully opaque, 0 fully transparent.
+#    Credit: http://stackoverflow.com/questions/8047668/transparent-equivalent-of-given-color
+#    "
+#    newColor<-col2rgb(someColor)
+#    apply(newColor, 2, function(curcoldata){rgb(red=curcoldata[1], green=curcoldata[2],
+#    blue=curcoldata[3],alpha=alpha, maxColorValue=255)})
+#}
 
 reshape_mcov<- function(mcov, bases= count_header){
     ## Reshape mcov (file *.grp.bed.txt) to databse long form
@@ -368,7 +391,8 @@ lines.bdg<- function(bdg.start, bdg.end, bdg.score, ybottom= min(bdg.score), ...
 }
 
 points.bdg<- function(bdg.start, bdg.end, bdg.score, ...){
-    "Draw points in the middle of each bedgraph interval and at y-axis given by bedgraph score
+    "-- Deprecated --
+    Draw points in the middle of each bedgraph interval and at y-axis given by bedgraph score
     bdg.start,
     bdg.end,
     bdg.score:
@@ -378,7 +402,26 @@ points.bdg<- function(bdg.start, bdg.end, bdg.score, ...){
         Args to points
     "
     xmid<- rowMeans(cbind(bdg.start, bdg.end))
-    points(x= xmid, y= bdg.score, pch= 19, ...)
+    points(x= xmid, y= bdg.score, ...)
+}
+
+shaded.axis<- function(side= 2, col.shade= 'grey70', col.axis= 'white', col= 'white', las= 2, pct.margin= 1, ...){
+    # Add a shaded colour to the left side of a plot
+    # Example:
+    # plot(1:10)
+    # shaded.axis()
+    plt<- par()$plt
+    usr<- par()$usr
+   
+    plotWidth<- diff(usr[1:2])
+    pltWidth<- diff(plt[1:2])
+    outerLeftMarWidth<- (plotWidth * plt[1]) / pltWidth
+    outerLeftMarCoords<- c(usr[1] - outerLeftMarWidth, usr[1], usr[3], usr[4])
+   
+    rect(xleft= outerLeftMarCoords[1] * pct.margin,
+        ybottom= outerLeftMarCoords[3], xright= outerLeftMarCoords[2],
+        ytop= outerLeftMarCoords[4], xpd= NA, col= col.shade, border= col.shade)
+    axis(side= side, col.axis= col.axis, col= col, las= las, ...)
 }
 
 # ------------------------------------------------------------------------------
@@ -410,6 +453,13 @@ plot_params$feature<- sapply(plot_params$file_name, filename2tracktype)
 plot_params$input_order<- 1:nrow(plot_params)
 plot_params<- plot_params[order(plot_params$overplot),]
 
+## Hardcoded parameters
+axisAnn.col<- 'black'           ## col for the axis line and tick marks
+axisAnn.col.axis<- axisAnn.col  ## col for axis numbers
+axisLab.col<- axisAnn.col       ## col for axis label
+axisShade.col<- NA        ## col for shaded area
+# col.bg<- 'grey85'          ## col for figure background. `par(bg= col.bg)`
+
 # Check params
 # ------------
 pp<- unique(plot_params[,c('overplot', 'feature')])
@@ -440,6 +490,7 @@ mar<- c(%(mar)s)
 pwidth<- %(pwidth)s
 pheight<- %(pheight)s
 maxseq<- %(maxseq)s
+fbg<- '%(fbg)s'
 
 # ------------------------------------------------------------------------------
 # DATA INPUT
@@ -558,7 +609,7 @@ layout(lay.mat, heights= plot_heights)
 
 ## TOP PANEL
 ## ---------
-par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar, xaxs= 'i')
+par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar, xaxs= 'i', bg= fbg)
 plot(0, ylim= c(0,100), xlim= xlim, ylab= '', xlab= '', type= 'n')
 
 cex.title.1<- cex.for.height(plotname, 80)
@@ -657,18 +708,20 @@ for(i in 1:nrow(plot_params)){
         ## Set up plot
         ## -----------
         if(drawNewPlot){
-            par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0), xaxs= 'i')
+            par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0), xaxs= 'i', bg= fbg)
             plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(pymin, pymax), xlim= xlim, yaxt= 'n') # 
+            shaded.axis(side= 2, col.shade= axisShade.col, col.axis= NA, col= NA, pct.margin= 1)
+            
             ## Reset cex_axis if output is going to be too big
             cex_yaxis<- cex_axis
-            yax<- axis(side= 2, labels= FALSE, tick= TRUE, lwd= 0.5)
+            yax<- axis(side= 2, labels= FALSE, tick= TRUE, lwd= 0.5, col= axisAnn.col, col.axis= axisAnn.col.axis)
             maxw<- max(sapply(yax, strwidth, cex= cex_axis))
             marWidth<- par('mar')[2] * strwidth('M') ## Width of the margin in user coords
             if(maxw > marWidth){
                 maxLab<- yax[which(sapply(yax, strwidth, cex= cex_axis) == maxw)][1]
                 cex_yaxis<- cex.for.width(text= maxLab, marWidth)
             }
-            yax<- axis(side= 2, labels= TRUE, tick= FALSE, cex.axis= cex_yaxis)
+            yax<- axis(side= 2, labels= TRUE, tick= FALSE, cex.axis= cex_yaxis, col= axisAnn.col, col.axis= axisAnn.col.axis)
             cex_lab<- plot_params$cex_lab[i]
             labBase<- par('usr')[1] - maxw - strwidth('W', cex= cex_yaxis)*1.5 ## Where lab is going to sit in user coords
             if(cex_lab < 0){
@@ -678,7 +731,7 @@ for(i in 1:nrow(plot_params)){
             }
             ylabYpos<- par('usr')[4] - ( (par('usr')[4] - par('usr')[3])/2 )
             text(x= par('usr')[1] - marWidth, y= ylabYpos,
-                 labels= plot_params$ylab[i], cex= cex_lab, srt= 90, xpd= NA, adj= c(0.5, 0))
+                 labels= plot_params$ylab[i], cex= cex_lab, srt= 90, xpd= NA, adj= c(0.5, 0), col= axisLab.col)
             rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= plot_params$bg[i], border= 'transparent')
             grid(col= plot_params$col_grid[i], lwd= 0.5, lty= 'dotted')
             text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= par('usr')[4] * 1, adj= c(0,1), labels= libname, col= plot_params$col_names[i], cex= cex_names)
@@ -706,19 +759,19 @@ for(i in 1:nrow(plot_params)){
                 rect(xleft= pdata$start, ybottom= ybottom, xright= pdata$end, ytop= pdata$totZ, col= col4track, border= border)
             }
             lines.bdg(pdata$start, pdata$end, bdg.score= pdata$totZ, ybottom= ybottom, col= plot_params$col_line[i], lwd= plot_params$lwd[i])
-            points.bdg(pdata$start, pdata$end, bdg.score= pdata$totZ, col= plot_params$col_line[i], pch= 19)
+#            points.bdg(pdata$start, pdata$end, bdg.score= pdata$totZ, col= plot_params$col_line[i], type= 'l')
         }
     } else {
         ## If type is non-coverage (annotation)
         ## ------------------------------------
-        par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar, xaxs= 'i')
+        par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= mar, xaxs= 'i', bg= fbg)
         plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '', lwd= 0.2)
         rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col= makeTransparent('blue', 20), border= 'transparent')
         offs<- 35
-        thick_bottom<- offs - 30
-        thick_top<-    offs + 30
-        thin_bottom<-  offs - 20
-        thin_top<-     offs + 20
+        thick_bottom<- offs - 28
+        thick_top<-    offs + 28
+        thin_bottom<-  offs - 15
+        thin_top<-     offs + 15
         if(nrow(pdata) > 0){
             fextr<- getFeatureExtremes(pdata)
             rect(xleft= pdata$start,
@@ -736,14 +789,15 @@ for(i in 1:nrow(plot_params)){
         cx<- ifelse(cexHeight < cex_names, cexHeight, cex_names) ## Choose the smallest cex to avoid names too big or names overlapping features
         text(x= par('usr')[1] + ((par('usr')[2] - par('usr')[1])*0.01), y= 100, adj= c(0,1), labels= libname, col= plot_params$col_names[i], cex= cx)
         points(x= regLim, y= rep(par('usr')[3], 2), cex= 1, pch= 17, col= 'red')
+        eval(parse(text= plot_params$rcode[i]))
     }
 }
 ## BOTTOM PANEL
 ## -----------
 ## x-axis labels, tickmarks and range: Note very low level
-par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(mar[1], mar[2], 0, mar[4]), tcl= 0.5, xaxs= 'i')
+par(xaxt= 'n', yaxt= 'n', bty= 'n', mar= c(mar[1], mar[2], 0, mar[4]), tcl= 0.5, xaxs= 'i', bg= fbg)
 plot(0, type= 'n', ylim= c(0, 100), xlim= xlim, xlab= '', ylab= '')
-par(xaxt= 's', xaxs= 'i')
+par(xaxt= 's', xaxs= 'i', bg= fbg)
 strht<- strheight('1', cex= cex_axis)
 if((strht * 6) > 95){
     cex_axis<- cex.for.height(text= '1', height= 95 / 6)

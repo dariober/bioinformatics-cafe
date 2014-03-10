@@ -7,10 +7,14 @@ import glob
 import gzip
 import re
 import csv
-import pympileup
 import copy
-import genomeGraphs
-import pycoverage
+import inspect
+import genome_graphs ## Currently (v 0.2.0) this is necessary only to get the dir to Rscript(s)
+import pympileup
+
+## IMPORTS TO BE DEPRECATED:
+# import genomeGraphs
+# import genomeGraphs.pycoverage
 
 def read_parfile(parfile):
     """Read the paramater file and return a dictionary with {'param': args}.
@@ -185,13 +189,13 @@ def prefilter_nonbam_multiproc(inbed, nonbam, tmpdir, sorted):
     ncolbdg= len(list(pynonbam[0]))
     ncolbed= len(list(inbed[0]))
     if not sorted:
-        nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True, sorted= sorted)
+        nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed, u= True, sorted= sorted, stream= False)
     else:
         ## With sorted input the b.file is the "big one" (e.g. bedgraph).
         ## We need to rows from the b-file which are the columns after the a-file. Use cut to get these columns
         ## Since a b-feature can span several a-features, use sort | uniq the remove duplicate rows coming from the b-file
         nonbam_x_inbed= pybedtools.BedTool().intersect(b= pynonbam, a= inbed, wb= True, sorted= sorted).cut(range(ncolbed, ncolbdg+ncolbed)).saveas()
-        cmd= 'sort -k1,1 -k2,2n -k3,3n %(bed)s | uniq > %(bedu)s; mv %(bedu)s %(bed)s' %{'bed': nonbam_x_inbed.fn, 'bedu': nonbam_x_inbed.fn + '.uniq'}
+        cmd= 'set -e; set -o pipefail; sort -k1,1 -k2,2n -k3,3n %(bed)s | uniq > %(bedu)s; mv %(bedu)s %(bed)s' %{'bed': nonbam_x_inbed.fn, 'bedu': nonbam_x_inbed.fn + '.uniq'}
         p= subprocess.Popen(cmd, shell= True, stderr= subprocess.PIPE, stdout= subprocess.PIPE)
         stdout, stderr= p.communicate()
         if p.returncode != 0:
@@ -281,8 +285,10 @@ def RPlot(**kwargs):
     Return:
         A dictionary {'stdout': 'stderr':} with the captured output from Rscript.
     """
+    path_to_Rscript= os.path.split(inspect.getfile(genome_graphs))[0]
+
     rout= open(kwargs['rscript'], 'w')
-    rin= os.path.join(os.path.split(pycoverage.__file__)[0], 'R_template.R')
+    rin= os.path.join(path_to_Rscript, 'R_template.R')
     rtemplate= open(rin).read()
     rplot= rtemplate %kwargs
     rout.write(rplot)
@@ -334,12 +340,15 @@ def prepare_nonbam_file(infile_name, outfile_handle, region, use_file_name):
     infile= pybedtools.BedTool(infile_name)
     nlines= 0
 
-    if infile.head(n= 1, as_string= True) == '' :
+    if open(infile.fn).readline().strip() == '':
         """If there are no intersecting features return 0
         """
+        print('Done')
         pass
     else:
-        region_x_infile= pybedtools.BedTool().intersect(a= infile, b= pybedtools.BedTool(str(region), from_string= True), sorted= True)
+        region_x_infile= pybedtools.BedTool().intersect(a= infile,
+            b= pybedtools.BedTool(str(region), from_string= True),
+            sorted= True, stream= True)
         for line in region_x_infile:
             if line.name == '':
                 name= 'NA'
@@ -408,50 +417,32 @@ def compressBedGraph(regionWindows, bedgraph_name, use_file_name, bedgraph_grp_f
         ncols= len(gzip.open(bedgraph_name).readline().split('\t')) ## get number of columns in this bedgraph
     else:
         ncols= len(open(bedgraph_name).readline().split('\t')) ## get number of columns in this bedgraph
-    bedgraph_winds= pybedtools.BedTool(bedgraph_name).intersect(regionWindows, wb= True)
+    bedgraph_winds= pybedtools.BedTool(bedgraph_name).intersect(regionWindows, wb= True, stream= False)
     ## Aggregate counts in each position by window: -----------------------
     wind_idx= [ncols+1, ncols+2, ncols+3] ## These are the indexes of the columns containing the windows. 1 based!
-    bedgraph_grp= bedgraph_winds.groupby(g= wind_idx, c= col_idx, o= groupFun, stream= False)
+    bedgraph_grp= bedgraph_winds.groupby(g= wind_idx, c= col_idx, o= groupFun, stream= True)
     for line in bedgraph_grp:
         outline= [line.chrom, str(line.start), str(line.end), use_file_name] +  ['0'] * (len(pympileup.COUNT_HEADER)-1) + [line.name, 'coverage', 'NA', '.']
         bedgraph_grp_fh.write('\t'.join(outline) + '\n')
 
-#def format_paramater_dict(pardict, parser):
-#    """Format the arguments in dict pardict, tytpically returned by read_parfile(),
-#    to comform to the parser.
-#    pardict:
-#        Dictionary of {parameter:argument}
-#    parser:
-#        Parser obejct from argparse
-#    """
-#    sys.exit()
-#    argsDict= parser.__dict__['_option_string_actions']
-#    for k in argsDict:
-#        store_action= argsDict[k].__dict__
-#        nargs= store_action
-#        print(k, nargs)
+def get_open_fds():
+    '''Fro debugging: Get number of open files
+    See http://stackoverflow.com/questions/2023608/check-what-files-are-open-in-python
+    
+    Return the number of open file descriptors for current process
 
-#def prefilter_nonbam(inbed, nonbamlist, tmpdir):
-#    """For each filename in nonbamlist do the intersection with the regions in
-#    inbed. Produce filtered files to tmpdir and return a dict of original filenames
-#   and the filtered name
-#    inbed:
-#        pybedtools.BedTool() object of regions to intersect with the non bam files
-#    nonbamlist:
-#        List of non-bam files
-#    tmpdir:
-#        Where intersected files will go. Output name is
-#        tmpdir/x_<original name w/o .gz>
-#    Return:
-#        dict of original names:filtered names
-#        E.g. {'bedgraph/profile.bedGraph.gz': 'wdir/x_profile.bedGraph', 'annotation/genes.gtf.gz': 'wdir/x_genes.gtf'}
-#        Output files are *sorted*
-#    """
-#    nonbam_dict= {}
-#    for nonbam in nonbamlist:
-#        bname= re.sub('\.gz$', '', os.path.split(nonbam)[1])
-#        x_name= os.path.join(tmpdir, 'x_' + bname)
-#        pynonbam= pybedtools.BedTool(nonbam)
-#        nonbam_x_inbed= pybedtools.BedTool().intersect(a= pynonbam, b= inbed).sort().saveas(x_name)
-#        nonbam_dict[nonbam]= x_name
-#    return(nonbam_dict)
+    .. warning: will only work on UNIX-like os-es.
+    '''
+    import subprocess
+    import os
+
+    pid = os.getpid()
+    procs = subprocess.check_output( 
+        [ "lsof", '-w', '-Ff', "-p", str( pid ) ] )
+
+    nprocs = len( 
+        filter( 
+            lambda s: s and s[ 0 ] == 'f' and s[1: ].isdigit(),
+            procs.split( '\n' ) )
+        )
+    return nprocs

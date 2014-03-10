@@ -12,7 +12,7 @@ import os
 import sys
 import subprocess as sp
 import pybedtools
-from genomeGraphs import pycoverage
+from genome_graphs import pycoverage
 #import pycoverage
 import inspect
 import tempfile
@@ -118,7 +118,7 @@ def test_mpileupToNucCounts():
     {'chrom': 'chr7', 'pos': 5567254, 'base': 'C', 0: {'A': 0, 'a': 42, 'C': 336, 'c': 80, 'G': 0, 'g': 0, 'T': 0, 't': 0, 'N': 0, 'n': 0, 'Z': 336, 'z': 122}, }
     """
     ### ex1
-    cmd= 'cat ex1.mpileup | java -jar ../genomeGraphs/mpileupToNucCounts.jar'
+    cmd= 'cat ex1.mpileup | java -jar ../genome_graphs/mpileupToNucCounts.jar'
     print(cmd)
     p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
     stdout, stderr= p.communicate()
@@ -130,7 +130,7 @@ def test_mpileupToNucCounts():
     assert (outDict[0]['Z'] + outDict[0]['z']) == 458
 
     ### ex2
-    cmd= 'cat ex2.mpileup | java -jar ../genomeGraphs/mpileupToNucCounts.jar'
+    cmd= 'cat ex2.mpileup | java -jar ../genome_graphs/mpileupToNucCounts.jar'
     print(cmd)
     p= sp.Popen(cmd, shell= True, stdout= sp.PIPE, stderr= sp.PIPE)
     stdout, stderr= p.communicate()

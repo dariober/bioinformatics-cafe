@@ -1,6 +1,6 @@
 #!/usr/bin/env py.test
 
-import validate_args as va
+import genome_graphs.validate_args as va
 
 def test_validate_ymax():
     ymax= ['max']

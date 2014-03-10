@@ -2,7 +2,7 @@
 import sys
 import pybedtools
 import os
-import bigWigToBedGraph
+# import bigWigToBedGraph
 import platform
 import tempfile
 import subprocess

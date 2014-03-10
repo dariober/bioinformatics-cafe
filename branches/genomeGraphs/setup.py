@@ -16,7 +16,7 @@ cd ../../
 
 setup(
    name = 'genomeGraphs',
-   version = '0.1.0',
+   version = '0.2.0a', ## MAKE IT MATCH genomeGraphs.py
    author = 'Dario Beraldi',
    author_email = 'dario.beraldi<at>gmail<dot>com',
    url= '',
@@ -32,21 +32,18 @@ setup(
    requires = [ 'pybedtools', 'python (>=2.6, <3.0)' ],
    
    py_modules = [
-      'genomeGraphs.genomeGraphs',
-      'genomeGraphs.pycoverage',
-      'genomeGraphs.pympileup',
-      'genomeGraphs.validate_args'
+      'genome_graphs.genomeGraphs',
+      'genome_graphs.pycoverage',
+      'genome_graphs.pympileup',
+      'genome_graphs.validate_args'
    ],
 
    scripts = [
       'scripts/genomeGraphs',
+      'scripts/genomeGraphsDemo.py',
    ],
-   packages= ['genomeGraphs'],
-   package_data= {'genomeGraphs': ['R_template.R', 'mpileupToNucCounts.jar']}
-#   data_files=[
-#      ('genomeGraphs', ['genomeGraphs/R_template.R']),
-#      ('genomeGraphs/java_code/mpileupToNucCounts',  ['genomeGraphs/java_code/mpileupToNucCounts/Pile.class',
-#                                                      'genomeGraphs/java_code/mpileupToNucCounts/mpileupParser.class',
-#                                                      'genomeGraphs/java_code/mpileupToNucCounts/mpileupParser.java'])
-#   ]
+    packages=['genome_graphs'],
+    package_data = {
+        'genome_graphs': ['R_template.R', 'mpileupToNucCounts.jar', 'demo/*'],
+    },
 )

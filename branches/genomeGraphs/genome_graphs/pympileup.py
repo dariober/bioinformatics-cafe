@@ -8,8 +8,8 @@ import tempfile
 import subprocess
 import gzip
 import re
-import genomeGraphs
-import pympileup
+import inspect
+import genome_graphs
 
 COUNT_HEADER= ['A', 'a', 'C', 'c', 'G', 'g', 'T', 't', 'N', 'n', 'Z', 'z']
 
@@ -80,9 +80,10 @@ def mpileup_java_cmd(bamlist, region, fasta= None, mpileup= 'samtools mpileup'):
         f= '-f %s' %(fasta)
     else:
         f= ''
-    mpileupParserJar= os.path.join(os.path.split(pympileup.__file__)[0], 'mpileupToNucCounts.jar')
+    pathToJar= os.path.split(inspect.getfile(genome_graphs))[0]
+    mpileupParserJar= os.path.join(pathToJar, 'mpileupToNucCounts.jar')
     
-    cmd= '%(mpileup)s %(f)s -BQ0 -d10000000 %(r)s %(bamlist)s | java -jar %(mpileupParserJar)s' %{'mpileup': mpileup,
+    cmd= 'set -e; set -o pipefail; %(mpileup)s %(f)s -BQ0 -d 1000000000 %(r)s %(bamlist)s | java -jar %(mpileupParserJar)s' %{'mpileup': mpileup,
             'f': f, 'r': r, 'bamlist': ' '.join(bamlist), 'mpileupParserJar': mpileupParserJar}
     return(cmd)
 
@@ -276,11 +277,15 @@ def bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, region, nwinds, 
     mpileup_grp_fout= open(mpileup_grp_name, 'w')
     if nlines > nwinds:
         """Divide interval in nwinds regions if the number of positions to plot is >nwinds
+        
+        Issue with pybedtools leaking file handles:
+            It seems that intersect(stream= False)
+            and .groupby(stream= True) doesn't leak (?!)
         """
-        mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(regionWindows, wb= True)  ## Assign to each pileup position its window
+        mpileup_winds= pybedtools.BedTool(mpileup_name).intersect(regionWindows, wb= True, stream= False)  ## Assign to each pileup position its window
         pile_cols= range(cnt_indx+1, len(bedline)+1) ## Indexes of columns with counts 1-BASED!
         wind_idx= [len(bedline)+1, len(bedline)+2, len(bedline)+3] ## These are the indexes of the columns containing the windows
-        mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= [groupFun] * len(pile_cols), stream= False) ## Aggregate counts in each position by window
+        mpileup_grp= mpileup_winds.groupby(g= wind_idx, c= pile_cols, o= [groupFun] * len(pile_cols), stream= True) ## Aggregate counts in each position by window
         mpileup_grp_fout.write(header + '\n')
         for line in mpileup_grp:
             mpileup_grp_fout.write(str(line))

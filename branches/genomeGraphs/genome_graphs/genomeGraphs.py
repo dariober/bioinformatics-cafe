@@ -3,15 +3,22 @@
 import argparse
 import sys
 import os
+import re
 import tempfile
 import shutil
 import glob
-import genomeGraphs
-from pycoverage import *
-from validate_args import *
+import time
+import pycoverage
 import pympileup
+import validate_args
+import pybedtools
 
-VERSION= '0.1.0a'
+#from genomeGraphs.pycoverage import *
+#from genomeGraphs.validate_args import *
+#import genomeGraphs.pympileup
+##import genomeGraphs
+
+VERSION= '0.2.0a' ## MAKE IT MATCH setup.py
 
 # HOWTO: Add recyclable graphical parameters
 # ------------------------------------------
@@ -21,9 +28,9 @@ VERSION= '0.1.0a'
 # 1. Add arguments to argparse parser. Use nargs= '+' to make it a list:
 #   p.add_argument('--col_line', default= ['blue'], nargs= '+', ...)
 # 
-# 2. Add this arguments to RPlot function. Enclose the list in quoteStringList.
+# 2. Add this arguments to RPlot function. Enclose the list in pycoverage.quoteStringList.
 #   This will send the arg to the R script:
-# RPlot(..., col_line= quoteStringList(args.col_line), ...)
+# RPlot(..., col_line= pycoverage.quoteStringList(args.col_line), ...)
 #
 # 3. In R_template.R: Get this argument by assigning to a var and recycle as
 #    necessary. col_line is now a vector c('blue', 'red', ...):
@@ -288,8 +295,11 @@ plot_layout.add_argument('--col_names', default= ['#0000FF50'], nargs= '+',
     help='''List of colours for the name of each samples. Colours recycled as necessary.
 Useful to colour-code samples according to experimemtal design.''')
 
-plot_layout.add_argument('--bg', nargs= '+', default= ['grey95'],
+plot_layout.add_argument('--bg', nargs= '+', default= ['white'],
     help='''List of colours for the plot backgrounds. Recycled as necessary.''')
+
+plot_layout.add_argument('--fbg', default= 'grey85',
+    help='''Colour for the whole figure background. Default grey85''')
 
 plot_layout.add_argument('--col_grid', default= ['darkgrey'], nargs= '+',
     help='''Grid colour. Recycled.''')
@@ -348,22 +358,23 @@ between 9 and 12 should suite most cases. Default 10.
                    ''')
 
 # -----------------------------------------------------------------------------
-
+# END ARGPARSE
 # -----------------------------------------------------------------------------
+
 def main():
     args = parser.parse_args()
     if args.parfile:
-        pf= read_parfile(args.parfile)
+        pf= pycoverage.read_parfile(args.parfile)
         if not pf:
             sys.exit('Error parsing parameter file %s' %(args.parfile))
-        args= assign_parfile(pf, args)
+        args= pycoverage.assign_parfile(pf, args)
     # Checking arguments
     # ------------------
     if args.ibam == '-' and args.bed == '-':
         sys.exit('stdin passed to *both* --ibam and --bed!')
     try:
-        assert validate_ymax(args.ymax)
-        assert validate_ymin(args.ymin)
+        assert validate_args.validate_ymax(args.ymax)
+        assert validate_args.validate_ymin(args.ymin)
     except AssertionError:
         print('''Invalid arguments passed to ymax (%s) or ymin (%s).''' %(args.ymax, args.ymin))
         sys.exit(1)
@@ -398,17 +409,15 @@ def main():
     if args.ibam == ['-']:
         inputlist_all= [x.strip() for x in sys.stdin.readlines()]
     else:
-        inputlist_all= getFileList(args.ibam)
-    inputlist= dedupFileList(inputlist_all)
+        inputlist_all= pycoverage.getFileList(args.ibam)
+    inputlist= pycoverage.dedupFileList(inputlist_all)
     bamlist= [x for x in inputlist if x.endswith('.bam')]
     nonbamlist= [x for x in inputlist if not x.endswith('.bam')]
-    names= parse_names(args.names, inputlist_all)
+    names= validate_args.parse_names(args.names, inputlist_all)
     if not args.replot:
         print('\nFiles to analyze (%s found):\n%s\n' %(len(inputlist), ', '.join(inputlist)))
     if len(inputlist) == 0 and not args.replot:
         sys.exit('No file found!\n')
-    #if args.title is None:
-    #    args.title= ''
     
     # Output settings
     # ---------------
@@ -451,7 +460,7 @@ def main():
         print(', '.join([str(x) for x in libsizes]))
     if args.bed == '-':
         inbed= sys.stdin
-        fh= stdin_inbed_to_fh(inbed)
+        fh= pycoverage.stdin_inbed_to_fh(inbed)
         inbed= open(fh.name)
         os.remove(fh.name)
     elif args.bed.endswith('.gz'):
@@ -459,21 +468,17 @@ def main():
     else:
         inbed= open(args.bed)
     inbed= pybedtools.BedTool(inbed).sort() ## inbed is args.bed file handle
+    
     # ---------------------[ Pre-filter non-bam files ]-------------------------
-    xinbed= pybedtools.BedTool(inbed).each(slopbed, slop).merge().saveas()
+    
+    xinbed= pybedtools.BedTool(inbed).each(pycoverage.slopbed, slop).merge().saveas()
     ## BigWigs: Pass them through bigWigToBedGraph.py and replace the output name
     ## in nonbamlist. exts: .bw, .bigWig, .bigwig 
     nonbam_dict= {}
     for nonbam in nonbamlist:
         print('Pre-parsing %s' %(nonbam))
-        nonbam_dict[nonbam]= prefilter_nonbam_multiproc(nonbam= nonbam, inbed= xinbed, tmpdir= tmpdir, sorted= args.sorted)
+        nonbam_dict[nonbam]= pycoverage.prefilter_nonbam_multiproc(nonbam= nonbam, inbed= xinbed, tmpdir= tmpdir, sorted= args.sorted)
 
-#        proc_list.append({'nonbam':nonbam, 'inbed':inbed, 'tmpdir':tmpdir})
-#    pool = multiprocessing.Pool(processes= args.nproc)
-#    ori_new= pool.map(prefilter_nonbam_multiproc, proc_list)
-#    nonbam_dict= {}
-#    for t in ori_new:
-#        nonbam_dict[t[0]]= t[1]
     # -----------------------[ Loop thorugh regions ]----------------------------
     for region in inbed:
         print('Processing: %s' %(str(region).strip()))
@@ -483,7 +488,7 @@ def main():
         if region.name != '' and region.name != '.':
             regname = regname + '_' + region.name
         regname= re.sub('[^a-zA-Z0-9_\.\-\+]', '_', regname) ## Get rid of metachar to make sensible file names
-        xregion= slopbed(region, slop)
+        xregion= pycoverage.slopbed(region, slop)
         
         ## --------------------[ Prepare output file names ]-------------------
         
@@ -502,17 +507,23 @@ def main():
         final_pdffile= os.path.join(outdir, regname + '.pdf')
         rscript= os.path.join(tmpdir, regname + '.R')
         if not args.replot:
-            prepare_reference_fasta(fasta_seq_name, args.maxseq, xregion, args.fasta) ## Create reference file even if header only
+            pycoverage.prepare_reference_fasta(fasta_seq_name, args.maxseq, xregion, args.fasta) ## Create reference file even if header only
             ## ----------------------- BAM FILES -------------------------------
             ## At the end of this session you have *.grp.bed.txt (matrix-like
             ## file read by R)
-            regionWindows= False ## bed interval divided into nwinds intervals by bedtools windowMaker
+            regionWindowsDone= False ## In previous versions this var was regionWindows itself.
+                                    ## However just checking `if regionWindows`
+                                    ## consumes a file handle which is never closed!!
             if bamlist != []:
-                if not regionWindows:
-                    regionWindows= makeWindows(xregion, nwinds)
-                pympileup.bamlist_to_mpileup(mpileup_name, mpileup_grp_name, bamlist, xregion, nwinds, args.fasta, args.rpm, regionWindows, samtools= args.samtools, groupFun= args.group_fun) ## Produce mpileup matrix
+                if not regionWindowsDone:
+                    regionWindows= pycoverage.makeWindows(xregion, nwinds) ## bed interval divided into nwinds intervals by bedtools windowMaker
+                    regionWindowsDone= True
+                pympileup.bamlist_to_mpileup(mpileup_name, mpileup_grp_name,
+                    bamlist, xregion, nwinds, args.fasta, args.rpm, regionWindows,
+                    samtools= args.samtools, groupFun= args.group_fun) ## Produce mpileup matrix
             else:
                 mpileup_grp_name= ''
+            
             ## ----------------------NON BAM FILES -----------------------------
             ## Produce coverage and annotation files for non-bam files. One output
             ## file prooduced with format
@@ -533,13 +544,14 @@ def main():
                         """
                         tmpfh= tempfile.NamedTemporaryFile(dir= tmpdir, suffix= 'nonbam.tmp.bed', delete= False)
                         tmp_name= tmpfh.name
-                        #tmpfh= open(tmp_name, 'w')
-                        nlines= prepare_nonbam_file(nonbam, tmpfh, xregion, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
+                        nlines= pycoverage.prepare_nonbam_file(nonbam, tmpfh, xregion, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
                         tmpfh.close()
                         if nlines > nwinds:
-                            if not regionWindows:
-                                regionWindows= makeWindows(xregion, nwinds)
-                            compressBedGraph(regionWindows, tmp_name, use_file_name= x, bedgraph_grp_fh= non_bam_fh, col_idx= 4 + len(pympileup.COUNT_HEADER),
+
+                            if not regionWindowsDone:
+                                regionWindows= pycoverage.makeWindows(xregion, nwinds)
+                                regionWindowsDone= True
+                            pycoverage.compressBedGraph(regionWindows, tmp_name, use_file_name= x, bedgraph_grp_fh= non_bam_fh, col_idx= 4 + len(pympileup.COUNT_HEADER),
                                 groupFun= args.group_fun)
                         else:
                             fh= open(tmp_name)
@@ -547,7 +559,7 @@ def main():
                                 non_bam_fh.write(line)
                         os.remove(tmp_name)
                     else:
-                        nlines= prepare_nonbam_file(nonbam, non_bam_fh, xregion, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
+                        nlines= pycoverage.prepare_nonbam_file(nonbam, non_bam_fh, xregion, use_file_name= x) ## Write to fh the overlaps btw nonbam and region. Return no. lines
                 non_bam_fh.close()
             else:
                 non_bam_name= ''
@@ -555,9 +567,9 @@ def main():
         # Plotting 
         # ----------------------------------------------------------------------
         outputPDF.append(pdffile)
-        rgraph= RPlot(
-              inputlist= quoteStringList(inputlist_all),
-              count_header= quoteStringList(pympileup.COUNT_HEADER),
+        rgraph= pycoverage.RPlot(
+              inputlist= pycoverage.quoteStringList(inputlist_all),
+              count_header= pycoverage.quoteStringList(pympileup.COUNT_HEADER),
               pdffile= pdffile,
               rscript= rscript,
               mcov= mpileup_grp_name,
@@ -568,40 +580,41 @@ def main():
               pheight= args.pheight,
               pwidth= args.pwidth,
               psize= args.psize,
-              ylab= quoteStringList(args.ylab),
-              cex_lab= quoteStringList(args.cex_lab),
+              ylab= pycoverage.quoteStringList(args.ylab),
+              cex_lab= pycoverage.quoteStringList(args.cex_lab),
               bstart= bstart,
               bend= bend,
               xlim1= xregion.start,
               xlim2= xregion.end,
               maxseq= args.maxseq,
-              ymax= quoteStringList(args.ymax),
-              ymin= quoteStringList(args.ymin),
+              ymax= pycoverage.quoteStringList(args.ymax),
+              ymin= pycoverage.quoteStringList(args.ymin),
               chrom= xregion.chrom,
-              vheights= quoteStringList(args.vheights),
-              mar_heights= quoteStringList(args.mar_heights),
+              vheights= pycoverage.quoteStringList(args.vheights),
+              mar_heights= pycoverage.quoteStringList(args.mar_heights),
               cex= args.cex,
               cex_axis= args.cex_axis,
-              col_mark= quoteStringList(args.col_mark),
-              col_line= quoteStringList(args.col_line),
-              lwd= quoteStringList(args.lwd),
-              col_track= quoteStringList(args.col_track),
-              col_track_rev= quoteStringList(args.col_track_rev),
-              col_nuc= quoteStringList(args.col_nuc),
+              col_mark= pycoverage.quoteStringList(args.col_mark),
+              col_line= pycoverage.quoteStringList(args.col_line),
+              lwd= pycoverage.quoteStringList(args.lwd),
+              col_track= pycoverage.quoteStringList(args.col_track),
+              col_track_rev= pycoverage.quoteStringList(args.col_track_rev),
+              col_nuc= pycoverage.quoteStringList(args.col_nuc),
               no_col_bases= args.no_col_bases,
-              bg= quoteStringList(args.bg),
-              col_grid= quoteStringList(args.col_grid),
-              col_text_ann= quoteStringList(args.col_text_ann),
-              names= quoteStringList(names),
-              col_names= quoteStringList(args.col_names),
+              bg= pycoverage.quoteStringList(args.bg),
+              fbg= args.fbg,
+              col_grid= pycoverage.quoteStringList(args.col_grid),
+              col_text_ann= pycoverage.quoteStringList(args.col_text_ann),
+              names= pycoverage.quoteStringList(names),
+              col_names= pycoverage.quoteStringList(args.col_names),
               cex_names= args.cex_names,
               # cex_range= args.cex_range,
               cex_seq= args.cex_seq,
               col_seq= args.col_seq,
               mar= ', '.join([str(x) for x in [0, args.mar, 0.2, 1]]),
               col_all= args.col_all,
-              rcode= quoteStringList(args.rcode),
-              overplot= quoteStringList(args.overplot)
+              rcode= pycoverage.quoteStringList(args.rcode),
+              overplot= pycoverage.quoteStringList(args.overplot)
               )
         
         if rgraph['stderr'] != '':
@@ -616,7 +629,7 @@ def main():
             ## if the final destination dir has been set to be also the tempdir
             shutil.copyfile(pdffile, final_pdffile)
     if onefile:
-        catPdf(in_pdf= outputPDF, out_pdf= args.onefile)
+        pycoverage.catPdf(in_pdf= outputPDF, out_pdf= args.onefile)
     for f in nonbam_dict:
         os.remove(nonbam_dict[f])
     if args.tmpdir is None:
