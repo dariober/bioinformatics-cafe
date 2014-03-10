@@ -250,7 +250,8 @@ If you find some of the graphics features annoying, here's how to turn them off:
 || `--col_track NA`       || Don't draw coverage bars (_i.e._ the area under coverage profiles) ||
 || `--col_track_rev NA`   || Don't use a different colour for reads on reverse strand||
 || `--col_line NA`        || Don't add border profile to coverage tracks    || 
-|| `--bg NA`              || Don't use any background for plot area    ||
+|| `--bg NA`              || Don't use any background for plot area  ||
+|| `--fbg NA`             || Don't use any background for figure area  ||
 || `--grid NA`            || Don't draw grid lines ||
 || `--col_mark NA`        || Don't plot the triangles marking the extremes of the input bed region ||
 || `--nwinds 1000000` || Don't group read counts or score from `--ibam` in windows (could generate huge pdf files!) ||
