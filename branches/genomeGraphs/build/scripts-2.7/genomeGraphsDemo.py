@@ -109,35 +109,31 @@ pdfOpen(outPdf)
 # -----------------------------------------------------------------------------
 # CHUNK 3
 region= ['Q36', '60', '120']
-ibam= ' '.join([os.path.join(datadir, 'grm022.gtf'),
-                os.path.join(datadir, 'grm022.bedGraph'),
-                os.path.join(datadir, 'grm022.bedGraph'),
-                os.path.join(datadir, 'grm022.bedGraph'),
-                os.path.join(datadir, 'grm022.bedGraph'),
-                os.path.join(datadir, 'grm022.bedGraph'),
-                os.path.join(datadir, 'grm022.bedGraph'),
-                os.path.join(datadir, 'grm022.bedGraph'),
-                os.path.join(datadir, 'grm022.bedGraph'),
-                os.path.join(datadir, 'grm022.gtf'),
-                ])
+ibam= ' '.join([os.path.join('$dd', 'grm022.gtf')]
+    + [os.path.join('$dd', 'grm022.bedGraph')] * 50
+    + [os.path.join('$dd', 'grm022.gtf')])
 
-cmd="""echo '%(region)s' | genomeGraphs -b - \
+cmd="""dd="%(datadir)s"
+
+cols=`printf ' grey50%%.0s' {1..50}`
+vh=`printf ' 1%%.0s' {1..50}`
+
+echo '%(region)s' | genomeGraphs -b - \
     -i %(ibam)s \
     --title 'Stacking several tracks' \
     --bg white \
-    --col_track pink grey90 grey80 grey70 grey60 grey50 grey40 grey30 grey20 pink \
+    --col_track pink $cols pink \
     --col_line darkorange \
     --lwd 2 \
+    -vh 5 $vh 5 \
     -d %(outdir)s
-""" %{'region': ' '.join(region), 'ibam': ibam, 'outdir': outdir}
+""" %{'datadir': datadir, 'region': ' '.join(region), 'ibam': ibam, 'outdir': outdir}
 
 outPdf= os.path.join(outdir, '_'.join(region) + '.pdf')
-cmdPrint= re.sub(datadir + '/', '', cmd)
-cmdPrint= re.sub('    ', ' \ \n', cmdPrint)
+cmdPrint= re.sub('    ', ' \\\n', cmd)
 
 print('\n\n' + '-' * 80 + '\n')
 print(cmdPrint)
-print('Input files are in "%s"' %(datadir))
 print('Output file "%s"' %(outPdf))
 print('-' * 80)
 

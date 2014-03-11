@@ -271,6 +271,11 @@ plot_layout.add_argument('--cex_lab', '-cl',
                     nargs= '+',
                     help='''Character expansion for labels of Y-axis. Recycled. Default to same as cex_axis.''')
 
+plot_layout.add_argument('--col_yaxis',
+                    default= ['black'],
+                    nargs= '+',
+                    help='''Colour for annotationa of y-axis line and figures. Default black''')
+
 plot_layout.add_argument('--vheights', '-vh',
                     default= [''],
                     type= str,
@@ -297,9 +302,6 @@ Useful to colour-code samples according to experimemtal design.''')
 
 plot_layout.add_argument('--bg', nargs= '+', default= ['white'],
     help='''List of colours for the plot backgrounds. Recycled as necessary.''')
-
-plot_layout.add_argument('--fbg', default= 'grey85',
-    help='''Colour for the whole figure background. Default grey85''')
 
 plot_layout.add_argument('--col_grid', default= ['darkgrey'], nargs= '+',
     help='''Grid colour. Recycled.''')
@@ -334,6 +336,8 @@ TODO: Make it recyclable/one for each region?''')
 figure_size_args.add_argument('--cex_title', default= 1, type= float,
     help= '''Character expansion for --title. This is independent to --cex.''')
 
+figure_size_args.add_argument('--fbg', default= 'grey85',
+    help='''Colour for the whole figure background. Default grey85''')
 
 figure_size_args.add_argument('--mar', default= 4, type= float, help='''Spacing on the left margin in line numbers. Default 4.
 Increase or decrease to give space to y-axis labels.''')
@@ -582,6 +586,7 @@ def main():
               psize= args.psize,
               ylab= pycoverage.quoteStringList(args.ylab),
               cex_lab= pycoverage.quoteStringList(args.cex_lab),
+              col_yaxis= pycoverage.quoteStringList(args.col_yaxis),
               bstart= bstart,
               bend= bend,
               xlim1= xregion.start,

@@ -444,6 +444,7 @@ plot_params$col_grid<- recycle(nrow(plot_params), c(%(col_grid)s) )
 plot_params$ymax<- recycle(nrow(plot_params), c(%(ymax)s) )
 plot_params$ymin<- recycle(nrow(plot_params), c(%(ymin)s) )
 plot_params$ylab<- recycle(nrow(plot_params), c(%(ylab)s) )
+plot_params$col_yaxis<- recycle(nrow(plot_params), c(%(col_yaxis)s) )
 plot_params$cex_lab<- as.numeric(recycle(nrow(plot_params), c(%(cex_lab)s) ))
 plot_params$vheights<- as.numeric(recycle(nrow(plot_params), c(%(vheights)s) ))
 plot_params$rcode<- recycle(nrow(plot_params), c(%(rcode)s) )
@@ -458,7 +459,6 @@ axisAnn.col<- 'black'           ## col for the axis line and tick marks
 axisAnn.col.axis<- axisAnn.col  ## col for axis numbers
 axisLab.col<- axisAnn.col       ## col for axis label
 axisShade.col<- NA        ## col for shaded area
-# col.bg<- 'grey85'          ## col for figure background. `par(bg= col.bg)`
 
 # Check params
 # ------------
@@ -708,20 +708,20 @@ for(i in 1:nrow(plot_params)){
         ## Set up plot
         ## -----------
         if(drawNewPlot){
-            par(las= 1, mar= mar, bty= 'l', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0), xaxs= 'i', bg= fbg)
+            par(las= 1, mar= mar, bty= 'n', xaxt= 'n', yaxt= 's', mgp= c(3, 0.7, 0), xaxs= 'i', bg= fbg)
             plot(x= 0, type= 'n', xlab= '', ylab= '', ylim= c(pymin, pymax), xlim= xlim, yaxt= 'n') # 
             shaded.axis(side= 2, col.shade= axisShade.col, col.axis= NA, col= NA, pct.margin= 1)
             
             ## Reset cex_axis if output is going to be too big
             cex_yaxis<- cex_axis
-            yax<- axis(side= 2, labels= FALSE, tick= TRUE, lwd= 0.5, col= axisAnn.col, col.axis= axisAnn.col.axis)
+            yax<- axis(side= 2, labels= FALSE, tick= TRUE, lwd= 0.5, col= plot_params$col_yaxis[i], col.axis= plot_params$col_yaxis[i])
             maxw<- max(sapply(yax, strwidth, cex= cex_axis))
             marWidth<- par('mar')[2] * strwidth('M') ## Width of the margin in user coords
             if(maxw > marWidth){
                 maxLab<- yax[which(sapply(yax, strwidth, cex= cex_axis) == maxw)][1]
                 cex_yaxis<- cex.for.width(text= maxLab, marWidth)
             }
-            yax<- axis(side= 2, labels= TRUE, tick= FALSE, cex.axis= cex_yaxis, col= axisAnn.col, col.axis= axisAnn.col.axis)
+            yax<- axis(side= 2, labels= TRUE, tick= FALSE, cex.axis= cex_yaxis, col= plot_params$col_yaxis[i], col.axis= plot_params$col_yaxis[i])
             cex_lab<- plot_params$cex_lab[i]
             labBase<- par('usr')[1] - maxw - strwidth('W', cex= cex_yaxis)*1.5 ## Where lab is going to sit in user coords
             if(cex_lab < 0){
