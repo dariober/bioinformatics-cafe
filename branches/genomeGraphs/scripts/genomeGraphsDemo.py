@@ -93,7 +93,6 @@ cmd="""echo '%(region)s' | genomeGraphs -b - \
 """ %{'region': ' '.join(region), 'ibam': ibam, 'outdir': outdir}
 
 outPdf= os.path.join(outdir, '_'.join(region) + '.pdf')
-cmdPrint= re.sub(datadir + '/', '', cmd)
 cmdPrint= re.sub('    ', ' \ \n', cmdPrint)
 
 print('\n\n' + '-' * 80 + '\n')
@@ -108,26 +107,33 @@ pdfOpen(outPdf)
 
 # -----------------------------------------------------------------------------
 # CHUNK 3
-region= ['Q36', '60', '120']
-ibam= ' '.join([os.path.join('$dd', 'grm022.gtf')]
-    + [os.path.join('$dd', 'grm022.bedGraph')] * 50
-    + [os.path.join('$dd', 'grm022.gtf')])
+region= ['Q36', '0', '1000']
 
 cmd="""dd="%(datadir)s"
 
-cols=`printf ' grey50%%.0s' {1..50}`
-vh=`printf ' 1%%.0s' {1..50}`
+bdg=`printf " $dd/grm022.bedGraph%%.0s" {1..100}`
+cols=`printf ' red blue%%.0s' {1..50}`
+vh=`printf ' 1%%.0s' {1..100}`
 
 echo '%(region)s' | genomeGraphs -b - \
-    -i %(ibam)s \
-    --title 'Stacking several tracks' \
-    --bg white \
-    --col_track pink $cols pink \
-    --col_line darkorange \
-    --lwd 2 \
-    -vh 5 $vh 5 \
-    -d %(outdir)s
-""" %{'datadir': datadir, 'region': ' '.join(region), 'ibam': ibam, 'outdir': outdir}
+ -i $dd/grm022.gtf $bdg $dd/grm022.gtf \
+ --title 'Stacking several tracks' \
+ --bg white \
+ --col_track firebrick4 $cols firebrick4 \
+ --col_line NA \
+ --col_mark NA \
+ --names '' \
+ --col_grid NA \
+ --fbg white \
+ --lwd 2 \
+ -vh 4 $vh 4 \
+ -mh 3 10 \
+ -W 16 \
+ -H 24 \
+ --col_yaxis NA \
+ --cex_axis 1.5 \
+ -d %(outdir)s
+""" %{'datadir': datadir, 'region': ' '.join(region), 'outdir': outdir}
 
 outPdf= os.path.join(outdir, '_'.join(region) + '.pdf')
 cmdPrint= re.sub('    ', ' \\\n', cmd)
@@ -141,10 +147,9 @@ p= subprocess.Popen(cmd, shell= True)
 p.wait()
 pdfOpen(outPdf)
 
-# -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
-# CHUNK 3
+# CHUNK 4
 region= ['Q36', '60', '120', 'vh']
 ibam= ' '.join([os.path.join(datadir, 'grm022.bedGraph'),
                 os.path.join(datadir, 'grm022.bedGraph'),
@@ -154,7 +159,7 @@ ibam= ' '.join([os.path.join(datadir, 'grm022.bedGraph'),
 cmd="""echo '%(region)s' | genomeGraphs -b - \
     -i %(ibam)s \
     --title 'Adjusting panel size with -vh' \
-    --col_track grey60 \
+    --col_track "#FF000050" \
     --lwd 2 \
     --col_line chocolate \
     -vh 3 2 1 \
@@ -176,32 +181,35 @@ p.wait()
 pdfOpen(outPdf)
 
 # -----------------------------------------------------------------------------
+# CHUNK 5
+
+region= ['Q36', '0', '100', 'OP']
+
+cmd="""dd="%(datadir)s"
+
+echo "%(region)s" | genomeGraphs -b - \
+    -i $dd/grm022.a.bedGraph $dd/grm022.b.bedGraph $dd/grm022.a.bedGraph $dd/grm022.b.bedGraph \
+    --title 'Overplotting tracks' \
+    --col_track '#FF000050' '#0000FF50' \
+    --col_line '#FF000050' '#0000FF50' \
+    --lwd 2 \
+    --names 'Prof 1' 'Prof 2' 'Both' \
+    -op 1 2 3 3 \
+    -d %(outdir)s
+""" %{'datadir': datadir, 'region': ' '.join(region), 'outdir': outdir}
+
+outPdf= os.path.join(outdir, '_'.join(region) + '.pdf')
+cmdPrint= re.sub('    ', ' \\\n', cmd)
+
+print('\n\n' + '-' * 80 + '\n')
+print(cmdPrint)
+print('Output file "%s"' %(outPdf))
+print('-' * 80)
+
+p= subprocess.Popen(cmd, shell= True)
+p.wait()
+pdfOpen(outPdf)
+
+# -----------------------------------------------------------------------------
 
 sys.exit()
-
-"""
-dd="/Users/berald01/svn_checkout/bioinformatics-misc/branches/genomeGraphs/genome_graphs/demo"
-
-bdg=`printf " $dd/grm022.bedGraph%.0s" {1..100}`
-cols=`printf ' red blue%.0s' {1..50}`
-vh=`printf ' 1%.0s' {1..100}`
-
-echo 'Q36 0 1000' | genomeGraphs -b - \
- -i $dd/grm022.gtf $bdg $dd/grm022.gtf \
- --title 'Stacking several tracks' \
- --bg white \
- --col_track pink $cols pink \
- --col_line NA \
- --col_mark NA \
- --names '' \
- --col_grid NA \
- --fbg white \
- --lwd 2 \
- -vh 4 $vh 4 \
- -mh 3 10 \
- -W 16 \
- -H 24 \
- --col_yaxis NA \
- --cex_axis 1.5 \
- -d tmp
-"""
