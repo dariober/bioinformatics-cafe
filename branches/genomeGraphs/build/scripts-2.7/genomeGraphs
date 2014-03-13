@@ -1,7 +1,0 @@
-#!/Users/berald01/bin/python
-
-from genome_graphs import genomeGraphs
-
-genomeGraphs.main()
-
-

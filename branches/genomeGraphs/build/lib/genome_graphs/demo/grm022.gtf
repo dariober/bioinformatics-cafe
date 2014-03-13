@@ -1,4 +1,0 @@
-Q36	example	exon	5	40	.	+	.	gene_name "TQ-VT";
-Q36	example	exon	55	65	.	+	.	gene_name "TQ-VT";
-Q36	example	CDS	55	65	.	+	.	gene_name "TQ-VT";
-Q36	example	exon	80	105	.	+	.	gene_name "TQ-VT";
