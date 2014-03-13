@@ -1,0 +1,26 @@
+DOWNLOAD AND INSTALLATION
+-------------------------
+
+## Download repository
+svn checkout http://bioinformatics-misc.googlecode.com/svn/branches/genomeGraphs genomeGraphs
+cd genomeGraphs
+
+## Optional: delete previous installation build
+python setup.py clean --all
+
+## User specific installation. No needs to admin rights:
+python setup.py install --user --install-scripts $HOME/bin/
+
+## Install for entire system
+python setup.py install
+
+TEST AND EXAMPLES
+-----------------
+
+## Some examples
+genomeGraphsDemo.py tmp/
+
+SEE ALSO
+--------
+
+http://code.google.com/p/bioinformatics-misc/wiki/coverage_screenshots_docs
