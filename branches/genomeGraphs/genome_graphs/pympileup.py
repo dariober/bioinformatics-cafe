@@ -83,7 +83,7 @@ def mpileup_java_cmd(bamlist, region, fasta= None, mpileup= 'samtools mpileup'):
     pathToJar= os.path.split(inspect.getfile(genome_graphs))[0]
     mpileupParserJar= os.path.join(pathToJar, 'mpileupToNucCounts.jar')
     
-    cmd= 'set -e; set -o pipefail; %(mpileup)s %(f)s -BQ0 -d 1000000000 %(r)s %(bamlist)s | java -jar %(mpileupParserJar)s' %{'mpileup': mpileup,
+    cmd= 'set -e; set -o pipefail; %(mpileup)s %(f)s -BQ0 -d 1000000 %(r)s %(bamlist)s | java -jar %(mpileupParserJar)s' %{'mpileup': mpileup,
             'f': f, 'r': r, 'bamlist': ' '.join(bamlist), 'mpileupParserJar': mpileupParserJar}
     return(cmd)
 
