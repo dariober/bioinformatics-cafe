@@ -128,7 +128,7 @@ genome= {}
 for line in fasta:
     line= line.strip()
     if line.startswith('>'):
-        chrom= line.lstrip('>')
+        chrom= line.lstrip('>').split()[0]
         sys.stderr.write('Reading: ' + chrom + '\n')
         genome[chrom]= []
         continue
