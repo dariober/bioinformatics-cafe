@@ -128,7 +128,7 @@ public class Tester {
 		
 		NullDistribution nd= new NullDistribution(sequence, orderMarkovChain, pctPseudocounts);
 		System.out.println(nd.toString());
-		nd.generateNullDistribution(sequence, cpattern, 50000, 20, obsHits, hits);
+		nd.generateNullDistribution(sequence, cpattern, 50000, 20, obsHits, hits, true);
 		
 		long t1= System.currentTimeMillis();
 		System.out.println("generateNullDistribution: " + (t1-t0) + " ms");

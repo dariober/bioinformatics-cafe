@@ -114,7 +114,6 @@ public class Main {
 				i++;
 				w.setNucleotideFreq(precision);
 				List<SeqMatcher> matches= Tools.regexMatcher(cpattern, w.getSequence(), revcomp);
-				
 				/* Decide if randomization has to run */						
 
 				boolean moreHitsThanEver= ptable.obsHitsGreaterThanMax(matches.size(), w.getNucleotideFreq());
@@ -138,7 +137,8 @@ public class Main {
 							nrand, 
 							precision, 
 							matches.size(),
-							nullDistr
+							nullDistr,
+							revcomp
 					);
 					ptable.probsLookUpTable.put(w.getNucleotideFreq(), nullDistr);
 					ptable.maxHitsLookUpTable.put(w.getNucleotideFreq(), matches.size());
