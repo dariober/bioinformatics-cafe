@@ -1,0 +1,47 @@
+## This R script should reproduce the results of RegexEnrichment
+## for a sample window.
+## Use Input: 
+
+## java -Xmx2g -jar RegexEnrichment.jar -f test_data/chr1.hg19.fa.gz -r 100000 
+
+## Regex: "([gG]{3,}\\w{1,7}){3,}[gG]{3,}"  
+## Window size: 1000
+## precision 20
+## Excpected output from RegexEnrichment for hg19: chr1:11000-12000 (exact figures might vary):
+chr1	11008	11026	chr1_110008_1100026_for	0.00162	+	11000	12000	GGGCGGGGGTTGGGGGGG	[0 x 59077, 1 x 3322, 2 x 100, 3]
+chr1	11058	11078	chr1_1100058_1100078_for	0.00162	+	11000	12000	GGGCTGGGGCGGGGGGAGGG	[0 x 59077, 1 x 3322, 2 x 100, 3]
+
+R
+## Get sequence from fasta
+fa<- system('echo "chr1\t11000\t12000" | fastaFromBed -fi chr1.hg19.fa -bed - -fo -', intern= TRUE)
+x<- fa[[2]]
+
+
+## Split to individual chars and shuffle:
+xv<- strsplit(toupper(x), '')[[1]]
+ntCount<- table(xv)
+fa<- file("Rshuffled.fa", "w")
+t0<- Sys.time()
+nrand<- 100000
+for (i in 1:nrand){   
+    xshuff<- sample(unique(xv), prob= ntCount, replace= TRUE, size= length(xv))
+    xseq<- paste(xshuff, collapse= '')
+    write(paste(">seq_", i, '\n', xseq, sep= ''), file= fa)
+}
+close(fa)
+t1<- Sys.time()
+print(t1 - t0)
+
+## Scan shuffles seqs
+system("fastaRegexFinder.py -q -f Rshuffled.fa > Rshuffled.txt")
+pqs<- read.table("Rshuffled.txt")
+simCount<- c(table(pqs$V1), rep(0, nrand - length(unique(pqs$V1))))
+length(simCount) == nrand
+aggregate(simCount, list(simCount), length)
+
+## Now look at the number of hits returned by RegexEnrichment (e.g. 2).
+## The pvalue from R for the row just before this number should approx match
+## the pvalue from RegexEnrichment.
+pvalue= 1-seq(0.95, 1, len= 100)
+nhits= as.vector(quantile(simCount, seq(0.95, 1, len= 100)))
+cbind(pvalue, nhits)
