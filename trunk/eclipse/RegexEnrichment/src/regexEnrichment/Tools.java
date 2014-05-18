@@ -44,17 +44,47 @@ public class Tools {
 		}
 	}
 	
+	/**
+	 * Transform raw nucleotide counts to frequencies rounded to given precision.
+	 * 
+	 * If any of the nucleotides has been rounded to 0, use the exact
+	 * frequencies. E.g. 
+	 * sequence= 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG'
+	 * ntCount= {A= 49, G= 1}
+	 * freq= {A= 0.98, G= 0.02}
+	 * roundedProbWithPrecision20= {A= 1, G= 0}
+	 * 
+	 * The rounded probabilities will generate random sequence composed
+	 * by 'A' homopolymers!
+	 *
+	 * NOTE: Sum of rounded % will not always sum to 1. See also:
+	 * http://stackoverflow.com/questions/5227215/how-to-deal-with-the-sum-of-rounded-percentage-not-being-100
+	 *
+	 * 
+	 * @param ntCount Count of each nucleotide.
+	 * @param precision @see nucleotideFrequencies
+	 * @return Rounded frequency of each nucleotide.
+	 */
 	public static HashMap<String, Float> countsToProbs(HashMultiset<String> ntCount, int precision){
-		// MEMO: Sum of rounded % will not always sum to 1. See also:
-		// http://stackoverflow.com/questions/5227215/
-		// how-to-deal-with-the-sum-of-rounded-percentage-not-being-100
 		HashMap<String, Float> probs= new HashMap<String, Float>();
 		float totCount= (float) ntCount.size();
 
+		boolean hasZero= false;
 		for( String sequence : ntCount.elementSet() ){
 			float prob= roundProb(ntCount.count(sequence) / totCount, precision);
+			if (prob == 0){
+				// If a rounded prob gets down to zero, exit and use "exact" frequencies.
+				hasZero= true;
+				break;
+			}
 			probs.put(sequence, prob);
-		}	
+		}
+		if (hasZero){
+			for( String sequence : ntCount.elementSet() ){
+				float prob= ntCount.count(sequence) / totCount;
+				probs.put(sequence, prob);
+			}
+		}
 		return(probs);
 	}
 	
