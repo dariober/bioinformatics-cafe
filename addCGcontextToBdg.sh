@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -e
+set -o pipefail
+
 bdg=$1
 ref=$2
 
@@ -23,6 +26,11 @@ REQUIREMENTS
 
 USAGE
     addCGcontextToBdg.sh <bedgraph> <fasta-ref> 
+
+NOTES:
+    Error handling is not very robust, if one of the pipes fails the script keeps going!
+
+Version: 0.1
 "
 exit 1
 fi
@@ -36,8 +44,8 @@ awk 'BEGIN{OFS="\t"} {print $1, $2, $3, $4, $5, $7, $6}' $bdg \
                                 {print "CHH"}
                             else if ($2~/^C[ACTU][ACTU]/)
                                 {print "CHH"}
-                            else if ($2~/^C../)
+                            else if ($2~/^C/)
                                 {print "CNN"}
                             else
-                                {print "NNN"}}' \
+                                {print "ERROR: There is no C at this position!" > "/dev/stderr"; exit 1}}' \
 | paste $bdg -
