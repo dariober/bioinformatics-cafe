@@ -1,7 +1,7 @@
 package bisReadBias;
 
 import java.io.File;
-import java.util.LinkedHashMap;
+import java.util.*;
 import java.util.List;
 
 import org.biojava3.core.sequence.DNASequence;
@@ -10,16 +10,16 @@ import org.biojava3.core.sequence.io.FastaReaderHelper;
 
 public class FastaReference {
 
-	private LinkedHashMap<String, byte[]> reference= new LinkedHashMap<String, byte[]>();
+	private HashMap<String, byte[]> reference= new HashMap<String, byte[]>();
 	
 	/* SETTERS AND GETTERS 
 	 * -----------------------------------------------------------------------*/
 	
-	public LinkedHashMap<String, byte[]> getReference() {
+	public HashMap<String, byte[]> getReference() {
 		return reference;
 	}
 
-	public void setReference(LinkedHashMap<String, byte[]> reference) {
+	public void setReference(HashMap<String, byte[]> reference) {
 		this.reference = reference;
 	}
 
@@ -29,7 +29,7 @@ public class FastaReference {
 	public FastaReference(File fastafile) {
 		
 		try {
-			LinkedHashMap<String, DNASequence> referenceDNAseq = 
+			HashMap<String, DNASequence> referenceDNAseq = 
 					FastaReaderHelper.readFastaDNASequence(fastafile);
 			for (String chrom : referenceDNAseq.keySet()){
 				this.reference.put(chrom, DNASequenceToByteArray(referenceDNAseq.get(chrom)));
