@@ -1,7 +1,7 @@
 package bisReadBias;
 
 import net.sf.samtools.*;
-import net.sf.picard.reference.*;
+
 
 import java.io.*;
 

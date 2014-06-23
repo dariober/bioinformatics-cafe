@@ -1,16 +1,10 @@
 package bisReadBias;
 
-import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.biojava3.core.sequence.DNASequence;
 
-import com.google.common.base.Joiner;
-
-import net.sf.picard.reference.IndexedFastaSequenceFile;
-import net.sf.samtools.AlignmentBlock;
+// import net.sf.picard.reference.IndexedFastaSequenceFile;
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMRecord;
@@ -48,9 +42,6 @@ import net.sf.samtools.SAMRecord;
 public class AlignedRead {
 	
 	private byte CHAR_FOR_SOFT_CLIP= (byte)'N';
-	private List<CigarOperator> readingOperators= Arrays.asList(CigarOperator.M, 
-			CigarOperator.I, CigarOperator.S, CigarOperator.EQ, CigarOperator.X);  
-			
 	private byte[] readbases;
 	private byte[] refbases;
 	private byte[] methylbases;
@@ -108,7 +99,7 @@ public class AlignedRead {
 		this.isFirst= setMateFlag(rec);
 	}
 	
-	public AlignedRead(SAMRecord rec, IndexedFastaSequenceFile fa){
+	public AlignedRead(SAMRecord rec, FastaReference fa){
 		this.readbases= this.getAlignedBasesForRead(rec);
 		this.refbases= this.getReferenceBasesForRead(rec, fa);
 		this.isFirst= setMateFlag(rec);
@@ -191,7 +182,7 @@ public class AlignedRead {
 	 * @param fa
 	 * @return
 	 */
-	public byte[] getReferenceBasesForRead(SAMRecord rec, IndexedFastaSequenceFile fa){
+	public byte[] getReferenceBasesForRead(SAMRecord rec, FastaReference fa){
 
 		byte[] referenceBases= new byte[rec.getReadLength()];
 
@@ -210,7 +201,7 @@ public class AlignedRead {
 										
 					int readPos= rec.getReferencePositionAtReadPosition(readIdx+1);
 					
-					referenceBases[readIdx]= fa.getSubsequenceAt(rec.getReferenceName(), readPos, readPos).getBases()[0]; 
+					referenceBases[readIdx]= fa.getSubsequenceAt(rec.getReferenceName(), readPos, readPos, true)[0]; 
 															
 					if (el.getOperator().consumesReadBases()){
 						readIdx++;
