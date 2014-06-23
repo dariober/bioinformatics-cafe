@@ -59,17 +59,15 @@ public class FastaReferenceTest {
 	public void profileGetSubsequenceAtIsFastEnough(){
 		
 		FastaReference fa= new FastaReference(new File("test_data/ref.fa"));
-		byte[] subseq= fa.getSubsequenceAt("ref", 1, 10, true);		
-		assertArrayEquals("TACGCACGGG".getBytes(), subseq);
 		
 		long t0= System.currentTimeMillis();
 		int i= 0;
 		while(i < 10000000){
-			subseq= fa.getSubsequenceAt("ref", 1, 10, true);
+			byte[] subseq= fa.getSubsequenceAt("ref20", 1, 10, true);
 			i++;
 		}
 		long t1= System.currentTimeMillis();
-//		System.out.println((t1-t0)/(float)1000);
+		System.out.println((t1-t0)/(float)1000);
 		assertTrue((t1-t0) < 2000);
 		
 	}
