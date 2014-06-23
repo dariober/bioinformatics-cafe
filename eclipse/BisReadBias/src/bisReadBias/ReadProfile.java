@@ -1,7 +1,6 @@
 package bisReadBias;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Joiner;
