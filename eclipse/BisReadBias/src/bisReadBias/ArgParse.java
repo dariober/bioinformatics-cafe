@@ -22,16 +22,19 @@ public class ArgParse {
 				+ "\nUSAGE\n"
 				+ "java -Xmx4g BisReadBias.jar -f <ref.fasta> -i <aln.sam>"
 				+ "\n"
+				+ "samtools view -u <aln.bam> | java -Xmx4g BisReadBias.jar -f <ref.fasta> -i -"
+				+ "\n"
 				+ "\nNB: Fasta file is read in memory, adjust memory requirements via -Xmx accordingly"
 				+ "\n"
 				+ "\nOUTPUT\n"
 				+ "To stdout a table with colums methylation counts aggregated along reads"
-				+ "\n"
-				+ "read position cnt_met cnt_unmet cnt_mismatch cnt_noncytosine\n"
-				+ "1    1        5923    29        32           9114\n"
-				+ "1    2        4100    12        10           10976\n"
-				+ "\nTODO:\n"
-				+ "Allow reading bam file from stdin.");	
+				+ "\nColumns are:"
+				+ "\n read            [1|2],"
+				+ "\n position        [1-based pos on read],"
+				+ "\n cnt_met         [count methylated],"
+				+ "\n cnt_unmet       [count unmenthylated],"
+				+ "\n cnt_mismatch    [non C or T],"
+				+ "\n cnt_noncytosine [not a C in the reference]");	
 
 		parser.addArgument("-f", "--fasta")
 			.type(String.class)
@@ -40,7 +43,7 @@ public class ArgParse {
 		parser.addArgument("-i", "--input")
 			.type(String.class)
 			.required(true)
-			.help("Input sam or bam file.");
+			.help("Input sam or bam file. Use - to read *bam* from stdin.");
 		parser.addArgument("-s", "--step")
 			.type(Integer.class)
 			.required(false)
