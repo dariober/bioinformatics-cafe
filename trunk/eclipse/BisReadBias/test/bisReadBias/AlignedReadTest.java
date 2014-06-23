@@ -1,6 +1,10 @@
 package bisReadBias;
 
 import static org.junit.Assert.*;
+import org.junit.*;
+import org.mockito.Mockito;
+
+import static org.mockito.Mockito.*;
 
 import java.io.File;
 
@@ -8,22 +12,14 @@ import net.sf.picard.reference.IndexedFastaSequenceFile;
 import net.sf.samtools.*;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 
-import org.junit.*;
-import org.mockito.Mockito;
-
-import static org.mockito.Mockito.*;
 
 
 public class AlignedReadTest {
 
 	
-	private SAMRecord rec= mock(SAMRecord.class);
-	private AlignedRead alignedRead= new AlignedRead();
-	
 	@Test
 	public void readBaseseAreCorrectlyReturned() throws Exception {
 
-//		IndexedFastaSequenceFile faidx=new IndexedFastaSequenceFile(new File("test_data/chr7.fa"));
 		SAMFileReader samfile= new SAMFileReader(new File("test_data/read01.sam"));
 		SAMRecord rec= samfile.iterator().next();
 		rec.setValidationStringency(ValidationStringency.SILENT);
@@ -73,7 +69,9 @@ public class AlignedReadTest {
 	public void referenceBaseseAreCorrectlyReturned() throws Exception {
 		
 		//AACCGGTTAANNAACCGGTTAACCGGTTAACCGGTTAACCGGTTAACCGGTTAACCGGTT
-		IndexedFastaSequenceFile fa=new IndexedFastaSequenceFile(new File("test_data/chr7.small.fa"));		
+		// IndexedFastaSequenceFile fa=new IndexedFastaSequenceFile(new File("test_data/chr7.small.fa"));		
+		FastaReference fa= new FastaReference( new File("test_data/chr7.small.fa") );
+		
 		AlignedRead alignedRead= new AlignedRead();
 		String basesFromRef= null;
 		
@@ -152,7 +150,8 @@ public class AlignedReadTest {
 	@Test
 	public void referenceForRead1RevStrandEqualsFastqSeq() throws Exception{
 		
-		IndexedFastaSequenceFile fa=new IndexedFastaSequenceFile(new File("test_data/ref.fa"));
+		// IndexedFastaSequenceFile fa=new IndexedFastaSequenceFile(new File("test_data/ref.fa"));
+		FastaReference fa= new FastaReference( new File("test_data/ref.fa") );
 		AlignedRead alignedRead= new AlignedRead();
 		String bases= null;
 		
@@ -182,7 +181,8 @@ public class AlignedReadTest {
 	
 	@Test
 	public void toStringShouldReturnALine() throws Exception{
-		IndexedFastaSequenceFile fa=new IndexedFastaSequenceFile(new File("test_data/ref.fa"));
+		// IndexedFastaSequenceFile fa=new IndexedFastaSequenceFile(new File("test_data/ref.fa"));
+		FastaReference fa= new FastaReference( new File("test_data/ref.fa") );
 		// ---------------------------------------------------------------------
 		SAMRecord rec= new SAMFileReader(new File("test_data/read01.rev.bam")).iterator().next();
 		rec.setValidationStringency(ValidationStringency.SILENT);
