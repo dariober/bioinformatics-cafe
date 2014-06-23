@@ -1,36 +1,62 @@
 package bisReadBias;
 
 import net.sf.samtools.*;
-
+import net.sourceforge.argparse4j.inf.Namespace;
 
 import java.io.*;
+
+import bisReadBias.ArgParse;
 
 public class Main {
 
 	public static void main(String[] args) {
 
-		// ---------------------------------------------------------------------
-		String fastaRef= "test_data/chr7.fa";
-		String bam= "test_data/ds051.actb.bam";
-		// ---------------------------------------------------------------------
+		/* Start parsing arguments */
+		Namespace opts= ArgParse.argParse(args);
+		ArgParse.validateArgs(opts);
 		
+		String fasta= opts.getString("fasta");
+		String input= opts.getString("input");
+		int step= opts.getInt("step");
+		int stopAfter= opts.getInt("stopAfter");
+		
+		/* Adjust arguments */
+		if (step <= 0){
+			step= 1;
+		} 
+		
+		/* ------------------------------------------------------------------- */
 		System.err.print("Reading fasta reference... ");
-		FastaReference fastaFile= new FastaReference(new File(fastaRef)); 
+		FastaReference fastaFile= new FastaReference(new File(fasta)); 
 		System.err.println("Done");
 		
-		SAMFileReader samfile= new SAMFileReader(new File(bam));
+		/* ------------------------------------------------------------------- */
+		SAMFileReader samfile;
+		if (input == "-"){
+			samfile= new SAMFileReader(System.in);
+		} else {
+			samfile= new SAMFileReader(new File(input));
+		}
 		
-		int i= 0;
+		/* ------------------------------------------------------------------- */
+		int nrec= 0;
+		int ncollected= 0;
 		ReadProfile readProfile= new ReadProfile();
 		for (SAMRecord rec : samfile){
-			AlignedRead alignedRead= new AlignedRead(rec, fastaFile);
-			readProfile.addReadMethyl(alignedRead);
-			i++;
-			if (i % 1000000 == 0){
-				System.err.println(i);
+			if(nrec % step == 0){
+				AlignedRead alignedRead= new AlignedRead(rec, fastaFile);
+				readProfile.addReadMethyl(alignedRead);
+				ncollected++;
+			}
+			nrec++;
+			if(stopAfter > 0 && ncollected >= stopAfter){
+				break;
+			}
+			if (nrec % 1000000 == 0){
+				System.err.println(nrec);
 			}
 		}
-		System.err.println("N. reads: " + i);
+		System.err.println("N. reads: " + nrec + "; N. collected: " + ncollected);
 		System.out.println(readProfile.toString());
 		
 		samfile.close();
