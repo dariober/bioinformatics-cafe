@@ -32,7 +32,7 @@ public class Main {
 		
 		/* ------------------------------------------------------------------- */
 		SAMFileReader samfile;
-		if (input == "-"){
+		if (input.equals("-")){
 			samfile= new SAMFileReader(System.in);
 		} else {
 			samfile= new SAMFileReader(new File(input));
