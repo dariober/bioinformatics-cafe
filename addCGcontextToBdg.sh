@@ -5,8 +5,9 @@ set -o pipefail
 
 bdg=$1
 ref=$2
+strand=$3
 
-if [ "$bdg" = "-h" ] || [ "$bdg" = "--help" ] || [ "$bdg" = "" ] || [ "$ref" = "" ]; then
+if [ "$bdg" = "-h" ] || [ "$bdg" = "--help" ] || [ "$bdg" = "" ] || [ "$ref" = "" ] || [ "$strand" = ""  ]; then
 echo "
 DESCRIPTION
     Add (annotate) CG context to bedgraph file produced by bam2methylation.py. Input format
@@ -15,7 +16,6 @@ DESCRIPTION
     What matters is:
     - 'chrom' and 'start' matches the C to annotate. Typically 'end' is start+1 but
         it doesn't have to
-    - Strand information is in **7th column** NOT 6th as in standard bed (sorry).
     
 REQUIREMENTS
     - bedtools on path
@@ -25,17 +25,19 @@ REQUIREMENTS
       Use e.g `samtools faidx` to create it.
 
 USAGE
-    addCGcontextToBdg.sh <bedgraph> <fasta-ref> 
+    addCGcontextToBdg.sh <bedgraph> <fasta-ref> <strand-column-index>
 
 NOTES:
     Error handling is not very robust, if one of the pipes fails the script keeps going!
 
-Version: 0.1
+Version: 0.2
 "
 exit 1
 fi
 
-awk 'BEGIN{OFS="\t"} {print $1, $2, $3, $4, $5, $7, $6}' $bdg \
+
+awk -v strandCol=$strand 'BEGIN{OFS="\t"} {print $1, $2, $3, ".", ".", $strandCol}' $bdg \
+| awk '{if ($6 != "+" && $6 != "-") {print "Strand information must be coded as + and -" > "/dev/stderr"; exit 1} else {print $0}}' \
 | slopBed -l 0 -r 2 -s -i - -g ${ref}.fai \
 | fastaFromBed.py -q -bed - -fi $ref -fo - -tab -s \
 | awk 'BEGIN{IGNORECASE=1} {if ($2~/^CG/)
