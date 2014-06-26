@@ -18,9 +18,13 @@ DESCRIPTION
 
 OUTPUT:
    bedGraph with columns:
-    <chrom>  <pos-1>  <pos>  <pct meth'd>  <cnt methylated>  <tot count>  <strand>
+    <chrom>  <pos-1>  <pos>  <pct meth'd>  <cnt methylated>  <tot count>  <strand> [cnt mismatch]
     Memo: bedGraph is 0-based, so if the first base of chr1 is C it will have position: `chrom 0 1 ... +`
    Output is sorted by chromosome and position.
+   
+   With --mismatch option an additional column of mismatch count is after <tot count>.
+   This is the number of A or G when the reference is C.
+   The percent mismatch is given by: $7/($6+$7)
 
 REQUIRES:
       - BAM file sorted and indexed
@@ -67,12 +71,25 @@ parser.add_argument('--region', '-R',
 E.g. -R 'chr1:0-10000'
                    ''')
 
+parser.add_argument('--mismatch', '-mm',
+                  action= 'store_true',
+                  help='''Insert a column of mismatches after the tot methylation count.
+                   ''')
+
+parser.add_argument('--minq', '-mq',
+                  type= int,
+                  default= 0,
+                  required= False,
+                  help='''Minimum base quality required to consider the base a
+methylation call or a mismatch.
+                   ''')
+
 parser.add_argument('--keeptmp',
                   action= 'store_true',
                   help='''Keep tmp dir. Use for debugging.
                    ''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.1')
+parser.add_argument('--version', action='version', version='%(prog)s 0.2')
 
 # ------------------------------------------------------------------------------
 
@@ -126,7 +143,10 @@ def bam2methylation(bam, ref, bed, tmpdir):
       ## See http://stackoverflow.com/questions/17411966/printing-stdout-in-realtime-from-a-subprocess-that-requires-stdin
       for line in iter(p.stdout.readline, b''):
          line= line.strip().split('\t')
-         methList= pileup2methylation(chrom= line[0], pos= int(line[1]), callString= cleanCallString(line[4]), ref= line[2], is_second= is_second)
+         methList= pileup2methylation(chrom= line[0], pos= int(line[1]),
+                                   callString= acceptedCalls(bases= line[4], qual_string= line[5], minq= args.minq),
+                                   ref= line[2], is_second= is_second, add_mismatch= args.mismatch)
+         
          if methList is not None:
             mpileup.write('\t'.join(methList) + '\n')
       mpileup.close()   
@@ -137,20 +157,6 @@ def bam2methylation(bam, ref, bed, tmpdir):
            print('Exit code %s' %(p.returncode))
            sys.exit(1)
    return( outfilenames )
-
-def getMetCalls(mpileupLine, is_second= False):
-   """Extract methylation calls from mpileup line.
-   mpileupLine:
-      Line returned from `samtools mpileup`
-   is_second:
-      Is the mpileup file generated from read 2?
-   Return:
-      Output from pileup2methylation      
-   """
-   line= line.strip().split('\t')
-   callString= cleanCallString(line[4])
-   methList= pileup2methylation(chrom= line[0], pos= int(line[1]), callString= callString, ref= line[2], is_second= is_second)
-   return(methList)
 
 def cleanCallString(bases):
    """Removes from the call string in mpileup (5th column) the ^ character and
@@ -164,7 +170,7 @@ def cleanCallString(bases):
       bases= '^A....,,.,.,...,,,.,....^k.'
       cleanCallString(bases) >>> '....,,.,.,...,,,.,.....'
    """
-
+   
    callString= ''
    skip= False
    getIndel= False ## Switch to start accumulating ints following +/-
@@ -188,10 +194,15 @@ def cleanCallString(bases):
             indel= []
             getIndel= False
       else:
-         callString += x         
+         callString += x
+   
+   ## Remove the end of read marker. Do this now. If you do it earlier you might
+   ## remove the mapping quality following ^ and mess up the string
+   ## Obviuosly the all thing could be better done...
+   callString= callString.replace('$', '')
    return(callString)
       
-def pileup2methylation(chrom, pos, callString, ref, is_second= False):
+def pileup2methylation(chrom, pos, callString, ref, is_second= False, add_mismatch= False):
    """Count methylated and unmethylated calls.
    chrom, pos:
       Chromosome (string) and position (int) on the pileup
@@ -205,46 +216,120 @@ def pileup2methylation(chrom, pos, callString, ref, is_second= False):
    chr7    3002090 G       2       ..      HE
    chr7    3002114 C       2       ..      HE
 
+pileup2methylation('chr1', 1, '', C, is_second= False)
    """
    cnt_M= 0 ## Count methylated
    cnt_m= 0 ## Count unmethylated
-
+   cnt_MM= 0 ## Count mismatches. I.e. not C or T when reference has C
    if ref.upper() == 'G':
       strand= '-'
       if is_second:
          cnt_M += callString.count('.')
          cnt_m += callString.count('A')
+         cnt_MM += (callString.count('C') + callString.count('T') + callString.count('N'))
       else:
          cnt_M += callString.count(',')
          cnt_m += callString.count('a')
+         cnt_MM += (callString.count('c') + callString.count('t') + callString.count('n'))
    elif ref.upper() == 'C':
       strand= '+'
       if is_second:
          cnt_M += callString.count(',')
-         cnt_m += callString.count('t')         
+         cnt_m += callString.count('t')
+         cnt_MM += (callString.count('a') + callString.count('g') + callString.count('n'))
       else:
          cnt_M += callString.count('.')
          cnt_m += callString.count('T')
+         cnt_MM += (callString.count('A') + callString.count('G') + callString.count('N'))
    else:
       return(None)
-   if (cnt_m + cnt_M) == 0:
+   if (cnt_m + cnt_M + cnt_MM) == 0:
       return(None)
    totreads= cnt_M + cnt_m
-   methList= [chrom, str(pos-1), str(pos), str(round(100*(float(cnt_M)/totreads), 4)), str(cnt_M), str(totreads), strand]
+   
+   if(totreads == 0):
+      pct_met= 0
+   else:
+      pct_met= round(100*(float(cnt_M)/totreads), 4)
+   methList= [chrom, str(pos-1), str(pos), str(pct_met), str(cnt_M), str(totreads), strand]
+   
+   if add_mismatch:
+      methList.append(str(cnt_MM))
+   
    return(methList)
 
-def mergeMpileup(metCall_r1, metCall_r2):
+def mergeMpileup(metCall_r1, metCall_r2, add_mismatch):
    """Merge the methylation call files from read 1 and read 2.
    """
-   cmd= '''sort -m -s -k1,1 -k2,2n -k3,3n %s %s \
-        | bedtools groupby -g 1,2,3 -c 5,6,7 -o sum,sum,distinct \
-        | awk '{printf("%%s\t%%s\t%%s\t%%0.2f\t%%s\t%%s\t%%s\\n", $1, $2, $3, 100*($4/$5), $4, $5, $6)}'
-   ''' %(metCall_r1, metCall_r2)
+   if add_mismatch:
+         cmd= '''sort -m -s -k1,1 -k2,2n -k3,3n %s %s \
+           | bedtools groupby -g 1,2,3 -c 5,6,7,8 -o sum,sum,distinct,sum \
+           | awk '{if($4==0 && $5==0){pct= 0} else {pct= 100*($4/$5)} printf("%%s\t%%s\t%%s\t%%0.2f\t%%s\t%%s\t%%s\t%%s\\n", $1, $2, $3, pct, $4, $5, $6, $7)}'
+      ''' %(metCall_r1, metCall_r2)
+   else:
+      cmd= '''sort -m -s -k1,1 -k2,2n -k3,3n %s %s \
+           | bedtools groupby -g 1,2,3 -c 5,6,7 -o sum,sum,distinct \
+           | awk '{if($4==0 && $5==0){pct= 0} else {pct= 100*($4/$5)} printf("%%s\t%%s\t%%s\t%%0.2f\t%%s\t%%s\t%%s\\n", $1, $2, $3, pct, $4, $5, $6)}'
+      ''' %(metCall_r1, metCall_r2)
    sys.stderr.write(cmd + '\n')
    p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)   
    for line in iter(p.stdout.readline, b''):
       sys.stdout.write(line)
+
+def rmLowQualsCalls(call_string, qual_string, minq= 0):
+   """Removes base calls from a string of calls if their quality is lower than
+   minq.
+   call_string:
+      String of base calls, i.e. 5th column in mpileup. This string cleaned by
+      cleanCallString() to remove mapping qualities and start/end of read markers
+   qual_string:
+      Quality string. i.e. 6th column from mpileup
+   minq:
+      Remove calls with quality lower than this. Base quality= ord(ascii) - 33
+      E.g. ord(I) - 33 = 40
+
+   Return:
+      call_string with low quality bases removed.
    
+   qual_string= '''!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJ!"#$'''
+   call_string=   'AAAAAAAAAAAAAAAAAAAATCCCCCCCCCCCCCCCCCCCCGNNNN'
+   rmLowQualsCalls(call_string, qual_string, minq= 20)
+   'TCCCCCCCCCCCCCCCCCCCCG'
+   """
+   if(len(qual_string) != len(call_string)):
+      sys.exit('Quality and call string differ in length')
+   
+   if (minq <= 0):
+      return(call_string)
+   
+   to_keep= []
+   for i in range(1, len(qual_string)):
+      q= ord(qual_string[i]) - 33
+      if q >= minq:
+         to_keep.append(call_string[i])
+   return(''.join(to_keep))
+
+def acceptedCalls(bases, qual_string, minq):
+   """Parse the "bases" string (5th column mpileup) to return the characters to be
+   used for methylation and mismatch calling
+   
+   bases:
+      String corresponding to 5th column mpileup
+   qual_string:
+      Quality string (6th column mpileup) to use to filter out bad calls
+   minq:
+      Minimum acceptable quality to use for methylation and mismatch calling
+   
+   Return: String suitable for pileup2methylation() and pileup2mismatch().
+
+bases=   '^kAAAAAAAAAAAAAAAAAAAATCCCCCCCCCCCCCCCCCCCCGNNNN^k$'   
+qual_string= '''!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJ!"#$'''
+acceptedCalls(bases, qual_string, minq)
+   'TCCCCCCCCCCCCCCCCCCCCG'
+   
+   """
+   accepted= rmLowQualsCalls(cleanCallString(bases), qual_string, minq)
+   return(accepted)
 # ------------------------------------------------------------------------------
 
 if __name__ == '__main__':
@@ -253,10 +338,75 @@ if __name__ == '__main__':
    
    tmpdir= tempfile.mkdtemp(prefix= 'tmp_bam2methylation_')
    outpiles= bam2methylation(bam= args.input, ref= args.ref, bed= args.l, tmpdir= tmpdir)
-   mergeMpileup(outpiles[0], outpiles[1])
+   mergeMpileup(outpiles[0], outpiles[1], args.mismatch)
 
    if not args.keeptmp:
       shutil.rmtree(tmpdir)   
    sys.exit()
 
+#def pileup2mismatch(chrom, pos, callString, ref, is_second= False):
+#   """Count mismatches at cytosines. I.e. Where the reference has C and the read is
+#   neither C or T.
+#   chrom, pos:
+#      Chromosome (string) and position (int) on the pileup
+#   callString:
+#      String of bases obtained by cleanCallString
+#   ref:
+#      Reference base as obtained from 3nd column of mpileup
+#   
+#   Output format:
+#      chrom, start, end, % mismatch, cnt mismatch, cnt total, strand
+#   Note that count total includes count of ACTG only, not N in the read.
+#   
+#   Memo: mpileup input looks like this:
+#   chr7    3002089 C       2       .^~.    IA
+#   chr7    3002090 G       2       ..      HE
+#   chr7    3002114 C       2       ..      HE
+#   
+#   Read base column:
+#   -----------------
+#   Dot:   Stands for a MATCH to the reference
+#   Comma: For a MATCH on the reverse strand
+#   ACGTN: For a MISmatch on the forward strand
+#   acgtn: For a MISmatch on the reverse strand
+#   """
+#   cnt_M= 0 ## Count mismatches [A or G when ref has C]
+#   cnt_m= 0 ## Count matches    [C or T when ref has C]
+# 
+#   if ref.upper() == 'G':
+#      strand= '-'
+#      if is_second:
+#          cnt_M += (callString.count('C') + callString.count('T'))
+#          cnt_m += (callString.count('.') + callString.count('A'))
+#      else:
+#          cnt_M += (callString.count('c') + callString.count('t'))
+#          cnt_m += (callString.count(',') + callString.count('a'))
+#   elif ref.upper() == 'C':
+#      strand= '+'
+#      if is_second:
+#          cnt_M += (callString.count('a') + callString.count('g'))
+#          cnt_m += (callString.count(',') + callString.count('t'))
+#      else:
+#          cnt_M += (callString.count('A') + callString.count('G'))
+#          cnt_m += (callString.count('.') + callString.count('T'))
+#   else:
+#      return(None)
+#   if (cnt_m + cnt_M) == 0:
+#      return(None)
+#   totreads= cnt_M + cnt_m
+#   methList= [chrom, str(pos-1), str(pos), str(round(100*(float(cnt_M)/totreads), 4)), str(cnt_M), str(totreads), strand]
+#   return(methList)
 
+#def getMetCalls(mpileupLine, is_second= False):
+#   """Extract methylation calls from mpileup line.
+#   mpileupLine:
+#      Line returned from `samtools mpileup`
+#   is_second:
+#      Is the mpileup file generated from read 2?
+#   Return:
+#      Output from pileup2methylation
+#   """
+#   line= line.strip().split('\t')
+#   callString= cleanCallString(line[4])
+#   methList= pileup2methylation(chrom= line[0], pos= int(line[1]), callString= callString, ref= line[2], is_second= is_second)
+#   return(methList)
