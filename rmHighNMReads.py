@@ -2,69 +2,89 @@
 
 import sys
 import pysam
+import argparse
+parser = argparse.ArgumentParser(description= """
+DESCRIPTION
+    Set mapping quality to 0 for reads with high density of mismatches.
+    
+    USAGE
+    
+    rmHighNMreads.py <density mism> <in.bam> [out.bam|.sam]
+    
+    <density mism>:
+        Max allowed density of mismatches expressed as NM / aligned length. E.g
+        0.1 allows 1 mismatch in a 10bp alignment.
+  
+""", formatter_class= argparse.RawTextHelpFormatter)
 
-docstring= """DESCRIPTION
+parser.add_argument('--input', '-i',
+                   required= True,
+                   help='''Input sam or bam file or - to read *bam* from stdin
 
-Set mapping quality to 0 for reads with high density of mismatches.
+''')
 
-USAGE
+parser.add_argument('--output', '-o',
+                   required= False,
+                   default= '-',
+                   help='''Output sam or bam file, format determined by extension. Default is sam to
+stdout. SAM includes header.
 
-rmHighNMreads.py <in.bam> <density mism> [out.bam|.sam]
+''')
 
-<in.bam>:
-    Input sam or bam file or - to read *bam* from stdin
+parser.add_argument('--mismDensity', '-m',
+                   required= False,
+                   type= float,
+                   default= 0.05,
+                   help='''Max allowed density of mismatches expressed as NM / aligned length. E.g
+0.1 allows 1 mismatch in a 10bp alignment. Default 0.05.
+''')
 
-<density mism>:
-    Max allowed density of mismatches expressed as NM / aligned length. E.g
-    0.1 allows 1 mismatch in a 10bp alignment.
+parser.add_argument('--tag', '-t',
+                   required= False,
+                   default= 'NM',
+                   help='''Tag to use to extract the number of mismatches. Default 'NM'
+Tag from BSSeqMismatches.jar is XZ. If the tag is not found the record is written
+unchanged.
+''')
 
-[out.bam|.sam]:
-    Output sam or bam file, format determined by extension. Defualt is sam to
-    stdout. SAM includes header.
-"""
+args= parser.parse_args()
+# -----------------------------------------------------------------------------
 
 def getTagValue(tags, tag):
     """Returns the value associated to tag given the list of tuples tags
     """
-    tv= [x[1] for x in tags if x[0] == tag]
+    tv= [x[1] for x in tags if x[0] == tag]    
     if (len(tv) > 1):
         sys.stderr.write("More than one value found. Returning first one\n")
-    return(tv[0])
+    if tv == []:
+        return(None)
+    else:
+        return(tv[0])
     
 # ------------------------------------------------------------------------------
-if (len(sys.argv) not in [3, 4] or sys.argv[1] in ['-h', '--help']):
-    print(docstring)
-    sys.exit(1)
 
-# Parse args -------------------------------------------------------------------
 # Input
-inbam= sys.argv[1]
-samfile = pysam.Samfile(inbam)
+samfile = pysam.Samfile(args.input)
 
-# Output
-if len(sys.argv) == 4:
-    outfile= sys.argv[4]
-    if outfile.endswith('.sam'):
-        outsam= pysam.Samfile(outfile, "wh", template= samfile)
-    elif outfile.endswith('.bam'):
-        outsam= pysam.Samfile(outfile, "wb", template= samfile)
-    else:
-        sys.exit("Invalid extension for output file. Must be .sam or .bam. Got: " + outfile)
+if args.output.endswith('.sam') or args.output == "-":
+    outsam= pysam.Samfile(args.output, "wh", template= samfile)
+elif args.output.endswith('.bam'):
+    outsam= pysam.Samfile(args.output, "wb", template= samfile)
 else:
-    outsam= pysam.Samfile("-", "wh", template= samfile)
+    sys.exit("Invalid extension for output file. Must be .sam or .bam. Got: " + args.output)
 
 ## N. mismatches
-mm= float(sys.argv[2])
+mm= args.mismDensity
 if mm < 0 or mm > 1:
     sys.exit("Invalid density of mismatches. Must be between 0 and 1, got " + str(mm))
 
 # -----------------------------------------------------------------------------
 
 for aln in samfile:
-    NM= getTagValue(aln.tags, 'NM')
-    L= float(aln.alen)
-    if (L > 0) and (NM / L > mm):
-        aln.mapq= 0
+    NM= getTagValue(aln.tags, args.tag)
+    if (aln.alen is not None) and (aln.alen > 0) and (NM is not None):
+        if (NM / float(aln.alen)) > mm:   
+            aln.mapq= 0
     outsam.write(aln)
 
 samfile.close()
