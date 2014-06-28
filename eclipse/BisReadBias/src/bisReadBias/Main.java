@@ -1,6 +1,7 @@
 package bisReadBias;
 
 import net.sf.samtools.*;
+import net.sf.samtools.SAMFileReader.ValidationStringency;
 import net.sourceforge.argparse4j.inf.Namespace;
 
 import java.io.*;
@@ -9,7 +10,7 @@ import bisReadBias.ArgParse;
 
 public class Main {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException, InterruptedException {
 
 		/* Start parsing arguments */
 		Namespace opts= ArgParse.argParse(args);
@@ -17,6 +18,7 @@ public class Main {
 		
 		String fasta= opts.getString("fasta");
 		String input= opts.getString("input");
+		String output= opts.getString("output");
 		int step= opts.getInt("step");
 		int stopAfter= opts.getInt("stopAfter");
 		
@@ -24,6 +26,13 @@ public class Main {
 		if (step <= 0){
 			step= 1;
 		} 
+		if (output.equals("")){
+			if (input.equals("-"))
+				output= "bisReadBias";
+			else {
+				output= input.replaceAll("sam$|bam$", "") + "bisReadBias";
+			}
+		}
 		
 		/* ------------------------------------------------------------------- */
 		System.err.print("Reading fasta reference... ");
@@ -37,6 +46,7 @@ public class Main {
 		} else {
 			samfile= new SAMFileReader(new File(input));
 		}
+		samfile.setValidationStringency(ValidationStringency.SILENT);
 		
 		/* ------------------------------------------------------------------- */
 		int nrec= 0;
@@ -57,7 +67,13 @@ public class Main {
 			}
 		}
 		System.err.println("N. reads: " + nrec + "; N. collected: " + ncollected);
-		System.out.println(readProfile.toString());
+		
+		FileWriter fw = new FileWriter(output + ".txt");
+		fw.write(readProfile.toString());
+		fw.close();
+		
+		ScriptRunner sr= new ScriptRunner(); 
+		sr.runRscript(sr.getTmpFileFromResourceFile("Plotter.R"), output + ".txt");
 		
 		samfile.close();
 
