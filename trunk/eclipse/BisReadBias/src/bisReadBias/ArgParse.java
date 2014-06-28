@@ -40,10 +40,19 @@ public class ArgParse {
 			.type(String.class)
 			.required(true)
 			.help("Input fasta file.");
+
 		parser.addArgument("-i", "--input")
 			.type(String.class)
 			.required(true)
 			.help("Input sam or bam file. Use - to read *bam* from stdin.");
+
+		parser.addArgument("-o", "--output")
+			.type(String.class)
+			.required(false)
+			.setDefault("")
+			.help("Output basename for table file (<output>.txt) and pdf plot (<output>.pdf).\n"
+					+ "Default is <input>.bisReadBias");
+		
 		parser.addArgument("-s", "--step")
 			.type(Integer.class)
 			.required(false)

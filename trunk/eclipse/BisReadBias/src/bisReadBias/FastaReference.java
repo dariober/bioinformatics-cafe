@@ -78,8 +78,9 @@ public class FastaReference {
 		}
 
 		byte[] subsequence= new byte[(to - from) + 1];
-		byte[] refsequence= this.reference.get(refname);
 		
+		byte[] refsequence= this.reference.get(refname);
+
 		int subidx= 0;
 		for(int i= subidx; i < subsequence.length; i++){
 
