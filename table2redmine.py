@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+import re
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -26,8 +27,8 @@ parser.add_argument('infile',
 ''')
 
 parser.add_argument('--sep', '-s',
-                    default= '\t',
-                   help='''Column separator. Default to tab character.
+                    default= '\s+',
+                   help='''Regex to use aS column separator. Default to any blank space ('\\s+'). 
 ''')
 
 parser.add_argument('--header', '-H',
@@ -42,9 +43,17 @@ if args.infile is None or args.infile == '-':
 else:
     fin= open(args.infile, 'rU')
 
+#if args.sep is None:
+#    sep= '\t'
+#else:
+#    sep= args.sep
+
 header= args.header
+
+
+
 for line in fin:
-    line=line.strip().split(args.sep)
+    line= re.split(args.sep, line.strip())
     if header:
         line= ' |_. '.join(line)
         line=  '|_. ' + line
