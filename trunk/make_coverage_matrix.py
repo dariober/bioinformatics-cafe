@@ -1,4 +1,4 @@
-#!/home/berald01/.local/bin/python
+#!/usr/bin/env python
 
 import argparse
 import sys
