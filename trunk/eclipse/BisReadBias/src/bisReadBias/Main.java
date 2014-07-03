@@ -76,6 +76,7 @@ public class Main {
 		sr.runRscript(sr.getTmpFileFromResourceFile("Plotter.R"), output + ".txt");
 		
 		samfile.close();
-
+		
+		System.err.println("Output to: " + output + ".txt|.pdf");
 	}
 }

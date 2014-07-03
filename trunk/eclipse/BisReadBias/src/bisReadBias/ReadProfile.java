@@ -1,6 +1,8 @@
 package bisReadBias;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Joiner;
@@ -23,7 +25,8 @@ import com.google.common.collect.*;
  */
 public class ReadProfile {
 	
-	private char[] METHYL_CODES= new char[] {'M', 'u', '*', '.'};
+//	private char[] METHYL_CODES= new char[] {'M', 'u', '*', '.'};
+	private List<Character> METHYL_CODES= Arrays.asList('M', 'u', '*', '.');
 	
 	private List<HashMultiset<Character>> read1= new ArrayList<HashMultiset<Character>>();
 	private List<HashMultiset<Character>> read2= new ArrayList<HashMultiset<Character>>();
@@ -76,10 +79,13 @@ public class ReadProfile {
 		addReadMethyl(aln.getMethylbases(), aln.isFirst());
 	}	
 	
-	private String printer(HashMultiset<Character> position){
+	private String printer(HashMultiset<Character> position, boolean isRead1){
 		List<Integer> line= new ArrayList<Integer>();
 		for (char x : METHYL_CODES){
 			line.add(position.count(x));
+		}
+		if (!isRead1){
+			Collections.swap(line, METHYL_CODES.indexOf('M'), METHYL_CODES.indexOf('u'));
 		}
 		String outline= Joiner.on("\t").join(line);
 		return(outline);
@@ -97,17 +103,20 @@ public class ReadProfile {
 		// This complicated list is to iterarate thorugh read1 and read2
 		List<ArrayList<HashMultiset<Character>>> reads= new 
 					ArrayList<ArrayList<HashMultiset<Character>>>();
+		
 		reads.add((ArrayList<HashMultiset<Character>>) this.read1);
 		reads.add((ArrayList<HashMultiset<Character>>) this.read2);
 		
 		int nread= 1;
+		boolean isRead1= true;
 		for (ArrayList<HashMultiset<Character>> read : reads){
 			int pos= 1;
 			for(HashMultiset<Character> position : read){
-				outList.add(nread + "\t" + pos + "\t" + printer(position));
+				outList.add(nread + "\t" + pos + "\t" + printer(position, isRead1));
 				pos++;
 			}
 			nread++;
+			isRead1= false;
 		}
 		
 		String outHeader= Joiner.on("\n").join(outList);

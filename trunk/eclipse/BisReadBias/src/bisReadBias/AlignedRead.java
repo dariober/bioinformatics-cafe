@@ -209,7 +209,9 @@ public class AlignedRead {
 				}
 			} else {
 				for(int i= 0; i < el.getLength(); i++){
-					referenceBases[readIdx]= CHAR_FOR_SOFT_CLIP; 
+					if (!el.getOperator().equals(CigarOperator.HARD_CLIP)){
+						referenceBases[readIdx]= CHAR_FOR_SOFT_CLIP; 
+					}
 					if (el.getOperator().consumesReadBases()){
 						readIdx++;
 					}
