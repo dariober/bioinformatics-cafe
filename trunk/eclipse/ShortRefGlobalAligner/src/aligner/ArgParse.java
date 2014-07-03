@@ -14,7 +14,7 @@ public class ArgParse {
 	/* Parse command line args */
 	public static Namespace argParse(String[] args){
 		ArgumentParser parser= ArgumentParsers
-				.newArgumentParser("ConvertFastqBS")
+				.newArgumentParser("ShortRefGlobalAligner")
 				.defaultHelp(true)
 				.version("${prog} " + VERSION)
 				.description("DESCRIPTION\n"
