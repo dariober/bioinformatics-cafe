@@ -12,8 +12,6 @@ import org.biojava3.core.sequence.io.DNASequenceCreator;
 import org.biojava3.core.sequence.io.FastaReader;
 import org.biojava3.core.sequence.io.GenericFastaHeaderParser;
 
-// import aligner.ArgParse;
-
 public class Main {
 
 	public static void main(String[] args) throws Exception {
@@ -48,7 +46,9 @@ public class Main {
         FKMod fkmod= new FKMod();
         BufferedReader br= FastqReader.openFastq(fastq);
         String[] fqread= FastqReader.getNextRead(br);
+        int nreads= 0;
         while (fqread != null){
+        	nreads++;
         	String sequence= fqread[1];
         	aln.align(sequence, refseq, matrixFile);
         	
@@ -69,6 +69,10 @@ public class Main {
         	}
         	System.out.println(sb.toString().trim());
         	fqread= FastqReader.getNextRead(br);
+        	          	
+        	if (nreads % 10000 == 0){
+        		System.err.println(nreads + " reads");
+        	}
 		}
         br.close();
 	}
