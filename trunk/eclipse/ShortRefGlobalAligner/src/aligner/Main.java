@@ -2,6 +2,8 @@ package aligner;
 
 import java.io.*;
 import java.util.*;
+//import java.util.concurrent.ExecutorService;
+//import java.util.concurrent.Executors;
 
 import net.sourceforge.argparse4j.inf.Namespace;
 
@@ -23,6 +25,8 @@ public class Main {
 		String reference= opts.getString("reference");
 		String matrix= opts.getString("matrix");
 		String refName= opts.getString("refName");
+		int stopAfter= opts.getInt("stopAfter");
+		int step= opts.getInt("step");
 		
 		Aligner aln= new Aligner();
 		String matrixFile= null;
@@ -33,6 +37,14 @@ public class Main {
 		}
 		/* End parsing arguments */
 
+		/* Parallelization variables*/
+//		int NUM_OF_THREADS= Runtime.getRuntime().availableProcessors();
+//		int BATCH_SIZE= 100; // Accumulate this many items (reads) before passing them to parallelize
+//      List<String[]> fqreadList= new ArrayList<String[]>(); // Accumulate here reads to pass to parallelize()
+//      List<String> outList= new ArrayList<String>();
+
+		
+		/* Get input */
 		FileInputStream inStream = new FileInputStream( reference );
 	
 		GenericFastaHeaderParser<DNASequence, NucleotideCompound> genericFastaHeaderParser= new GenericFastaHeaderParser<DNASequence, NucleotideCompound>();
@@ -43,37 +55,83 @@ public class Main {
 		LinkedHashMap<String, DNASequence> b = fastaReader.process();
         String refseq= b.get(refName).getSequenceAsString();
 
-        FKMod fkmod= new FKMod();
         BufferedReader br= FastqReader.openFastq(fastq);
         String[] fqread= FastqReader.getNextRead(br);
         int nreads= 0;
+        int nprocessed= 0;
+
         while (fqread != null){
         	nreads++;
-        	String sequence= fqread[1];
-        	aln.align(sequence, refseq, matrixFile);
-        	
-        	String firstBarcode= fkmod.getQueryBasesAtTargetIndexes(aln, FKMod.INDEX_FIRST_BARCODE);
-        	String secondBarcode= fkmod.getQueryBasesAtTargetIndexes(aln, FKMod.INDEX_SECOND_BARCODE);
-        	String mods= fkmod.getQueryBasesAtTargetIndexes(aln, FKMod.INDEX_MODIFICATIONS);
-
-        	StringBuilder sb= new StringBuilder();
-        	sb.append(aln.getPair().getQuery());   sb.append("\t");
-        	sb.append(aln.getPair().getTarget());  sb.append("\t");
-        	sb.append(aln.getScore());             sb.append("\t");
-        	sb.append(aln.getStrand()); 		   sb.append("\t");
-        	sb.append(aln.getPair().getLength());  sb.append("\t");
-        	sb.append(firstBarcode);               sb.append("\t");
-        	sb.append(secondBarcode);              sb.append("\t");
-        	for(char c : mods.toCharArray()){
-        		sb.append(c);             sb.append("\t");
+        	if(nreads % step == 0){
+        		String outline= processRead(fqread, refseq, matrixFile);
+	        	nprocessed++;
+	        	System.out.println(outline);
         	}
-        	System.out.println(sb.toString().trim());
+        	if(nprocessed >= stopAfter && stopAfter > 0){
+        		break;
+        	} 
         	fqread= FastqReader.getNextRead(br);
-        	          	
         	if (nreads % 10000 == 0){
         		System.err.println(nreads + " reads");
         	}
 		}
         br.close();
+        System.err.println(nprocessed + " processed.");
+        System.exit(0);
 	}
+	
+	private static String processRead(String[] fqread, String refseq, String matrixFile) throws FileNotFoundException{
+		Aligner aln= new Aligner();
+		String sequence= fqread[1];
+    	aln.align(sequence, refseq, matrixFile);
+    	
+        FKMod fkmod= new FKMod();
+    	String firstBarcode= fkmod.getQueryBasesAtTargetIndexes(aln, FKMod.INDEX_FIRST_BARCODE);
+    	String secondBarcode= fkmod.getQueryBasesAtTargetIndexes(aln, FKMod.INDEX_SECOND_BARCODE);
+    	String mods= fkmod.getQueryBasesAtTargetIndexes(aln, FKMod.INDEX_MODIFICATIONS);
+
+    	StringBuilder sb= new StringBuilder();
+    	sb.append(aln.getPair().getQuery());   sb.append("\t");
+    	sb.append(aln.getPair().getTarget());  sb.append("\t");
+    	sb.append(aln.getScore());             sb.append("\t");
+    	sb.append(aln.getStrand()); 		   sb.append("\t");
+    	sb.append(aln.getPair().getLength());  sb.append("\t");
+    	sb.append(aln.getPair().getNumIdenticals());  sb.append("\t");
+    	sb.append(aln.getPair().getNumSimilars());  sb.append("\t");
+    	sb.append(firstBarcode);               sb.append("\t");
+    	sb.append(secondBarcode);              sb.append("\t");
+    	for(char c : mods.toCharArray()){
+    		sb.append(c);             sb.append("\t");
+    	}
+    	return(sb.toString().trim());
+	}
+	// See http://stackoverflow.com/questions/4010185/parallel-for-for-java
+	// But also
+	// See http://stackoverflow.com/questions/5686200/parallelizing-a-for-loop
+	/*	
+ 	private static List<String> parallelize(List<String[]> fqreadList, final String refseq, final String matrixFile, int NUM_OF_THREADS){
+		final List<String> outlist= new ArrayList<String>();
+		ExecutorService exec = Executors.newFixedThreadPool(NUM_OF_THREADS);
+		try {
+		    for (final String[] fqread : fqreadList) {
+		        exec.submit(new Runnable() {
+		            @Override
+		            public void run() {
+		                // do stuff with o.
+						try {
+							System.out.println(fqread);
+							String outline= processRead(fqread, refseq, matrixFile);							
+							outlist.add(outline);
+						} catch (FileNotFoundException e) {
+							e.printStackTrace();
+						}
+		            }
+		        });
+		    }
+		} finally {
+		    exec.shutdown();
+		}
+		return outlist;
+	}
+    */
 }
