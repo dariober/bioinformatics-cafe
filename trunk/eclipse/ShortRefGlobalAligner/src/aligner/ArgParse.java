@@ -27,9 +27,11 @@ public class ArgParse {
 						+ "3. Score\n"
 						+ "4. Strand\n"
 						+ "5. Aligment length\n"
-						+ "6. Sequence of first barcode\n"
-						+ "7. Sequence of second barcode\n"
-						+ "8+ Query base at given positions on the reference.\n"
+						+ "6. Num identical\n"
+						+ "7. Num similar\n"
+						+ "8. Sequence of first barcode\n"
+						+ "9. Sequence of second barcode\n"
+						+ "10+ Query base at given positions on the reference.\n"
 						+ "\n"
 						+ "TODO: Args to get custom barcodes and specific positions where modified bases are");
 		parser.addArgument("-f", "--fastq")
@@ -48,6 +50,15 @@ public class ArgParse {
 			.type(String.class)
 			.setDefault("nuc_N0.txt")
 			.help("File with scoring matrix. Default is read from resource file. Note that in the default matrix N has 0 score.");
+		parser.addArgument("-S", "--stopAfter")
+			.type(Integer.class)
+			.setDefault(-1)
+			.help("Stop after having processed this many reads. Default is to process entire fastq file.");
+		parser.addArgument("-s", "--step")
+			.type(Integer.class)
+			.setDefault(1)
+			.help("Process every s'th read.");
+
 		
 		parser.addArgument("--version", "-v").action(Arguments.version());
 
