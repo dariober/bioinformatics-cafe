@@ -3,7 +3,10 @@ package readSequenceToRefToMethylation;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.biojava3.core.sequence.DNASequence;
+
+
 
 
 
@@ -100,30 +103,36 @@ public class AlignedRead {
 	/* ------------------------
 	 *  C O N S T R U C T O R S  
 	 --------------------------*/
-		
+	
+	// IMPORTANT: Set the isForward/isFirst flags 
+	// 		      BEFORE running the setRead/Ref/Methy methods!!
+	//			  Otherwise you always use false/false (the default boolean)
+	
 	public AlignedRead(){
 		
 	};
 	
 	public AlignedRead(SAMRecord rec){
-		this.readbases= this.getAlignedBasesForRead(rec);
 		this.isForward= !rec.getReadNegativeStrandFlag();
 		this.isFirst= setMateFlag(rec);
+		this.readbases= this.getAlignedBasesForRead(rec);
 	}
 	
 	public AlignedRead(SAMRecord rec, FastaReference fa){
+		this.isForward= !rec.getReadNegativeStrandFlag();
+		this.isFirst= setMateFlag(rec);
 		this.readbases= this.getAlignedBasesForRead(rec);
 		this.refbases= this.getReferenceBasesForRead(rec, fa);
-		this.isFirst= setMateFlag(rec);
-		this.methylbases= this.methylArray(readbases, refbases);
+		this.methylbases= this.methylArray(readbases, refbases, isFirst, isForward);
 	}
 
 	public AlignedRead(SAMRecord rec, FastaReference fa, byte CHAR_FOR_SOFT_CLIP){
+		this.isForward= !rec.getReadNegativeStrandFlag();
+		this.isFirst= setMateFlag(rec);
 		this.CHAR_FOR_SOFT_CLIP= CHAR_FOR_SOFT_CLIP;
 		this.readbases= this.getAlignedBasesForRead(rec);
 		this.refbases= this.getReferenceBasesForRead(rec, fa);
-		this.isFirst= setMateFlag(rec);
-		this.methylbases= this.methylArray(readbases, refbases);
+		this.methylbases= this.methylArray(readbases, refbases, isFirst, isForward);
 	}
 	
 	/* ------------------------------------------------------------------------
@@ -133,7 +142,7 @@ public class AlignedRead {
 	private boolean setMateFlag(SAMRecord rec){
 		boolean flag;
 		if (!rec.getReadPairedFlag()){
-			flag= true;
+			flag= true; // If read is not paired it is treated as first-in-pair
 		} else {
 			flag= rec.getFirstOfPairFlag();
 		}
@@ -150,7 +159,7 @@ public class AlignedRead {
 	
 	/**
 	 * Get the read bases aligned to reference. The output sequence is in the same
-	 * order as in the fastq read. 
+	 * orientation as in the bam input. 
 	 * @param rec
 	 * @return
 	 */
@@ -189,16 +198,12 @@ public class AlignedRead {
 			System.exit(1);
 		}
 				
-		if (rec.getReadNegativeStrandFlag()){
-			alignedRead= reverseComplement(alignedRead);
-		}
-		
 		return(alignedRead);
 	}
 	
 	/**
 	 * Get the reference bases corresponding to each read base. Reference bases appear
-	 * in the same order as the fastq read.
+	 * in the same orientation as the input bam.
 	 * @param rec
 	 * @param fa
 	 * @return
@@ -248,46 +253,85 @@ public class AlignedRead {
 			}
 		}
 		
-		if (rec.getReadNegativeStrandFlag()){
-			referenceBases= reverseComplement(referenceBases);
-		}
-		
 		return(referenceBases);
 	}
 	
-	public byte[] methylArray(byte[] read, byte[] ref) {
+	/**
+	 * Look at C on the reference C: 
+	 *    - Forward & First in pair
+	 *    - Reverse & Second in pair
+	 * Look at G on the
+	 *    - Reverse & First in pair
+	 *    - Forward & Second in pair
+	 *    
+	 * In other words: Look at C if you have true/true or false/false. Look at G otherwise.
+	 * */
+	public char nucleotideToMethylation(char base, char ref, boolean isFirst, boolean isForward){
+		base= Character.toUpperCase(base);
+		ref= Character.toUpperCase(ref);
+		if ((isForward && isFirst) || (!isForward && !isFirst)){
+			if( ref != 'C') return '.';
+			if( ref == 'C' && base == 'C') return 'M';
+			if( ref == 'C' && base == 'T') return 'u';
+			if( ref == 'C' && (base != 'C' || base != 'T')) return '*';
+			System.err.println("Unexpected combination of base and reference");
+			System.exit(1);			
+		}
+		if ((!isForward && isFirst) || (isForward && !isFirst)){
+			if( ref != 'G' ) return '.';
+			if( ref == 'G' && base == 'G') return 'M';
+			if( ref == 'G' && base == 'A') return 'u';
+			if( ref == 'G' && (base != 'G' || base != 'A')) return '*';
+			System.err.println("Unexpected combination of base and reference");
+			System.exit(1);
+		}
+		System.err.println("Unexpected combination of strand and pairing information");
+		System.exit(1);
+		return('.');
+	}
+	
+	
+	public byte[] methylArray(byte[] read, byte[] ref, boolean isFirst, boolean isForward) {
 		
 		byte[] methyl= new byte[read.length];
 		for (int i=0; i < methyl.length; i++){
-
-			char xread= (char) Character.toUpperCase(read[i]);
-			char xref= (char) Character.toUpperCase(ref[i]);
-			char xmeth;
-			Character.toUpperCase(xref);
-			if (xref == 'C'){
-				if (xread == 'C'){
-					xmeth= 'M';
-				} else if (xread == 'T'){
-					xmeth= 'u';
-				} else {
-					// Mismatch
-					xmeth= '*';
-				}
-			} else {
-				// Any base other than C matching or not
-				xmeth= '.';
-			}
-			methyl[i]= (byte)xmeth;
+			methyl[i]= (byte) nucleotideToMethylation((char)read[i], (char)ref[i], isFirst, isForward);
 		}
-		return(methyl);
-		
+		return methyl;
 	}
+
 	public byte[] methylArray(){
 		
 		byte[] read= this.getReadbases();
 		byte[] ref= this.getRefbases();
-		byte[] methyl= methylArray(read, ref);
+		byte[] methyl= methylArray(read, ref, this.isFirst, this.isForward);
 		return(methyl);
+	}
+	
+	
+	/**
+	 * Re-orient the reads, reference, and methylation arrays to have the 
+	 * reads appearing as in the original fastq.
+	 * I.e. rev comp if mapped to reverse strand. Methyaltion array is simply reversed.
+	 */
+	public void orientAsInFastq(){
+		if (!this.isForward){
+			this.readbases= reverseComplement(this.readbases);
+			this.refbases= reverseComplement(this.refbases);
+			ArrayUtils.reverse(this.methylbases);
+		}
+	}
+	
+	/**
+	 * Remove from arrays read/ref/methyl the character marked by CHAR_FOR_SOFT_CLIP
+	 */
+	public void clipAlignment(){
+		
+		List<Integer> softClippedPositions= this.getSoftClippedPositions(this.getReadbases()); 
+		this.readbases= this.softClipArray(softClippedPositions, this.getReadbases());
+		this.refbases= this.softClipArray(softClippedPositions, this.getRefbases());
+		this.methylbases= this.softClipArray(softClippedPositions, this.getMethylbases());
+		
 	}
 	
 	public String toString(){
@@ -305,7 +349,7 @@ public class AlignedRead {
 	 * @param readBases
 	 * @return
 	 */
-	public List<Integer> getSoftClippedPositions(byte[] readBases){
+	private List<Integer> getSoftClippedPositions(byte[] readBases){
 		
 		List<Integer> sofClippedPositions= new ArrayList<Integer>();
 		for (int i= 0; i < readBases.length; i++){
@@ -324,7 +368,7 @@ public class AlignedRead {
 	 * @param arrayToClip Array to clip
 	 * @return
 	 */
-	public byte[] softClipArray(List<Integer> softClippedPositions, byte[] arrayToClip){
+	private byte[] softClipArray(List<Integer> softClippedPositions, byte[] arrayToClip){
 		byte[] clippedArray= new byte[arrayToClip.length - softClippedPositions.size()];
 		
 		int p= 0;
