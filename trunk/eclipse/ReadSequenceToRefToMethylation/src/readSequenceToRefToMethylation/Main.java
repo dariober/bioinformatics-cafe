@@ -1,7 +1,6 @@
 package readSequenceToRefToMethylation;
 
 import java.io.File;
-import java.util.*;
 
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
@@ -21,13 +20,11 @@ public class Main {
 				+ "3. String of reference bases for each read base\n"
 				+ "4. String representing the methylation status of each base in the read.\n"
 				+ "   M= Methylated; u= unmethylated; .= Not a C; *= Mismatch (not C or T)\n"
-				+ "5. Read is first in pair (true/false)\n"
-				+ "6. Read mapes to forward strand (true/false)"
+				+ "5. Read maps to forward strand (true/false)"
+				+ "6. Read is first in pair (true/false)\n"
 				+ "\n\n"
 				+ "The strings for read, reference and methylation have the same length"
 				+ "\n\n"
-				+ "Reads are represented in the same way as they appear on the original FASTQ file\n"
-				+ "and the reference is reverse complemented accordingly."
 				+ "Soft clipped bases are trimmed and if a read is completely clipped is represented as '!'"
 				+ "\n"
 				+ "See AlignedRead.java for up do date coding of methylation status"
@@ -56,7 +53,9 @@ public class Main {
 		sam.setValidationStringency(ValidationStringency.SILENT);
 
 		// INPUT FASTA
+		System.err.print("Reading reference '" + ref + "'... ");
 		FastaReference fa= new FastaReference( new File(ref) );
+		System.err.println("Done");
 		/* ----------------------------------------------------- */
 		
 		int n= 0;
@@ -65,20 +64,16 @@ public class Main {
 			// Note use of 'n' to mark soft clipped bases. Hopefully 'n' doesn't appear
 			// in read sequence.
 			AlignedRead aln= new AlignedRead(rec, fa, (byte)'n'); 
-		
-			List<Integer> softClippedPositions= aln.getSoftClippedPositions(aln.getReadbases()); 
-			byte[] readbases= aln.softClipArray(softClippedPositions, aln.getReadbases());
-			byte[] refbases= aln.softClipArray(softClippedPositions, aln.getRefbases());
-			byte[] methylbases= aln.softClipArray(softClippedPositions, aln.getMethylbases());
-			
-			if (readbases.length != refbases.length || refbases.length != methylbases.length){
+			aln.clipAlignment();
+
+			if (aln.getReadbases().length != aln.getRefbases().length || aln.getRefbases().length != aln.getMethylbases().length){
 				System.err.println("Unequal length of read, reference or methylation arrays");
 				System.exit(1);
 			}
-			String readstring= new String(readbases);
-			String refstring= new String(refbases);
-			String methylstring= new String(methylbases);
-			if (readbases.length == 0){
+			String readstring= new String(aln.getReadbases());
+			String refstring= new String(aln.getRefbases());
+			String methylstring= new String(aln.getMethylbases());
+			if (aln.getReadbases().length == 0){
 				readstring= "!"; // This is to mark empty reads (completely sof clipped). Use a string that cannot be found in read/ref or methyl (i.e. '*' or 'NA' are NOT suitable)
 				refstring= "!";
 				methylstring= "!";
@@ -93,17 +88,18 @@ public class Main {
 			sb.append("\t");
 			sb.append(methylstring); 
 			sb.append("\t");
-			sb.append(aln.isFirst()); 			
-			sb.append("\t");
 			sb.append(aln.isForward());
+			sb.append("\t");
+			sb.append(aln.isFirst()); 			
 			System.out.println( sb.toString() );
 						
 			n++;
-			if (n >= 1000000){
-				break;
+			if (n % 1000000 == 0){
+				System.err.println(n + " reads processed");
 			}
 		}
 		sam.close();
+		System.err.println(n + " reads processed");
 	}
 
 }
