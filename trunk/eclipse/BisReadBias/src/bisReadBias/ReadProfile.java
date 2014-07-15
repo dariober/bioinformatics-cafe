@@ -2,7 +2,6 @@ package bisReadBias;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Joiner;
@@ -83,9 +82,6 @@ public class ReadProfile {
 		List<Integer> line= new ArrayList<Integer>();
 		for (char x : METHYL_CODES){
 			line.add(position.count(x));
-		}
-		if (!isRead1){
-			Collections.swap(line, METHYL_CODES.indexOf('M'), METHYL_CODES.indexOf('u'));
 		}
 		String outline= Joiner.on("\t").join(line);
 		return(outline);
