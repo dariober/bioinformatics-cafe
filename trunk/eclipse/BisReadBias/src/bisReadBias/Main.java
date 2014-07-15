@@ -55,6 +55,7 @@ public class Main {
 		for (SAMRecord rec : samfile){
 			if(nrec % step == 0){
 				AlignedRead alignedRead= new AlignedRead(rec, fastaFile);
+				alignedRead.orientAsInFastq();
 				readProfile.addReadMethyl(alignedRead);
 				ncollected++;
 			}
