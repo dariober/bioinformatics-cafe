@@ -47,7 +47,7 @@ args= parser.parse_args()
 if args.motifs == '-':
     inmot= sys.stdin
 else:
-    inmot= args.motifs
+    inmot= open(args.motifs)
 
 motifs= []
 for line in inmot:
