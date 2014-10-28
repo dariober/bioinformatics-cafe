@@ -292,6 +292,14 @@ like this:
 convert -density 300 chr7_5566757_5566829_ACTB.pdf chr7_5566757_5566829_ACTB.jpg
 }}}
 
+To convert a multi-page pdf as produced by `--onefile` to individual jpeg or png use:
+
+{{{
+convert -density 300 switch_regions.ymax.pdf[0-2] region_%0d.png
+}}}
+
+Using the syntax `[0-2]` only the first 3 pdf pages will be converted. The syntax `%0d` will number output files with a leading zero.
+
 === Opening pdf from shell ===
 
 The utility *`gnome-open`* should be present on most Linux systems. The following
