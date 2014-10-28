@@ -34,9 +34,11 @@ else:
 read_len_hist= {}
 n= -1
 tot= 0
+seqmass= 0
 for line in fin:
     if n % 4 == 0:
         l= len(line.strip())
+        seqmass += l
         read_len_hist[l]= read_len_hist.get(l, 0) + 1
         tot+=1
     n += 1
@@ -57,3 +59,4 @@ for i in len_range:
     bars= '|' * int(round(pct))
     bars_left= ' ' * (100 - int(round(pct)) - 1) + '+' 
     print(str(i) + '\t' + str(cnt) + '\t' + str(pct) + '\t' + str(cumcnt) + '\t' + str(cumpct) + '\t' + bars + bars_left)
+print('## Sequence mass (bp)\t%s' %(seqmass))
