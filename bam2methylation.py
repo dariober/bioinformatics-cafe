@@ -303,7 +303,7 @@ def rmLowQualsCalls(call_string, qual_string, minq= 0):
       return(call_string)
    
    to_keep= []
-   for i in range(1, len(qual_string)):
+   for i in range(0, len(qual_string)):
       q= ord(qual_string[i]) - 33
       if q >= minq:
          to_keep.append(call_string[i])
