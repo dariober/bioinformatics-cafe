@@ -89,7 +89,7 @@ parser.add_argument('--keeptmp',
                   help='''Keep tmp dir. Use for debugging.
                    ''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.2')
+parser.add_argument('--version', action='version', version='%(prog)s 0.3')
 
 # ------------------------------------------------------------------------------
 
