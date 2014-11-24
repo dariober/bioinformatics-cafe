@@ -20,7 +20,7 @@ DESCRIPTION
     
 OUTPUT:
     bed file with header and columns:
-1. chrom,
+1. chrom
 2. start
 3. end
 4. targetID
@@ -32,16 +32,16 @@ OUTPUT:
 10. log2fc
 
 EXAMPLE
-    localEnrichmentBed.py -b aln.bam -t target.bed -g genome.fa.fai -bl blacklist.bed > out.bed
+    localEnrichmentBed.py -b rhh047.bam -t rhh047.macs_peaks.bed -g genome.fa.fai -bl blacklist.bed > out.bed
     
     ## Using pipes:
-    samtools view -u aln.bam chr18 \
-    | localEnrichmentBed.py -b - -t target.bed -g genome.fa.fai > out.bed
+    samtools view -u rhh047.bam chr18 \
+    | localEnrichmentBed.py -b - -t rhh047.macs_peaks.bed -g genome.fa.fai > out.bed
 
     
 Useful tip: Get genome file from bam file:
 
-    samtools view -H aln.bam \
+    samtools view -H rhh047.bam \
     | grep -P "@SQ\tSN:" \
     | sed 's/@SQ\tSN://' \
     | sed 's/\tLN:/\t/' > genome.txt
@@ -68,7 +68,7 @@ parser.add_argument('--genome', '-g',
                    required= True,
                    help='''A genome file giving the length of the chromosomes.
 A tab separated file with columns <chrom> <chrom lenght>.
-NB: It can be created from the header of the bam file.
+NB: It can be created from the header of the bam file (see tip above).
                    ''')
 
 parser.add_argument('--slop', '-S',
@@ -265,8 +265,11 @@ def localEnrichment(countTuple):
     cnt= [ct['flank']['cnt'], ct['target']['cnt']]
     length= [ct['flank']['len'], ct['target']['len']]
     
-    ct['log10_pval']= -numpy.log10(scipy.stats.chi2_contingency([cnt, length])[1])
-    
+    try:
+        ct['log10_pval']= -numpy.log10(scipy.stats.chi2_contingency([cnt, length])[1])
+    except ValueError:
+        ct['log10_pval']= None
+        
     if ct['flank']['cnt'] == 0 or ct['flank']['len'] == 0:
         ct['log2fc']= None
     else:
