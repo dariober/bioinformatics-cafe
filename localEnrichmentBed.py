@@ -8,6 +8,7 @@ import os
 import shutil
 import scipy.stats
 import numpy
+import atexit
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -283,6 +284,8 @@ def localEnrichment(countTuple):
 # ------------------------------------------------------------------------------
 ## Get tmp dir:
 tmpdir= tempfile.mkdtemp(prefix= 'localEnrichmentBed_', dir= args.tmpdir)
+if not args.keeptmp:
+    atexit.register(shutil.rmtree, tmpdir)
 
 if args.verbose:
     sys.stderr.write('\nWorking tmp dir: "%s"\n' %(tmpdir))
@@ -321,8 +324,4 @@ while True:
 fcount.close()
 ftarget.close()
 
-if not args.keeptmp:
-    if args.verbose:
-        sys.stderr.write('\nRemoving tmp dir "%s"\n\n' %(tmpdir))
-    shutil.rmtree(tmpdir)
 sys.exit()
