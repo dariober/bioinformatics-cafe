@@ -212,7 +212,7 @@ cat %(beds)s > %(catbeds)s &&
 coverageBed -counts -abam %(bam)s -b %(catbeds)s \\
 | awk 'BEGIN{OFS="\\t"}{print $0, $3-$2}' \\
 | sort -s -k4,4n -k5,5 \\
-| groupBy -g 4,5 -c 6,7 -o sum,sum > %(countTable)s
+| groupBy -g 4,5 -c 6,7 -o sum,sum -prec 12 > %(countTable)s
 """ %{'beds': ' '.join(beds), 'catbeds': os.path.join(tmpdir, 'cat.bed'), 'bam': inbam, 'countTable':countTable}
     
     if verbose:
@@ -244,9 +244,7 @@ def countsToDict(fin):
             thisLocus= line[0]
             if locus == {} or thisLocus == current:
                 current= line[0]
-                ## int(float()) is necessary to handle exp from groupBy see also
-                ## bedtools-discuss
-                locus[line[1]]= {'cnt': int(float(line[2])), 'len': int(float(line[3]))}
+                locus[line[1]]= {'cnt': int(line[2]), 'len': int(line[3])}
             else:
                 fin.seek(x)
                 return((int(current), locus))
