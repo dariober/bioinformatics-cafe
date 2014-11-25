@@ -244,7 +244,9 @@ def countsToDict(fin):
             thisLocus= line[0]
             if locus == {} or thisLocus == current:
                 current= line[0]
-                locus[line[1]]= {'cnt': int(line[2]), 'len': int(line[3])}
+                ## int(float()) is necessary to handle exp from groupBy see also
+                ## bedtools-discuss
+                locus[line[1]]= {'cnt': int(float(line[2])), 'len': int(float(line[3]))}
             else:
                 fin.seek(x)
                 return((int(current), locus))
