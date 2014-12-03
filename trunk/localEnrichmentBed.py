@@ -36,16 +36,16 @@ EXAMPLE
     localEnrichmentBed.py -b rhh047.bam -t rhh047.macs_peaks.bed -g genome.fa.fai -bl blacklist.bed > out.bed
     
     ## Using pipes:
-    samtools view -u rhh047.bam chr18 \
+    samtools view -u rhh047.bam chr18 \\
     | localEnrichmentBed.py -b - -t rhh047.macs_peaks.bed -g genome.fa.fai > out.bed
 
     
 Useful tip: Get genome file from bam file:
 
-    samtools view -H rhh047.bam \
-    | grep -P "@SQ\tSN:" \
-    | sed 's/@SQ\tSN://' \
-    | sed 's/\tLN:/\t/' > genome.txt
+    samtools view -H rhh047.bam \\
+    | grep -P "@SQ\\tSN:" \\
+    | sed 's/@SQ\\tSN://' \\
+    | sed 's/\\tLN:/\\t/' > genome.txt
     
 REQUIRES:
     - bedtools suite
@@ -269,10 +269,10 @@ def localEnrichment(countTuple):
     try:
         ct['log10_pval']= -numpy.log10(scipy.stats.chi2_contingency([cnt, length])[1])
     except ValueError:
-        ct['log10_pval']= None
+        ct['log10_pval']= 'NA'
         
     if ct['flank']['cnt'] == 0 or ct['flank']['len'] == 0:
-        ct['log2fc']= None
+        ct['log2fc']= 'NA'
     else:
         ct['log2fc']= numpy.log2(
              float((ct['target']['cnt']) / float(ct['target']['len'])) /
