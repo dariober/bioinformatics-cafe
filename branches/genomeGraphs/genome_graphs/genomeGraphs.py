@@ -12,13 +12,14 @@ import pycoverage
 import pympileup
 import validate_args
 import pybedtools
+import atexit
 
 #from genomeGraphs.pycoverage import *
 #from genomeGraphs.validate_args import *
 #import genomeGraphs.pympileup
 ##import genomeGraphs
 
-VERSION= '0.2.0a' ## MAKE IT MATCH setup.py
+VERSION= '0.2.1a' ## MAKE IT MATCH setup.py
 
 # HOWTO: Add recyclable graphical parameters
 # ------------------------------------------
@@ -449,6 +450,7 @@ def main():
     ## -------------------------------------------------------------------------
     if args.tmpdir is None:
         tmpdir= tempfile.mkdtemp(suffix= '_coverageViewer')
+        atexit.register(shutil.rmtree, tmpdir)
     else:
         tmpdir= args.tmpdir
         if not os.path.exists(tmpdir):
@@ -637,8 +639,8 @@ def main():
         pycoverage.catPdf(in_pdf= outputPDF, out_pdf= args.onefile)
     for f in nonbam_dict:
         os.remove(nonbam_dict[f])
-    if args.tmpdir is None:
-        shutil.rmtree(tmpdir)
+#    if args.tmpdir is None:
+#        shutil.rmtree(tmpdir)
 if __name__ == '__main__':
     main()
     sys.exit()

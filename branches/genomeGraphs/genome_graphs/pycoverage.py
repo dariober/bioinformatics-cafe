@@ -224,7 +224,8 @@ def makeWindows(region, n):
     tmp= tempfile.NamedTemporaryFile(delete= False, suffix= '.bed.txt', prefix= 'windowMaker_')
     tmp.write(str(region))
     tmp.close()
-    regionWinds= pybedtools.BedTool().window_maker(b= tmp.name, n= n, stream= False)
+    ## Add s=1 opt. See bedtools-group list 
+    regionWinds= pybedtools.BedTool().window_maker(b= tmp.name, n= n, s= 1, stream= False)
     os.remove(tmp.name)
     return(regionWinds)
 
