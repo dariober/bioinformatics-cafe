@@ -16,7 +16,7 @@ cd ../../
 
 setup(
    name = 'genomeGraphs',
-   version = '0.2.0a', ## MAKE IT MATCH genomeGraphs.py
+   version = '0.2.1a', ## MAKE IT MATCH genomeGraphs.py
    author = 'Dario Beraldi',
    author_email = 'dario.beraldi<at>gmail<dot>com',
    url= '',
