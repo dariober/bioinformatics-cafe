@@ -24,7 +24,8 @@ VERSION<- '0.1.0a'
 
 docstring<- sprintf("DESCRIPTION \\n\\
 Compare local enrichment between pairs of files, e.g. condition 1 vs 2, to \\n\\
-compute log fold change and associated significance. \\n\\n\\
+compute log fold change and associated significance. Alternatively, compute the \\n\\
+overal significance of enrichment in a set of input files\\n\\n\\
 \\
 Enrichment is calculated for each pair first by comparing the number of reads \\n\\
 in target and in background by chi^2 test. \\n\\n\\
@@ -36,15 +37,17 @@ difference is < 0 than the chi^2 pvalue is returned as negative. \\n\\n\\
 \\
 OUTPUT \\n\\
 1) rank.bed file with tested regiosn ranked by rank-product, combined p-value \\n\\
-(as -log10) and average log2fc. \\n\\
-2) score.bed file with enrichment for each pair of files and rank \\n\\n\\
+(as -log10) and average log2fc. Note that log2fc is the mean of the individual \\n\\
+logFCs.\\n\\
+2) score.bed file with enrichment for each pair of files and rank. This file \\n\\
+produced only if control file(s) are given. \\n\\n\\
 Version %s", VERSION)
 
 
 parser<- ArgumentParser(description= docstring, formatter_class= 'argparse.RawTextHelpFormatter')
 
 parser$add_argument("-i", "--input", help= "Input files generate by localEnrichmentBed.py", nargs= '+', required= TRUE)
-parser$add_argument("-c", "--ctrl", help= "Control file (e.g. the input). It must be one file (for all inputs) or one for each input", nargs= '+', required= TRUE)
+parser$add_argument("-c", "--ctrl", help= "Control file (e.g. the input). It must be one file (for all inputs) or one for each input", nargs= '+')
 parser$add_argument("-o", "--out", help= "Basename for output files", required= TRUE)
 parser$add_argument("-m", "--method", help= "_Not implemented yet_ Method to detect differences", default= 'chisq')
 
@@ -56,22 +59,71 @@ gmean<- function(x){
     exp(mean(log(x)))
 }
 
-Stouffer.test <- function(p, w) { # p is a vector of p-values
-  if (missing(w)) {
+Stouffer.comb <- function(p, w) {
+    # Modified from Wikipedia
+    # p: is a vector of p-values
+    # w: Vector of weights
+    if (missing(w)) {
     w <- rep(1, length(p))/length(p)
-  } else {
+    } else {
     if (length(w) != length(p))
-      stop("Length of p and w must equal!")
-  }
-  Zi <- qnorm(1-p) 
-  Z  <- sum(w*Zi)/sqrt(sum(w^2))
-  p.val <- 1-pnorm(Z)
-  return(p.val)
+       stop("Length of p and w must equal!")
+    }
+    Zi <- qnorm(1-p) 
+    Z  <- sum(w*Zi)/sqrt(sum(w^2))
+    if(!is.na(Z) & Z > 7){
+        # Recompute in log space
+        p.val<- Stouffer.log(p, w)[['p.value']]
+    } else {
+        p.val <- 1-pnorm(Z)
+    }
+    return(p.val)
+}
+
+Stouffer.log<- function(p, w) {
+    # Stouffer method modified for log space. Don't use directly,
+    # call Stouffer.comb() instead
+    if (missing(w)) {
+        w <- rep(1, length(p))/length(p)
+    } else {
+        if (length(w) != length(p))
+        stop("Length of p and w must equal!")
+    }
+    logp<- log(p)     ## log transform pvalues
+    Zi <- -qnorm(logp, log.p= TRUE) ## Work in log space
+    Z  <- sum(w*Zi)/sqrt(sum(w^2))
+    p.val <- -pnorm(Z, log.p= TRUE)
+    out.p<- c(Z= Z, p.value= p.val)
+    return( out.p )
+}
+
+
+log10pvalToPvalForLogFC<- function(log2fc, log10pval, pmin= 1e-16, pmax= 0.999999){
+    ## Convert pvalues from -log10() format to original scale 0 to 1.
+    ## If log2fc is -ve make the pvalue 1 (or close to), meaning that
+    ## there is no evidence at all of enrichment.
+    ## log2fc: Vector of logFC
+    ## log10pval: Vector of -log10(pvalues)
+    ## pmin: Cap min pvalue: If a pvalue is lowewr than this, reset it to pmin.
+    ## pmax: Cap max pvalue: If a pvalue is more than this, reset it.
+    ## Example:
+    ## log10pvalToPvalForLogFC(c(1, 2, -1), c(2, 3, 1))
+    ## [1] 0.010000 0.001000 0.999999
+    ## 
+    stopifnot(length(log2fc) == length(log10pval))
+    stopifnot(pmin >= 0 & pmin <= 1)
+    stopifnot(pmax >= 0 & pmax <= 1)
+    stopifnot(pmax > pmin)
+    stopifnot(log10pval >= 0 | is.na(log10pval)) ## NAs are not explicitly handled!!
+    pval<- 10^(-log10pval)
+    newp<- ifelse(log2fc < 0, pmax, pval)  ## Set -ve pvalue to max pval
+    newp<- ifelse(newp < pmin, pmin, newp) ## Reset pval if too close to 0 or 1.
+    newp<- ifelse(newp > pmax, pmax, newp)
+    return(newp)
 }
 # -----------------------------------------------------------------------------
-
 if(xargs$method == 'chisq'){
-    if(length(xargs$ctrl) != 1 & length(xargs$ctrl) != length(xargs$input)){
+    if(length(xargs$ctrl) != 0 & length(xargs$ctrl) != 1 & length(xargs$ctrl) != length(xargs$input)){
         cat('\nPlease provide either one control file or as many control files (possibly repeated) as inputs.\n\n')
         quit(save= 'no', status= 1)
     }
@@ -99,6 +151,21 @@ for(f in lebfiles[2:length(lebfiles)]){
 rm(tmp)
 
 leb[, type := ifelse(library_id %in% xargs$ctrl, 'ctrl', 'pd')]
+# =============================================================================
+# Only input files
+if(is.null(xargs$ctrl)){
+    ## Do not compare, just give a combined pvalue and logFC
+    ## Do not create the score.bed file as this would be just the input files
+    ## concatenated.
+    ## Make sure the output format is consistent with the chisq output below
+    leb[, ranked := list(rank(-log2fc)), by= library_id]
+    leb$pval<- log10pvalToPvalForLogFC(leb$log2fc, leb$log10_pval)
+    rankProdDT<- leb[, list(avgLog2fc= mean(log2fc), log10_combp= -log10(Stouffer.comb(pval)),
+        RP= gmean(ranked)), by= list(chrom, start, end, targetID)]
+    write.table(rankProdDT, file= paste(xargs$out, 'rank.bed', sep= '.'),
+        row.names= FALSE, col.names= TRUE, sep= '\t', quote= FALSE)
+    quit(save= 'no')
+}
 
 if(xargs$method %in% c('binomial', 'betabin')){
     
@@ -168,17 +235,20 @@ if(xargs$method %in% c('binomial', 'betabin')){
         }
     }
     enrich[, log10_pval := -log10(pval)]
+
+    ## For combining pvals:
+    newp<- log10pvalToPvalForLogFC(enrich$log2fc, enrich$log10_pval)
+    
     enrich[, log10_pval := ifelse(log2fc < 0, -log10_pval, log10_pval)] ## Change sign of pvals
     enrich[, ranked := list(rank(-log2fc)), by= input]
 
-    ## For combining pvals:    
-    newp<- ifelse(enrich$log2fc < 0, 1, enrich$pval)  ## Set -ve pval to 1
-    newp<- ifelse(newp < 1e-16, 1e-16, newp)          ## Reset pval if too close to 0 or 1.
-    newp<- ifelse(newp > 0.999999, 0.999999, newp)
+#    newp<- ifelse(enrich$log2fc < 0, 1, enrich$pval)  ## Set -ve pval to 1
+#    newp<- ifelse(newp < 1e-16, 1e-16, newp)          ## Reset pval if too close to 0 or 1.
+#    newp<- ifelse(newp > 0.999999, 0.999999, newp)
     enrich$pval<- newp
     rm(newp)
     
-    rankProdDT<- enrich[, list(avgLog2fc= mean(log2fc), log10_combp= -log10(Stouffer.test(pval)), RP= gmean(ranked)), by= targetID]
+    rankProdDT<- enrich[, list(avgLog2fc= mean(log2fc), log10_combp= -log10(Stouffer.comb(pval)), RP= gmean(ranked)), by= targetID]
     rankProdDT<- merge(loci, rankProdDT, by= 'targetID')
     rankProdDT<- rankProdDT[, list(chrom, start, end, targetID, avgLog2fc, log10_combp, RP) ]
     enrich[, pval := NULL]
