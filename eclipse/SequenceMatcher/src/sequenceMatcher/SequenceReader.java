@@ -5,8 +5,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.zip.GZIPInputStream;
@@ -20,9 +22,15 @@ import org.biojava3.core.sequence.io.GenericFastaHeaderParser;
 
 public class SequenceReader {
 
-	public static LinkedHashMap<String, DNASequence> ReadFasta(String fastafile) throws IOException{
-	
-		FileInputStream inStream = new FileInputStream( fastafile );
+	/**
+	 * Read entire fasta file and put it in LinkedHashMap.
+	 * @param fastafile
+	 * @return
+	 * @throws IOException
+	 */
+	private static LinkedHashMap<String, DNASequence> readFasta(String fastafile) throws IOException{
+		
+		InputStream inStream= Opener.open(fastafile);
 	
 		GenericFastaHeaderParser<DNASequence, NucleotideCompound> genericFastaHeaderParser= 
 				new GenericFastaHeaderParser<DNASequence, NucleotideCompound>();
@@ -35,33 +43,41 @@ public class SequenceReader {
 		LinkedHashMap<String, DNASequence> fastaseq = fastaReader.process();
 		return(fastaseq);
 	}
+
+	/**
+	 * Convert a LinkedHashMap containing fasta sequences to a List of String arrays.
+	 * Each array has length 3 and contains a fasta sequence: {name, sequence, sequence revcomp}.
+	 * The LinkedHashMap is typically obtained by calling ReadFasta(fastafile).
+	 * @param fastaMap
+	 * @return
+	 */
+	private static ArrayList<String[]> fastaLinkedHashMapToList(
+			LinkedHashMap<String, DNASequence> fastaMap){
+		
+		ArrayList<String[]> fastaList= new ArrayList<String[]>();
+		AmbiguityDNACompoundSet ambDNAset= new AmbiguityDNACompoundSet();
+		
+		for(String seqname : fastaMap.keySet()){						
+			String[] faseq= new String[3];
+			faseq[0]= seqname;
+			faseq[1]= fastaMap.get(seqname).getSequenceAsString().toUpperCase();
+			faseq[2]= new DNASequence(faseq[1], ambDNAset).getReverseComplement().getSequenceAsString();
+			fastaList.add(faseq);
+		}
+		
+		return fastaList;
+	}
 	
 	/**
-	 * Convert LinkedHashMap to a pair of String arrays contained in a HashMap.
-	 * Format is: 
-	 * {"name": ['seq1', 'seq2', ...], "seq": ["ACTG", "AAA", ...]}
-	 * @param fastaseq
-	 * @return HashMap with key/value pairs: 
-	 *     "name": Array of sequence names
-	 *     "seq": Array of sequences as strings.
+	 * Read a fasta file and put each sequence (name & sequence pair) in a list of
+	 * String arrays. Each array has length 2: {name, sequence}.
+	 * @param fastafile
+	 * @return
+	 * @throws IOException
 	 */
-	public static HashMap<String, String[]> DNASequenceMapToArrays(LinkedHashMap<String, DNASequence> fastaseq){
-		
-		// Array of sequence names:
-		String[] names= fastaseq.keySet().toArray(new String[fastaseq.size()]);
-
-		String[] seqs= new String[fastaseq.size()];
-		int i= 0;
-		for(String k : fastaseq.keySet()){
-			seqs[i]= fastaseq.get(k).getSequenceAsString();
-			i++;
-		}
-		HashMap<String, String[]> fastaMap= new HashMap<String, String[]>();
-		fastaMap.put("name", names);
-		fastaMap.put("seq", seqs);
-		
-		return fastaMap;
-		
+	public static ArrayList<String[]> readFastaToList(String fastafile) throws IOException{
+		ArrayList<String[]> fastaList= fastaLinkedHashMapToList(readFasta(fastafile));
+		return fastaList;
 	}
 	
 	public static BufferedReader openFastq(String fastq) throws FileNotFoundException, IOException{
@@ -102,5 +118,88 @@ public class SequenceReader {
 		fqread[3]= br.readLine();	
 		return(fqread);
 	}
+
+	/**
+	 * Read next sequence from FASTA file and put it in a String array 
+	 * of length two:
+	 * String[0]: Name
+	 * String[1]: Sequence
+	 * @param br BufferedReader connected to the fasta file to read.
+	 * @return
+	 * @throws IOException
+	 */
+	public static String[] getNextSequence(BufferedReader br) throws IOException {
+		
+		String[] fastaseq= new String[2];
+		
+		int BUFFER_SIZE = 8192;	
+		String line= br.readLine();
+
+		// Name
+		if(line == null){
+			return null;
+		} else if (line.startsWith(">")){
+			fastaseq[0]= line.replaceFirst(">", "");
+		} else {
+			System.err.println(line);
+			System.err.println("Invalid sequence name or format");
+			System.exit(1);
+		}
+		StringBuilder sb= new StringBuilder();
+		while(true){
+			br.mark(BUFFER_SIZE);
+			line= br.readLine();
+			if(line == null || line.startsWith(">")){
+				break;
+			} else {
+				sb.append(line);
+			}
+		}		
+		String sequence= sb.toString().toUpperCase();
+		fastaseq[1]= sequence;
+		br.reset();
+		return fastaseq;		
+	}
+	
+	public static String revcomp(String dna, HashMap<Character, Character> iupac){
+		char[] f= dna.toCharArray();
+		char[] rc= new char[f.length];
+
+		for(int i= 0; i < f.length; i++){
+			rc[i]= iupac.get(f[i]);
+		}
+		return(Arrays.toString(rc));
+	}
 	
 }
+
+/*	
+private HashMap<Character, Character> iupacAmbiguityDNA= new HashMap<Character, Character>();
+	
+public void setIupacAmbiguityDNA(HashMap<Character, Character> iupacAmbiguityDNA) {
+	this.iupacAmbiguityDNA = iupacAmbiguityDNA;
+}
+
+public static HashMap<Character, Character> getIupacAmbiguityDNA() {
+
+HashMap<Character, Character> iupacAmbiguityDNA= new HashMap<Character, Character>();
+iupacAmbiguityDNA.put('A', 'T');
+iupacAmbiguityDNA.put('G', 'C');
+iupacAmbiguityDNA.put('C', 'G');
+iupacAmbiguityDNA.put('T', 'A');
+iupacAmbiguityDNA.put('Y', 'R');
+iupacAmbiguityDNA.put('R', 'Y');
+iupacAmbiguityDNA.put('W', 'W');
+iupacAmbiguityDNA.put('S', 'S');
+iupacAmbiguityDNA.put('K', 'M');
+iupacAmbiguityDNA.put('M', 'K');
+iupacAmbiguityDNA.put('D', 'H');
+iupacAmbiguityDNA.put('V', 'B');
+iupacAmbiguityDNA.put('H', 'D');
+iupacAmbiguityDNA.put('B', 'V');
+iupacAmbiguityDNA.put('X', 'X');
+iupacAmbiguityDNA.put('N', 'N');
+
+return iupacAmbiguityDNA;
+}
+*/
