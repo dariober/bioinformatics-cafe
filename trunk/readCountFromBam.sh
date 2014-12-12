@@ -14,6 +14,7 @@ USAGE \n
 readCountFromBam.sh <aln.bam>
 \n\n
 OUTPUT \n
+* Input file name
 # mapped (sum 3rd col) \n
 # mate unmapped (sum 4th col) \n
 # unmapped (* line) \n
@@ -21,8 +22,6 @@ OUTPUT \n
 "
 
 bam=$1
-
-#  || $bam = "-h" || $bam = "--help" 
 
 if [[ ${bam} = "" || ${bam} = "-h" || ${bam} == "--help" ]]
 then
@@ -44,7 +43,7 @@ then
 fi
 
 samtools idxstats ${bam} \
-| awk 'BEGIN{OFS="\t"; FS="\t"} {
+| awk -v bam=$bam 'BEGIN{OFS="\t"; FS="\t"} {
     if($1 == "*"){
         unmapped=$3+$4
     } else {
@@ -52,6 +51,6 @@ samtools idxstats ${bam} \
         mateun+=$4
         refsize+=$2
     }
-}END{print mapped, mateun, unmapped, refsize}'  
+}END{print bam, mapped, mateun, unmapped, refsize}'  
 
 exit 0
