@@ -48,4 +48,37 @@ public class DistanceTest {
 		
 	}
 
+	@Test
+	public void canGetNMtagFromAln(){
+		String alnRead;
+		String alnRef;
+		int nm= -1;
+		
+		alnRead= "ACTG";
+		alnRef=  "ACTG";
+		nm= Distance.getNMtagFromAln(alnRead, alnRef);
+		assertEquals(0, nm);
+
+		alnRead= "ACTGA";
+		alnRef=  "ACTGN";
+		nm= Distance.getNMtagFromAln(alnRead, alnRef);
+		assertEquals(1, nm);
+
+		alnRead= "AACTG-A";
+		alnRef=  "A-CTGTN";
+		nm= Distance.getNMtagFromAln(alnRead, alnRef);
+		assertEquals(3, nm);
+
+		alnRead= "AACTG--";
+		alnRef=  "AACTGNN";
+		nm= Distance.getNMtagFromAln(alnRead, alnRef);
+		assertEquals(0, nm);
+		
+		alnRead= "---AACTG--";
+		alnRef=  "NNNACCTGNN";
+		nm= Distance.getNMtagFromAln(alnRead, alnRef);
+		assertEquals(1, nm);
+	
+	}
+	
 }

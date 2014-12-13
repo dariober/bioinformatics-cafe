@@ -12,22 +12,38 @@ public class MatchTest {
 		String[] seqA= {"seq1-A", "ACTGA"};
 		String[] seqB= {"seq1-B", "ACTGN"};
 
-		Match matches= new Match(seqA, seqB);
+		Match matches= new Match(seqA, seqB);	
 		
-		double jwd= matches.getJaroWinklerDistance();
-		System.out.println(jwd);
+		matches.setHD(0);
+		assertTrue(matches.getHD() == -1);
 		
-		matches.getDistance("Leven", -1);
-		assertTrue(matches.getNM() == 1);
+		matches.setLD(1);
+		assertTrue(matches.getLD() == 1);
 		
-		matches.getDistance("Leven", 0);
-		assertTrue(matches.getNM() == -1);
+		matches.setJWD();
+		assertTrue(matches.getJWD() == 0.92);
+		
+		double d= matches.getFilterDistance("HD", -1);
+		assertTrue(d == 1);
 
-		matches.getDistance("Hamming", -1);
-		assertTrue(matches.getNM() == 1);
+		d= matches.getFilterDistance("LD", 1);
+		assertTrue(d == 1);
 		
-		matches.getDistance("Hamming", 0);
-		assertTrue(matches.getNM() == -1);
+		d= matches.getFilterDistance("LD", -1);
+		assertTrue(d == 1);
+		
+		d= matches.getFilterDistance("LD", 0);
+		assertTrue(d == -1);
+		
+		matches= new Match(seqA, seqA);
+		d= matches.getFilterDistance("LD", 0);
+		assertTrue(d == 0);
+
+		d= matches.getFilterDistance("LD", 1);
+		assertTrue(d == 0);
+
+		d= matches.getFilterDistance("LD", -1);
+		assertTrue(d == 0);
 		
 	}
 }

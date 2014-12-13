@@ -41,6 +41,7 @@ public class SequenceReader {
 				new FastaReader<DNASequence, NucleotideCompound>(
 						inStream, genericFastaHeaderParser, dnaSequenceCreator); 
 		LinkedHashMap<String, DNASequence> fastaseq = fastaReader.process();
+			
 		return(fastaseq);
 	}
 

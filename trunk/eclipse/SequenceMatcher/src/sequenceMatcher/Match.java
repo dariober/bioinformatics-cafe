@@ -3,6 +3,7 @@ package sequenceMatcher;
 
 import java.util.Arrays;
 import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 import org.biojava3.alignment.Alignments;
 import org.biojava3.alignment.SimpleGapPenalty;
@@ -30,15 +31,19 @@ public class Match {
 	
 	private String nameA= ".";
 	private String nameB= ".";
-	private Integer NM;
 	private String strand= ".";
 	private String seqA= ".";
 	private String seqB= ".";
 	private int NWscore; // Needleman-wunch alignment score
 	private SequencePair<DNASequence, NucleotideCompound> alnPair;
+	private double pct_ident; 
+	private String alnA;
+	private String alnB;
 	private Integer LD; // Levenshtein dist
 	private Integer HD; // Hamming dist
-	private double JWD; // JaroWinkler dist
+	private Double JWD; // JaroWinkler dist
+	private int NM; // Nucleotide difference
+	@SuppressWarnings("unused")
 	private String header;
 	
 	public String getNameA() {
@@ -52,12 +57,6 @@ public class Match {
 	}
 	public void setNameB(String nameB) {
 		this.nameB = nameB;
-	}
-	public int getNM() {
-		return NM;
-	}
-	public void setNM(int nM) {
-		NM = nM;
 	}
 	public String getStrand() {
 		return strand;
@@ -86,22 +85,67 @@ public class Match {
 		return alnPair;
 	}
 
-	// Distances
+	public String getAlnA() {
+		return alnA;
+	}
+	public void setAlnA(String alnA) {
+		this.alnA = alnA;
+	}
+	public String getAlnB() {
+		return alnB;
+	}
+	public void setAlnB(String alnB) {
+		this.alnB = alnB;
+	}
+
+	public double getPct_ident() {
+		return pct_ident;
+	}
+	public void setPct_ident(double pct_ident) {
+		this.pct_ident = pct_ident;
+	}
+
+	public int getNM() {
+		return NM;
+	}
+	public void setNM(int nM) {
+		NM = nM;
+	}
 	
-	public Integer getLD(int nmax) {
-		int LD= StringUtils.getLevenshteinDistance(seqA, seqB, nmax);
-		return LD;
+	/* ------------------------------------------------------------------------ */
+	// Distances
+	// ---------
+	public void setJWD(){
+		this.JWD= StringUtils.getJaroWinklerDistance(seqA, seqB);
+	}	
+	public double getJWD(){
+		return this.JWD;
 	}
-	public void setLD(Integer lD) {
-		LD = lD;
+
+	public void setLD(int nmax) {
+		if(nmax < 0){
+			this.LD= StringUtils.getLevenshteinDistance(seqA, seqB);
+		} else{
+			this.LD= StringUtils.getLevenshteinDistance(seqA, seqB, nmax);
+		}
 	}
-	public Integer getHD(int nmax) {
-		int HD= Distance.hammingDist(seqA, seqB, nmax);
-		return HD;
+	public void setLD() {
+		this.LD= StringUtils.getLevenshteinDistance(seqA, seqB);
 	}
-	public void setHD(Integer hD) {
-		HD = hD;
+	public int getLD() {
+		return this.LD;
 	}
+	
+	public void setHD(int nmax) {
+		this.HD= Distance.hammingDist(seqA, seqB, nmax);
+	}
+	public void setHD() {
+		this.HD= Distance.hammingDist(seqA, seqB, -1);
+	}
+	public int getHD() {
+		return this.HD;
+	}
+
 	
 	// -------------------------------------------------------------------------
 	// C O N S T R U C T O R S
@@ -123,54 +167,31 @@ public class Match {
 	}
 	
 	// -------------------------------------------------------------------------
-	
-	public double getJaroWinklerDistance(){
-		double jwd= StringUtils.getJaroWinklerDistance(seqA, seqB);
-		return jwd;
-	}
-	
+		
 	/**
-	 * Match sequence seqA with sequence seqB. 
-	 * @param setA
-	 * @param seqB
+	 * Match sequence seqA with sequence seqB to get a distance
+	 * metric using a specified method. This metric is going
+	 * to be used for deciding whether additional metrics have to be computed
+	 * and to decide whether the match is to be printed out.  
 	 * @param method Method to compute mismatches
 	 * @param nmax Max number of mismatches to output the match
-	 * @param strand Match also to the strand.
-	 * @return with elements
+	 * @return
 	 */
-	public void getDistance(String method, int nmax){
+	public double getFilterDistance(String method, int nmax){
 		
-		int d= -1;
-		if(method.equals("Leven") && nmax >= 0){
-			d= StringUtils.getLevenshteinDistance(seqA, seqB, nmax);
-		} else if(method.equals("Leven") && nmax < 0){
-			d= StringUtils.getLevenshteinDistance(seqA, seqB);
-		} else if (method.equals("Hamming")){
-			d= Distance.hammingDist(seqA, seqB, nmax);
+		double d= -1;
+		if(method.equals("LD")){
+			this.setLD(nmax);
+			d= this.getLD();
+		} else if (method.equals("HD")){
+			this.setHD(nmax);
+			d= this.getHD();
 		} else {
 			System.err.println("Unsupported method: " + method);
 			System.exit(1);
 		}
-		this.NM= d;
+		return d;
 	}
-	
-	/**
-	 * Get distance between strings using a valid method.
-	 * @param method: Leven or Hamming
-	 * @param nmax: Max number of mismatches. If exceeded -1 is returned
-	 * @param revcomp: Should seqA be reverse complemented before matching?
-	 */
-	//public void getDistance(String method, int nmax, boolean revcomp){
-	//	if(revcomp){
-	//		AmbiguityDNACompoundSet ambDNAset= new AmbiguityDNACompoundSet();
-	//		this.seqA= new DNASequence(this.seqA, ambDNAset).getReverseComplement().getSequenceAsString();
-	//		this.getDistance(method, nmax);
-	//		this.strand= "-";
-	//	} else {
-	//		this.getDistance(method, nmax);
-	//		this.strand= "+";
-	//	}
-	//}
 	
 	public void align(){
 		
@@ -196,12 +217,15 @@ public class Match {
 		
 		this.alnPair= alnPair;
 		this.NWscore= NWscore;
-	
+		this.pct_ident= (double) alnPair.getNumIdenticals() / (double) alnPair.getLength();
+		this.alnA= this.alnPair.getAlignedSequences().get(0).getSequenceAsString();
+		this.alnB= this.alnPair.getAlignedSequences().get(1).getSequenceAsString();
+		this.NM= Distance.getNMtagFromAln(this.alnB, this.alnA);
 	}	
 	
 	public String alnToString(){
 
-		String[] sa= new String[6];
+		String[] sa= new String[7];
 		
 		if(this.alnPair == null){
 			for(int i= 0; i < sa.length; i++){
@@ -212,8 +236,9 @@ public class Match {
 			sa[1]= Integer.toString(this.alnPair.getLength());	  
 			sa[2]= Integer.toString(this.alnPair.getNumIdenticals());
 			sa[3]= Integer.toString(this.alnPair.getNumSimilars());
-			sa[4]= this.alnPair.getAlignedSequences().get(0).getSequenceAsString();
-			sa[5]= this.alnPair.getAlignedSequences().get(1).getSequenceAsString();
+			sa[4]= String.format("%.2f", this.pct_ident);
+			sa[5]= this.alnA;
+			sa[6]= this.alnB;
 		}
 		return(Joiner.on("\t").join(sa));
 
@@ -221,35 +246,38 @@ public class Match {
 
 	public String toString(){
 		
-		String[] sa= new String[6];
+		String[] sa= new String[8];
 		
 		sa[0]= nameA; 
 		sa[1]= nameB;
 		sa[2]= strand;
-		sa[3]= (this.NM == null) ? "." : (Integer.toString(NM));
-		sa[4]= Integer.toString(seqA.length()); 
-		sa[5]= Integer.toString(seqB.length());
-		// sa[6]= seqA; 
-		// sa[7]= seqB;
+		sa[3]= (this.LD == null) ? "." : (Integer.toString(LD));
+		sa[4]= (this.HD == null) ? "." : (Integer.toString(HD));
+		sa[5]= (this.JWD == null) ? "." : (Double.toString(JWD));
+		sa[6]= Integer.toString(seqA.length()); 
+		sa[7]= Integer.toString(seqB.length());
 		
 		return(Joiner.on("\t").join(sa) + "\t" + this.alnToString());
 	} 
 
 	public String getHeader() {
-		String[] header= new String[12];
+		String[] header= new String[15];
 
 		header[0]= "seq_A"; 
 		header[1]= "seq_B";
 		header[2]= "strand";
-		header[3]= "NM";
-		header[4]= "len_A";
-		header[5]= "len_B";
-		header[6]= "aln_score";
-		header[7]= "len_aln";
-		header[8]= "n_ident";
-		header[9]= "n_sim";
-		header[10]= "aln_A";
-		header[11]= "aln_B";
+		header[3]= "LD";
+		header[4]= "HD";
+		header[5]= "JWD";
+		header[6]= "len_A";
+		header[7]= "len_B";
+		header[8]= "aln_score";
+		header[9]= "len_aln";
+		header[10]= "n_ident";
+		header[11]= "n_sim";
+		header[12]= "pct_ident";
+		header[13]= "aln_A";
+		header[14]= "aln_B";
 		return(Joiner.on("\t").join(header));
 	}
 	
@@ -257,5 +285,4 @@ public class Match {
 		this.header = header;
 	}
 
-	
 }
