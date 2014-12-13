@@ -29,28 +29,54 @@ public class ArgParse {
 						+ "5. Length sequence A\n"
 						+ "6. Length sequence B\n"
 						+ "7. Sequence A, if matched as rev. comp. it is rev comp'd here.\n"
-						+ "8. Sequence B\n");
+						+ "8. Sequence B\n"
+						+ "\n"
+						+ "NB: Names of fasta sequences must be unique within file.");
 		parser.addArgument("-a", "--a")
 			.type(String.class)
 			.required(true)
-			.help("Fasta file 'A'; can be gzip'd. Use '-' to read from stdin");
+			.help("Fasta file 'A'; can be gzip'd. Use '-' to read from stdin. "
+					+ "In SAM format this is 'Reference'");
 		parser.addArgument("-b", "--b")
 			.type(String.class)
 			.required(true)
-			.help("Fasta file 'B'; can be gzip'd. Use '-' to read from stdin");
+			.help("Fasta file 'B'; can be gzip'd. Use '-' to read from stdin. "
+					+ "In SAM format these are 'Reads'");
 		parser.addArgument("-m", "--method")
 			.type(String.class)
 			.required(false)
-			.setDefault("Leven")
-			.help("Method to determine the edit distance: Leven (Levenshtein, the default) or Hamming"
-					+ "Humming is much faster.");
+			.setDefault("LD")
+			.choices("LD", "HD")
+			.help("Method to determine the threshold edit distance: LD (Levenshtein) or HD (Hamming)"
+					+ "Hamming is much faster.");
 		parser.addArgument("-nm", "--nm")
 			.type(Integer.class)
 			.setDefault(-1)
 			.help("Maximum edit distance to output a match. If -1 (default) all sequence pairs are returned.");
+		
 		parser.addArgument("-norc", "--norc")
 			.action(Arguments.storeTrue())
 			.help("Do not reverse complement the sequences in file A. I.e. only match sequences as they are.");	
+
+		parser.addArgument("-noaln", "--noaln")
+			.action(Arguments.storeTrue())
+			.help("Do not align sequence, just match them (faster).");	
+
+		parser.addArgument("-noLD", "--noLD")
+			.action(Arguments.storeTrue())
+			.help("Do not compute Levenshtein distance (faster).");	
+
+		parser.addArgument("-noJWD", "--noJWD")
+			.action(Arguments.storeTrue())
+			.help("Do not compute Jaro-Winkler distance (faster).");	
+
+		parser.addArgument("-of", "--outfmt")
+			.type(String.class)
+			.required(false)
+			.setDefault("tab")
+			.choices("tab", "sam")
+			.help("Output format. 'tab': Tab delim (see above); 'sam' SAM format");	
+		
 		
 		parser.addArgument("--version", "-v").action(Arguments.version());
 

@@ -43,6 +43,58 @@ public class Distance {
 	    }
 	    return result;
 	}
+	
+	/**
+	 * Return the nucleotide difference as defined in SAM for the aligned
+	 * read and ref. E.g.
+	 * ANTG-- : Read (or seqB)
+	 * ACTGTT : Ref (or seqA)
+	 * NM= 1 since the two '-' don't count
+	 * @param alnRead
+	 * @param alnRef
+	 * @return
+	 */
+	public static int getNMtagFromAln(String alnRead, String alnRef){
+
+		if(alnRead.length() != alnRef.length()){
+			System.err.println("Aligned read and aligned reference must have the same length!");
+			System.exit(1);
+		}
+		
+		// Strip - from left and right of alnRead
+		int leftClip= 0;
+		for(int i= 0; i < alnRead.length(); i++){
+			char c= alnRead.charAt(i);
+			if(c == '-'){
+				leftClip++;
+			} else {
+				break;
+			}
+		}
+
+		int rightClip= 0;
+		for(int i= alnRead.length()-1; i >= 0; i--){
+			char c= alnRead.charAt(i);
+			if(c == '-'){
+				rightClip++;
+			} else {
+				break;
+			}
+		}
+		
+		String cRead= alnRead.substring(leftClip, alnRead.length() - rightClip);
+		String cRef= alnRef.substring(leftClip, alnRef.length() - rightClip);
+				
+		int nm= 0;
+		for(int i= 0; i < cRead.length(); i++){
+			char read= cRead.charAt(i);
+			char ref= cRef.charAt(i);
+			if(read != ref){
+				nm++;
+			}
+		}
+		return nm;
+	}
 		
 }
 

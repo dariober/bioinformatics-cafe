@@ -20,6 +20,10 @@ public class Main {
 		String method= opts.getString("method");
 		int nm= opts.getInt("nm");
 		boolean norc= opts.getBoolean("norc");
+		boolean noaln= opts.getBoolean("noaln");
+		boolean noLD= opts.getBoolean("noLD");
+		boolean noJWD= opts.getBoolean("noJWD");
+		String outfmt= opts.getString("outfmt");
 		
 		/* Adjust args */
 		
@@ -27,37 +31,47 @@ public class Main {
 		// 1 if rev comp is not required. 2 otherwise (+ and -)
 		int nLoops= (!norc) ? 2 : 1;
 		
-//		int NMAX= 0; // Max edit distance to return a match
-//		String faA= "/Users/berald01/Tritume/setA.fa"; // All read in memory
-//		String faB= "/Users/berald01/Tritume/setAB.fa"; // Read one sequence at a time
-//		String method= "Hamming";
-//		boolean revcomp= true;
 		// ---------------------------------------------------------------------
-	
+		
 		ArrayList<String[]> fastaFileA= SequenceReader.readFastaToList(a);
-				
-		System.err.println("Sequences in A: " + fastaFileA.size());
+		
+		System.err.println("Sequences in A (" + a + "): " + fastaFileA.size());
 		
 		// ---------------------------------------------------------------------
 		// Prepare reading file b
 		BufferedReader brB= Opener.openBr(b);
 				
 		long t0= System.currentTimeMillis();
-		
-		System.out.println(new Match().getHeader());
-		
+
+		/* -------------------------------------------------------------------- */
+		// Prepare header:
+		if(outfmt.equals("sam")){
+			System.out.println("@HD\tVN:1.0");
+			System.out.println(Sam.fastaListToSQHeader(fastaFileA));
+		} else if(outfmt.equals("tab")){
+			System.out.println(new Match().getHeader());
+		} else {
+			System.err.println("Unsupproted output format");
+			System.exit(1);
+		}
+		/* -------------------------------------------------------------------- */
 		int nseq= 0;
 		int nmatch= 0;
 		String[] seqB;
+		String seqBrc= null;
 		while((seqB= SequenceReader.getNextSequence(brB)) != null){
 
-			String seqBrc= new DNASequence(seqB[1]).getReverseComplement().getSequenceAsString();
+			if(!norc){
+				seqBrc= new DNASequence(seqB[1]).getReverseComplement().getSequenceAsString();
+			}
 			
 			for(int i=0; i < fastaFileA.size(); i++){
 				int nLoopCnt= 0;
+								
 				while(nLoopCnt < nLoops) {
 					String[] seqA= fastaFileA.get(i);
 					Match m= new Match(seqA, seqB);
+					
 					if(nLoopCnt == 0){
 						m.setStrand("+");
 					} else if (nLoopCnt == 1){
@@ -66,11 +80,29 @@ public class Main {
 					} else {
 						System.exit(1);
 					}
-					m.getDistance(method, nm);
-					if(nm < 0 || (m.getNM() >= 0 && m.getNM() <= nm)){
-						m.align();
+					double d= m.getFilterDistance(method, nm);
+					
+					if(nm < 0 || (d >= 0 && d <= nm)){
+						// Edit distance is below threshold. 
+						// Fill up remaining metrics:
+						if(method != "LD" && !noLD){
+							m.setLD();
+						} 
+						if(method != "HD"){
+							m.setHD();
+						}
+						if(!noJWD){
+							m.setJWD();
+						}
+						if(!noaln){
+							m.align();
+						}
 						nmatch++;
-						System.out.println(m);
+						if(outfmt.equals("sam")){
+							System.out.println(Sam.matchToSam(m).toString());
+						}else{
+							System.out.println(m);
+						}
 					}
 					nLoopCnt++;
 				}
@@ -84,27 +116,7 @@ public class Main {
 		long t1= System.currentTimeMillis();
 		System.err.println("Completed in " + (t1-t0)/1000.0 + "s");
 		System.err.println("N matches: " + nmatch);		
-
+		System.exit(0);
 	}
 
 }
-
-
-//String[] seqA= fastaFileA.get(i);
-//Match m= new Match(seqA, seqB);
-//m.getDistance(method, nm);
-//if(nm < 0 || (m.getNM() >= 0 && m.getNM() <= nm)){
-//	nmatch++;
-//	m.align();
-//	System.out.println(m);
-//}
-//if(!norc){
-//	// Replace sequence A with its revcomp.
-//	m.setSeqA(seqA[2]);
-//	m.getDistance(method, nm);
-//	m.setStrand("-");
-//	if(nm < 0 || (m.getNM() >= 0 && m.getNM() <= nm)){
-//		nmatch++;
-//		System.out.println(m);
-//	}
-//}
