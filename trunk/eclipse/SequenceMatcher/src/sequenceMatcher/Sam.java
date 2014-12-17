@@ -1,5 +1,7 @@
 package sequenceMatcher;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import com.google.common.base.Joiner;
@@ -125,19 +127,48 @@ public class Sam {
 	
 	/* ------------------------------------------------------------------------ */
 	
+	/**
+	 * Convert a string array of length two representing a fasta record 
+	 * (sequence name, sequence) to a string representing the SQ line in SAM 
+	 * header. E.g. 
+	 * {"seq1", "ACTG"} -> "@SQ	SN:seq1	LN:4"
+	 * NB: Trailing '\n' is not added. 
+	 * @return
+	 */
+	private static String fastaStringArrayToSQline(String[] fastaRecord){
+		
+		StringBuilder sb= new StringBuilder();
+		sb.append("@SQ\tSN:");
+		sb.append(fastaRecord[0]);
+		sb.append("\tLN:");
+		sb.append(fastaRecord[1].length());
+		return sb.toString();
+		
+	}
+	
 	public static String fastaListToSQHeader(ArrayList<String[]> fastaList) {
 		StringBuilder sb= new StringBuilder();
 		for(int i= 0; i < fastaList.size(); i++){
-			sb.append("@SQ");
-			sb.append("\tSN:");
-			sb.append(fastaList.get(i)[0]);
-			sb.append("\tLN:");
-			sb.append(fastaList.get(i)[1].length());
+			String sqLine= fastaStringArrayToSQline(fastaList.get(i));
+			sb.append(sqLine);
 			sb.append("\n");
 		}
 		return sb.toString().trim();
 	}
+	
+	public static String fastaFileToSQHeader(String fastafile) throws IOException {
 
+		BufferedReader br= Opener.openBr(fastafile);
+		String[] line;
+		StringBuilder sb= new StringBuilder();
+		while((line= SequenceReader.getNextSequence(br)) != null){
+			String sqLine= fastaStringArrayToSQline(line);
+			sb.append(sqLine);
+			sb.append("\n");
+		}
+		return sb.toString().trim();
+	}
+	
 	public static int getAlnStartPos(String read, String ref) {
 
 		if(read.length() != ref.length()){
@@ -355,5 +386,6 @@ public class Sam {
 		sb.append(tags);  sb.append("\t"); //12
 		
 		return sb.toString().trim();
-	} 
+	}
+	
 }

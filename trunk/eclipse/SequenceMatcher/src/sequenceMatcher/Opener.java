@@ -36,7 +36,7 @@ public class Opener {
 	
 	/**
 	 * Open a file, possibly gzipped, or from stdin (recognized by "-") and return a 
-	 * BufferedReader ready to iterate through
+	 * BufferedReader ready to iterate through.
 	 * @param filename
 	 * @return
 	 * @throws IOException

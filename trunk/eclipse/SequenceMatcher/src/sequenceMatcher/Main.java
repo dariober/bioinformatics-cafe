@@ -10,11 +10,65 @@ import net.sourceforge.argparse4j.inf.Namespace;
 
 public class Main {
 
-	public static void main(String[] args) throws IOException {
-		
+	public static void main(String[] args) throws IOException{
+
 		/* Start parsing arguments */
 		Namespace opts= ArgParse.argParse(args);
 		ArgParse.validateArgs(opts);
+		
+		String subcmd= opts.getString("subcmd");
+		
+		if(subcmd.equals("match")){
+			matcher(opts);
+		} else if(subcmd.equals("convert")){
+			System.out.println("Not implemented yet");
+		} else {
+			System.out.println("Unrecognized cmd.");
+		}
+		
+	}
+
+	/**
+	 * Routine to convert sam to tab and back. Called with SequenceMatcher convert ...
+	 * @param opts Arguments taken from command line and parsed by ArgParse class
+	 * @throws IOException 
+	 */
+	private static void converter(Namespace opts) throws IOException{
+
+		String input= opts.getString("input");
+		String a= opts.getString("a");
+		String outfmt= opts.getString("outfmt");
+		
+		if(outfmt.equals("outfmt")){
+		// * Convert tab to sam: 
+		// ** Read reference file, output as sam header
+			System.out.println("@HD\tVN:1.0");
+			System.out.println(Sam.fastaFileToSQHeader(a));
+			
+			// ** Read input tab line by line.
+			BufferedReader br= Opener.openBr(input);
+			String line;
+			while((line= br.readLine()) != null){
+				// Skip header if present:
+				if(line.startsWith("seq_A\tseq_B\tstrand\t")){
+					// Skip header if present:
+					continue;
+				}
+				// ** Convert each line to Match object
+				// ** Convert Match object to Sam object
+				// ** Output Sam object as sam line.
+			}
+		}
+	}
+	
+	/**
+	 * Routine to perform and output matching. Called with SequenceMatcher match ...
+	 * @param opts Arguments taken from command line and parsed by ArgParse class
+	 * @throws IOException
+	 */
+	private static void matcher(Namespace opts) throws IOException{
+		
+		/* Start parsing arguments */
 		String a= opts.getString("a");
 		String b= opts.getString("b");
 		String method= opts.getString("method");
@@ -86,13 +140,13 @@ public class Main {
 						// Edit distance is below threshold. 
 						// Fill up remaining metrics:
 						if(method != "LD" && !noLD){
-							m.setLD();
+							m.computeLD();
 						} 
 						if(method != "HD"){
-							m.setHD();
+							m.computeHD();
 						}
 						if(!noJWD){
-							m.setJWD();
+							m.computeJWD();
 						}
 						if(!noaln){
 							m.align();
@@ -117,6 +171,7 @@ public class Main {
 		System.err.println("Completed in " + (t1-t0)/1000.0 + "s");
 		System.err.println("N matches: " + nmatch);		
 		System.exit(0);
+		
 	}
-
+	
 }
