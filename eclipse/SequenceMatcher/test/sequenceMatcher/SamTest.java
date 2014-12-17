@@ -2,9 +2,8 @@ package sequenceMatcher;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.junit.Test;
 
@@ -22,7 +21,21 @@ public class SamTest {
    					 + "@SQ	SN:seq2	LN:8\n"
 					 + "@SQ	SN:seq3	LN:12";
 
-		String sqHeader= Sam.fastaListToSQHeader(fastaList);
+		String sqHeader= Sam.fastaListToSQHeader(fastaList);		
+		assertEquals(expect, sqHeader);
+	}
+
+	@Test
+	public void canConvertfastaFileToSQHeader() throws IOException {
+		
+		String fastafile= "test/seqs.fa";
+		
+		String sqHeader= Sam.fastaFileToSQHeader(fastafile);
+		
+		String expect= "@SQ	SN:seq1	LN:39\n"
+   					 + "@SQ	SN:seq2	LN:28\n"
+					 + "@SQ	SN:seq3	LN:4";
+
 		assertEquals(expect, sqHeader);
 	}
 
@@ -67,6 +80,11 @@ public class SamTest {
 		String ref;
 		String cigar;
 
+		aln= "A";
+		ref= "A";
+		cigar= Sam.getCigarFromAln(aln, ref);
+		assertEquals("1M", cigar);
+		
 		aln= "ACTG";
 		ref= "ACTG";
 		cigar= Sam.getCigarFromAln(aln, ref);
@@ -139,9 +157,9 @@ public class SamTest {
 		m.setNameA("read1");
 		m.setNameB("ref1");
 		m.align();
-		m.setHD();
-		m.setLD();
-		m.setJWD();
+		m.computeHD();
+		m.computeLD();
+		m.computeJWD();
 
 		ArrayList<String> tags= Sam.matchToTagList(m);
 		
@@ -155,8 +173,6 @@ public class SamTest {
 		assertTrue(tags.contains("XS:Z:ACTGA"));
 		
 		Sam sam= Sam.matchToSam(m);
-		
-		System.out.println(sam.toString());
-		
+			
 	}
 }
