@@ -110,14 +110,17 @@ public class ArgParse {
 		
 		convertSubparser.addArgument("-of", "--outfmt")
 			.type(String.class)
-			.choices("tab", "sam")
-			.required(true)
-			.help("Output format. 'tab' to convert sam input to tab; 'sam' viceversa.");
+			.choices("sam")
+			.setDefault("sam")
+			.help("Output format. 'sam' converts tabular to sam and it is currently the only"
+					+ " output format supported.");
 
 		convertSubparser.addArgument("-a", "--a")
 		.type(String.class)
-		.help("Required for converting tab to sam: Reference fasta file aka as 'a' file; "
-				+ "can be gzip'd. Use '-' to read from stdin. ");
+		.required(false)
+		.help("Used for converting tab to sam: Reference fasta file aka as 'a' file; "
+				+ "can be gzip'd. Use '-' to read from stdin. If not given the output "
+				+ "sam will be header-less.");
 
 		/* --------------------------------------------------------------------- */
 		
