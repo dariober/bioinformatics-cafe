@@ -13,6 +13,7 @@ import org.biojava3.alignment.SimpleGapPenalty;
 import org.biojava3.alignment.Alignments.PairwiseSequenceAlignerType;
 import org.biojava3.alignment.Alignments.PairwiseSequenceScorerType;
 import org.biojava3.alignment.SubstitutionMatrixHelper;
+import org.biojava3.alignment.template.PairwiseSequenceScorer;
 import org.biojava3.alignment.template.SequencePair;
 import org.biojava3.alignment.template.SubstitutionMatrix;
 import org.biojava3.core.sequence.DNASequence;
@@ -39,7 +40,7 @@ public class Match {
 	 * attributes. See method toString(). 
 	 * NB: Positions are 0-based.
 	 */
-	private static final Map<Integer, String> HEADER;
+	public static final Map<Integer, String> HEADER;
     static {
         LinkedHashMap<Integer, String> header= new LinkedHashMap<Integer, String>();
         header.put(0, "seq_A");
@@ -88,7 +89,7 @@ public class Match {
 	private int len_A;
 	private int len_B;
 	private int NM= -1; // Nucleotide difference
-	private int NWscore= -1; // Needleman-wunch alignment score
+	private int aln_score= -1; // Needleman-wunch alignment score
 	private int len_aln= -1;
 	private int n_ident= -1;
 	private int n_sim= -1;
@@ -127,8 +128,8 @@ public class Match {
 		this.seqB = seqB;
 	}
 
-	public int getNWscore() {
-		return NWscore;
+	public int getAln_score() {
+		return aln_score;
 	}
 	
 	public SequencePair<DNASequence, NucleotideCompound> getAlnPair() {
@@ -175,8 +176,8 @@ public class Match {
 		this.len_B = len_B;
 	}
 
-	public void setNWscore(int nWscore) {
-		NWscore = nWscore;
+	public void setaln_score(int aln_score) {
+		aln_score = aln_score;
 	}
 	public void setLD(Integer lD) {
 		LD = lD;
@@ -308,8 +309,8 @@ public class Match {
 		SimpleGapPenalty gapP = new SimpleGapPenalty();
 				
 		List<DNASequence> lst= Arrays.asList(reference, read);
-				
-		int NWscore= Alignments.getAllPairsScores(lst,
+		
+		int aln_score= Alignments.getAllPairsScores(lst,
 				PairwiseSequenceScorerType.GLOBAL, new SimpleGapPenalty(), matrix)[0];
 		
 		SequencePair<DNASequence, NucleotideCompound> alnPair= Alignments.getPairwiseAlignment(
@@ -319,7 +320,7 @@ public class Match {
 		
 		this.alnPair= alnPair;
 		this.len_aln= alnPair.getLength();
-		this.NWscore= NWscore;
+		this.aln_score= aln_score;
 		this.n_ident= alnPair.getNumIdenticals();
 		this.n_sim= alnPair.getNumSimilars();
 		this.pct_ident= (double) alnPair.getNumIdenticals() / (double) alnPair.getLength();
@@ -347,7 +348,7 @@ public class Match {
 			if(h.equals("len_A")) 		{sa[k]= Integer.toString(this.len_A);} else
 			if(h.equals("len_B")) 		{sa[k]= Integer.toString(this.len_B);} else
 			if(h.equals("NM")) 			{sa[k]= Integer.toString(this.NM);} else
-			if(h.equals("aln_score")) 	{sa[k]= Integer.toString(this.NWscore);} else
+			if(h.equals("aln_score")) 	{sa[k]= Integer.toString(this.aln_score);} else
 			if(h.equals("n_ident"))   	{sa[k]= Integer.toString(this.n_ident);} else
 			if(h.equals("n_sim")) 		{sa[k]= Integer.toString(this.n_sim);} else
 			if(h.equals("pct_ident")) 	{sa[k]= String.format("%.2f", this.pct_ident);} else
@@ -390,7 +391,7 @@ public class Match {
 		this.len_A= Integer.parseInt(aline[rev_header.get("len_A")]);
 		this.len_B= Integer.parseInt(aline[rev_header.get("len_B")]);
 		this.NM= Integer.parseInt(aline[rev_header.get("NM")]);
-		this.NWscore= Integer.parseInt(aline[rev_header.get("aln_score")]);
+		this.aln_score= Integer.parseInt(aline[rev_header.get("aln_score")]);
 		this.n_ident= Integer.parseInt(aline[rev_header.get("n_ident")]);
 		this.n_sim= Integer.parseInt(aline[rev_header.get("n_sim")]);
 		this.pct_ident= Double.parseDouble(aline[rev_header.get("pct_ident")]);

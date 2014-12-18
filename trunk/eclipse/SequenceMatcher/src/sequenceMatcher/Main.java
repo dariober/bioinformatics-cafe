@@ -21,7 +21,7 @@ public class Main {
 		if(subcmd.equals("match")){
 			matcher(opts);
 		} else if(subcmd.equals("convert")){
-			System.out.println("Not implemented yet");
+			converter(opts);
 		} else {
 			System.out.println("Unrecognized cmd.");
 		}
@@ -39,24 +39,27 @@ public class Main {
 		String a= opts.getString("a");
 		String outfmt= opts.getString("outfmt");
 		
-		if(outfmt.equals("outfmt")){
-		// * Convert tab to sam: 
-		// ** Read reference file, output as sam header
-			System.out.println("@HD\tVN:1.0");
-			System.out.println(Sam.fastaFileToSQHeader(a));
-			
-			// ** Read input tab line by line.
+		if(outfmt.equals("sam")){
+			// * Convert tab to sam: 
+			// ** Read reference file, output as sam header
+			if(a != null){
+				System.out.println("@HD\tVN:1.0");
+				System.out.println(Sam.fastaFileToSQHeader(a));
+			}
+			// This is use to understand if first line is the header.
+			String headerStart= Match.HEADER.get(0) + "\t" + 
+							    Match.HEADER.get(1) + "\t" + 
+					            Match.HEADER.get(2);
 			BufferedReader br= Opener.openBr(input);
 			String line;
 			while((line= br.readLine()) != null){
-				// Skip header if present:
-				if(line.startsWith("seq_A\tseq_B\tstrand\t")){
-					// Skip header if present:
+				if(line.startsWith(headerStart)){
 					continue;
 				}
-				// ** Convert each line to Match object
-				// ** Convert Match object to Sam object
-				// ** Output Sam object as sam line.
+				Match m= new Match();
+				m.stringToMatchObj(line);
+				Sam s= Sam.matchToSam(m);
+				System.out.println(s);
 			}
 		}
 	}

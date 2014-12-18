@@ -329,7 +329,7 @@ public class Sam {
 		ArrayList<String> tagList= new ArrayList<String>();
 		
 		tagList.add("NM:i:" + Integer.toString(m.getNM()));
-		tagList.add("AS:i:" + Integer.toString(m.getNWscore()));
+		tagList.add("AS:i:" + Integer.toString(m.getAln_score()));
 		tagList.add("XL:i:" + Integer.toString(m.getLD()));
 		tagList.add("XH:i:" + Integer.toString(m.getHD()));
 		tagList.add("XJ:f:" + String.format("%.4f", m.getJWD()) );
