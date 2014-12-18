@@ -21,6 +21,8 @@ RG tags in the header. Fix out.bam with this script.
 IMPORTANT:
 * A pre-existing @RG key in input is completely replaced by the new one!
 * Read w/o RG tag go to output as they are, w/o warnings.
+
+Requires: pysam 0.8.1
 """, formatter_class= argparse.RawTextHelpFormatter, prog= os.path.basename(__file__))
 
 parser.add_argument('--input', '-i',
