@@ -18,6 +18,12 @@ Typical use case: You run `samtools merge -r out.bam in1.bam in2.bam` and you
 get out.bam with reads tagged with RG. However, out.bam does not have those
 RG tags in the header. Fix out.bam with this script.
 
+USAGE
+# For large files it is (probably) much faster to output only the header and
+# pipe to samtools reheader:
+addRGtoSAMHeader.py -H -i in.bam -o - \\
+| samtools reheader - in.bam > new.bam
+
 IMPORTANT:
 * A pre-existing @RG key in input is completely replaced by the new one!
 * Read w/o RG tag go to output as they are, w/o warnings.
