@@ -15,9 +15,12 @@ DESCRIPTION
     Compute the read enrichment in target intervals relative to local background.
     
     Typical use case: A ChIP-Seq experiment on a sample returns a number of regions
-    of enrichemnt. We want to know how enriched these regions are in a different
+    of enrichment. We want to know how enriched these regions are in a *different*
     sample. Note that enrichment is quantified relative to the local background
     not relative to an input control.
+    
+    See also localEnrichmentScore.R to combine replicates and compare
+    treatment vs control.
     
 OUTPUT:
     bed file with header and columns:
@@ -50,7 +53,10 @@ Useful tip: Get genome file from bam file:
 REQUIRES:
     - bedtools suite
     - numpy, scipy 
-    
+
+NOTES:
+For PE reads, the second read in pair is excluded (by samtools view -F 128) 
+since coverageBed double counts pairs.
 """, formatter_class= argparse.RawTextHelpFormatter, prog= os.path.basename(__file__))
 
 parser.add_argument('--target', '-t',
@@ -74,16 +80,15 @@ NB: It can be created from the header of the bam file (see tip above).
 
 parser.add_argument('--slop', '-S',
                    default= '5.0',
-                   help='''Opt passed to slopBed to define the surrounding of the
-target regions:
+                   help='''Option passed to slopBed to define the flanking region (aka background).
 If `int` each target will be extended left and right this many bases.
-If `float` each target is extended left and right x times its size.
-E.g. 5.0 (default) extends each target regions 5 times its length.
+If `float` each target is extended left and right this many times its size.
+E.g. 5.0 (default) extends each target regions 5 times its length left and right.
                    ''')
 
 parser.add_argument('--blacklist', '-bl',
                    required= False,
-                   help='''An optianl bed file of regions to ignore to compute
+                   help='''An optional bed file of regions to ignore to compute
 the local background. These might be unmappable regions with 0-counts which would
 inflate the target enrichment.
                    ''')
@@ -209,7 +214,8 @@ def countReadsInInterval(inbam, beds, countTable, tmpdir, verbose= False):
     
     cmd= """
 cat %(beds)s > %(catbeds)s &&
-coverageBed -counts -abam %(bam)s -b %(catbeds)s \\
+samtools view -u -F 128 %(bam)s \\
+| coverageBed -counts -abam - -b %(catbeds)s \\
 | awk 'BEGIN{OFS="\\t"}{print $0, $3-$2}' \\
 | sort -s -k4,4n -k5,5 \\
 | groupBy -g 4,5 -c 6,7 -o sum,sum -prec 12 > %(countTable)s
