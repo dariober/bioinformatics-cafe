@@ -253,11 +253,18 @@ def countsToDict(fin):
                 locus[line[1]]= {'cnt': int(line[2]), 'len': int(line[3])}
             else:
                 fin.seek(x)
-                return((int(current), locus))
+                countTuple= (int(current), locus)
+                break
         elif locus != {}:
-            return((int(current), locus))
+            countTuple= (int(current), locus)
+            break
         else:
             return(None)
+    if not countTuple[1].has_key('flank'):
+        # If the blacklist removes a flanking region completely you need to put
+        # it back or later you will get a KeyError. This is a bit of a hack...
+        countTuple[1]['flank']= {'cnt': 0, 'len': 0}
+    return(countTuple)
 
 def localEnrichment(countTuple):
     """Take a tuple composed of (ID, Dict) to extract chi^2 stats for enrichment
