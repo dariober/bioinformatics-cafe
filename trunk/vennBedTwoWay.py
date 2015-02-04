@@ -10,6 +10,10 @@ Usage
 vennBedTwoWay.py a.bed b.bed
 >>> c(only_a: 115841, only_b: 111798, both: 66130)
 
+Within R:
+xv<- system('vennBedTwoWay.py a.bed b.bed', intern= TRUE)
+ab<- eval(parse(text= xv))
+
 Version %s""" %(version)
 
 def venn2(a, b):
@@ -31,7 +35,7 @@ def vdict2R(vdict):
     """Print the dict produced by venn2 in an R-friendly format as
     named vector.
     """
-    xv= """c(only_a: %(only_a)s, only_b: %(only_b)s, both: %(both)s)""" %(vdict)
+    xv= """c(only_a= %(only_a)s, only_b= %(only_b)s, both= %(both)s)""" %(vdict)
     return(xv)
     
 if __name__ == '__main__':
