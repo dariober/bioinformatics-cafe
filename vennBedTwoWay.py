@@ -26,9 +26,6 @@ def venn2(a, b):
     aonly= (A-B).count()
     bonly= (B-A).count()
     both= (B+A).count()
-#    print('Only %s: %s' %(a, aonly))
-#    print('Only %s: %s' %(b, bonly))
-#    print('Both: %s' %(both))
     return({'only_a': aonly, 'only_b': bonly, 'both': both})
 
 def vdict2R(vdict):
