@@ -2,8 +2,10 @@
 
 done<- suppressWarnings(suppressMessages(require(argparse)))
 if(done == FALSE){
-    cat('Please install the "argparse" package. Open an R session and execute:\n')
-    cat('install.packages("argparse")\n\n')
+    cat('\nPlease install the "argparse" package. Open an R session and execute:\n\n')
+    cat('> install.packages("argparse")\n\n')
+    cat('Once you are at it, install also the data.table package, if not already installed:\n\n')
+    cat('> install.packages("data.table")\n\n')
     quit(save= 'no', status= 1)
 }
 done<- suppressWarnings(suppressMessages(require(data.table)))
@@ -13,22 +15,31 @@ if(done == FALSE){
     quit(save= 'no', status= 1)
 }
 
-done<- suppressWarnings(suppressMessages(require(aod)))
-if(done == FALSE){
-    cat('Please install the "data.table" package. Open an R session and execute:\n')
-    cat('install.packages("data.table")\n\n')
-    quit(save= 'no', status= 1)
-}
+#done<- suppressWarnings(suppressMessages(require(aod)))
+#if(done == FALSE){
+#    cat('Please install the "data.table" package. Open an R session and execute:\n')
+#    cat('install.packages("data.table")\n\n')
+#    quit(save= 'no', status= 1)
+#}
 
 VERSION<- '0.1.0a'
 
 docstring<- sprintf("DESCRIPTION \\n\\
 Compare local enrichment between pairs of files, e.g. condition 1 vs 2, to \\n\\
-compute log fold change and associated significance. Alternatively, compute the \\n\\
-overal significance of enrichment in a set of input files\\n\\n\\
+compute log fold change and associated significance. Alternatively, if only one \\n\\
+condition is given, compute the overal significance of enrichment in a set of \\n\\
+input files.\\n\\n\\
 \\
 Enrichment is calculated for each pair first by comparing the number of reads \\n\\
-in target and in background by chi^2 test. \\n\\n\\
+in target and in background by chi^2 test like this: \\n\\n\\
+\\
+        input | ctrl \\n\\
+-------+------+----- \\n\\
+target |  1,1 | 1,2  \\n\\
+-------+------+----- \\n\\
+ flank |  2,1 | 2,2  \\n\\
+\\
+\\n\\
 \\
 A final pvalue is obtained by combining p-values from each pair via Stouffer method. \\n\\
 Input files are typically produced by localEnrichmentBed.py. \\n\\n\\
@@ -36,11 +47,19 @@ NB: The direction of change tested is always [input - control] if this \\n\\
 difference is < 0 than the chi^2 pvalue is returned as negative. \\n\\n\\
 \\
 OUTPUT \\n\\
-1) rank.bed file with tested regiosn ranked by rank-product, combined p-value \\n\\
+1) A *.rank.bed file with tested regions ranked by rank-product, combined p-value \\n\\
 (as -log10) and average log2fc. Note that log2fc is the mean of the individual \\n\\
 logFCs.\\n\\
-2) score.bed file with enrichment for each pair of files and rank. This file \\n\\
+2) A *.score.bed file with enrichment for each pair of files and rank. This file \\n\\
 produced only if control file(s) are given. \\n\\n\\
+EXAMPLE \\n\\
+\\n\\
+## Compare two pairs of pull-downs and controls:\\n\\
+localEnrichmentScore.R -i BG4-1.leb.bed  BG4-2.leb.bed -c ctrl-1.leb.bed  ctrl-2.leb.bed -o bg4-ctrl \\n\\
+\\n\\
+## Combine evidence of enrichment in two replicates:\\n\\
+localEnrichmentScore.R -i BG4-1.leb.bed  BG4-2.leb.bed -o bg4-ctrl \\n\\
+\\n\\
 Version %s", VERSION)
 
 
@@ -49,7 +68,9 @@ parser<- ArgumentParser(description= docstring, formatter_class= 'argparse.RawTe
 parser$add_argument("-i", "--input", help= "Input files generate by localEnrichmentBed.py", nargs= '+', required= TRUE)
 parser$add_argument("-c", "--ctrl", help= "Control file (e.g. the input). It must be one file (for all inputs) or one for each input", nargs= '+')
 parser$add_argument("-o", "--out", help= "Basename for output files", required= TRUE)
-parser$add_argument("-m", "--method", help= "_Not implemented yet_ Method to detect differences", default= 'chisq')
+parser$add_argument("-ps", "--pseudocnt", help= "Pseudo-counts to add to each cell to avoid zeros", type= 'integer', default= 0)
+parser$add_argument("-r", "--rankby", help= "Rank by this variable. Default log10_pval", default= 'log10_pval', choices= c("log10_pval", "log2fc"))
+parser$add_argument("-m", "--method", help= "_Not implemented yet_ Method to detect differences (only chisq supported.)", default= 'chisq')
 
 xargs<- parser$parse_args()
 
@@ -72,31 +93,12 @@ Stouffer.comb <- function(p, w) {
     Zi <- qnorm(1-p) 
     Z  <- sum(w*Zi)/sqrt(sum(w^2))
     if(!is.na(Z) & Z > 7){
-        # Recompute in log space
-        p.val<- Stouffer.log(p, w)[['p.value']]
+        p.val <- -pnorm(Z, log.p= TRUE)
     } else {
         p.val <- 1-pnorm(Z)
     }
     return(p.val)
 }
-
-Stouffer.log<- function(p, w) {
-    # Stouffer method modified for log space. Don't use directly,
-    # call Stouffer.comb() instead
-    if (missing(w)) {
-        w <- rep(1, length(p))/length(p)
-    } else {
-        if (length(w) != length(p))
-        stop("Length of p and w must equal!")
-    }
-    logp<- log(p)     ## log transform pvalues
-    Zi <- -qnorm(logp, log.p= TRUE) ## Work in log space
-    Z  <- sum(w*Zi)/sqrt(sum(w^2))
-    p.val <- -pnorm(Z, log.p= TRUE)
-    out.p<- c(Z= Z, p.value= p.val)
-    return( out.p )
-}
-
 
 log10pvalToPvalForLogFC<- function(log2fc, log10pval, pmin= 1e-16, pmax= 0.999999){
     ## Convert pvalues from -log10() format to original scale 0 to 1.
@@ -121,6 +123,54 @@ log10pvalToPvalForLogFC<- function(log2fc, log10pval, pmin= 1e-16, pmax= 0.99999
     newp<- ifelse(newp > pmax, pmax, newp)
     return(newp)
 }
+
+z.score<- function(x){
+    ## Return z-scores for vector x
+    z<- (x - mean(x))/sd(x)
+    return(z)
+}
+
+localZ<- function(x, y, nbins= 10){
+    # Return z-score of each y for each window around x
+    # x:
+    #   Vector of intensities. Typically logCPM (x-axis in MA plot). 
+    # y:
+    #   Vector to be z-score'd. Typically logFC (y-axis in MA plot).
+    # nbins:
+    #   Divide the x vector into this many bins, each of them containing the
+    #   same number of datapoints. z-scores are calculated within each bin.
+    #
+    # See google.code/bioinformatics-misc for this function.
+    # -------------------------------------------------------------------------
+    ## Number of datapoints surrounding the target point
+    n<- round(length(x) / nbins, 0) 
+
+    ## Record the order of input x (and y)
+    xorder<- order(x)
+    
+    ## Sort y by x
+    yorder<- y[xorder]
+
+    ## Initialize vector of z-scores zvec
+    zvec<- vector(length= length(x))
+    ## For each point p in x,
+    xleft<- floor(n/2)
+    xright<- ceiling(n/2)
+    for (i in 1:length(y)){
+        if (i <= xleft){
+            slice<- yorder[1:n]
+        } else if ((i + xright) >= length(x)) {
+            slice<- yorder[((length(x) - n)+1) : length(x)]
+        } else {
+            slice<- yorder[((i - xleft)+1) : (i + xright)]
+        }
+        zvec[i]<- (yorder[i] - mean(slice)) / sd(slice)
+    }
+    ## Return zvec in the original order of x (and y)
+    zvec_ordered<- zvec[order(xorder)]
+    return(zvec_ordered)
+}
+
 # -----------------------------------------------------------------------------
 if(xargs$method == 'chisq'){
     if(length(xargs$ctrl) != 0 & length(xargs$ctrl) != 1 & length(xargs$ctrl) != length(xargs$input)){
@@ -149,6 +199,10 @@ for(f in lebfiles[2:length(lebfiles)]){
     leb<- rbindlist(list(leb, tmp))
 }
 rm(tmp)
+
+## Add pseudocounts
+leb[, target_cnt := target_cnt + xargs$pseudocnt]
+leb[, flank_cnt := flank_cnt + xargs$pseudocnt]
 
 leb[, type := ifelse(library_id %in% xargs$ctrl, 'ctrl', 'pd')]
 # =============================================================================
@@ -207,6 +261,7 @@ if(xargs$method %in% c('binomial', 'betabin')){
     # ==========================================================================
     first<- TRUE
     for(i in 1:length(controls)){
+        ## For each pair of files compare target_cnt and falnk_cnt in input vs ctrl
         ctrl<- controls[i]
         ctrli<- which(cnames == ctrl)
         pd<- xargs$input[i]
@@ -218,8 +273,18 @@ if(xargs$method %in% c('binomial', 'betabin')){
                          flank[j, pdi], flank[j, ctrli]), nrow= 2, byrow= TRUE)
             colnames(m)<- c(pd, ctrl)
             rownames(m)<- c('target', 'flank')
+            #
+            # Matrix m is a contingency table like this:
+            #         input | ctrl
+            # -------+------+-----
+            # target |  1,1 | 1,2 
+            # -------+------+-----
+            #  flank |  2,1 | 2,2
+            #
             if(sum(m) > 0){
-                log2fc[j]<- log2( (m[1,1] / m[2,1]) / (m[1,2] / m[2,2]) )
+                log2fc[j]<- log2( (m[1,1] / m[2,1]) /
+                                  (m[1,2] / m[2,2])
+                                )
                 pval[j]<- chisq.test(m)$p.value
             } else {
                 pval[j]<- NA
@@ -240,8 +305,13 @@ if(xargs$method %in% c('binomial', 'betabin')){
     newp<- log10pvalToPvalForLogFC(enrich$log2fc, enrich$log10_pval)
     
     enrich[, log10_pval := ifelse(log2fc < 0, -log10_pval, log10_pval)] ## Change sign of pvals
-    enrich[, ranked := list(rank(-log2fc)), by= input]
-
+    if(xargs$rankby == 'log10_pval'){
+        enrich[, ranked := list(rank(-log10_pval)), by= input]
+    } else if (xargs$rankby == 'log2fcl'){
+        enrich[, ranked := list(rank(-log2fc)), by= input]    
+    } else {
+        stop(sprintf("Unsopported option to rank: '%s'", xargs$rankby))
+    }
 #    newp<- ifelse(enrich$log2fc < 0, 1, enrich$pval)  ## Set -ve pval to 1
 #    newp<- ifelse(newp < 1e-16, 1e-16, newp)          ## Reset pval if too close to 0 or 1.
 #    newp<- ifelse(newp > 0.999999, 0.999999, newp)
@@ -252,10 +322,12 @@ if(xargs$method %in% c('binomial', 'betabin')){
     rankProdDT<- merge(loci, rankProdDT, by= 'targetID')
     rankProdDT<- rankProdDT[, list(chrom, start, end, targetID, avgLog2fc, log10_combp, RP) ]
     enrich[, pval := NULL]
-    
+
+    options(scipen= 9) # This is to make ranks as integers    
     write.table(enrich, file= paste(xargs$out, 'score.bed', sep= '.'), row.names= FALSE, col.names= TRUE, sep= '\t', quote= FALSE)
     write.table(rankProdDT, file= paste(xargs$out, 'rank.bed', sep= '.'), row.names= FALSE, col.names= TRUE, sep= '\t', quote= FALSE)
 } else {
     cat(sprintf('\nInvalid method! Got "%s"\n\n', xargs$method))
 }
+warnings()
 quit(save= 'no')
