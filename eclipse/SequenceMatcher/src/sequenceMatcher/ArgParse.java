@@ -18,19 +18,27 @@ public class ArgParse {
 		
 		String mainHelp= "DESCRIPTION\n"
 				+ "This program answers the question: Which sequences in file a "
-				+ "are similar to the sequences in file b.\n"
+				+ "are similar to the sequences in file b. In addition it optionally performs gloabl alignment.\n"
 				+ "\n"
-				+ "Output format:\n"
+				+ "OUTPUT\n"
+				+ "Sam or tabular with columns:\n"
 				+ "1. Sequence name from the A file\n"
 				+ "2. Sequence name from the B file\n"
-				+ "3. Strand (+: Sequence matched as they are; -: Sequence A reverse complemented)\n"
+				+ "3. Strand: + if sequence B is matched as is; - if B is rev comp'd)\n"
 				+ "4. Edit distance\n"
 				+ "5. Length sequence A\n"
 				+ "6. Length sequence B\n"
 				+ "7. Sequence A, if matched as rev. comp. it is rev comp'd here.\n"
 				+ "8. Sequence B\n"
 				+ "\n"
-				+ "NB: Names of fasta sequences must be unique within file.";
+				+ "EXAMPLE\n"
+				+ "java -jar SequenceMatcher.jar match -a seqA.fa -b seqB.fa"
+				+ "\n"
+				+ "\n"
+				+ "NOTES & TODO\n"
+				+ "Names of fasta sequences must be unique within file.\n"
+				+ "Todo 1: Read fastq files and output quality scores, although scores are not used.\n"
+				+ "Todo 2: Support alternative scoring matrices.";
 		
 		ArgumentParser parser= ArgumentParsers
 				.newArgumentParser("SequenceMatcher")
