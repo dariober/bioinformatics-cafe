@@ -9,19 +9,17 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.biojava3.alignment.Alignments;
-import org.biojava3.alignment.SimpleGapPenalty;
 import org.biojava3.alignment.Alignments.PairwiseSequenceAlignerType;
 import org.biojava3.alignment.Alignments.PairwiseSequenceScorerType;
+import org.biojava3.alignment.SimpleGapPenalty;
 import org.biojava3.alignment.SubstitutionMatrixHelper;
-import org.biojava3.alignment.template.PairwiseSequenceScorer;
 import org.biojava3.alignment.template.SequencePair;
 import org.biojava3.alignment.template.SubstitutionMatrix;
 import org.biojava3.core.sequence.DNASequence;
-
-import com.google.common.base.Joiner;
-
 import org.biojava3.core.sequence.compound.AmbiguityDNACompoundSet;
 import org.biojava3.core.sequence.compound.NucleotideCompound;
+
+import com.google.common.base.Joiner;
 
 /**
  * Class to hold matches between two sequences.
