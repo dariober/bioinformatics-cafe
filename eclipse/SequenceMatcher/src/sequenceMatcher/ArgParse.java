@@ -87,10 +87,11 @@ public class ArgParse {
 			.action(Arguments.storeTrue())
 			.help("Do not reverse complement the sequences in file A. I.e. only match sequences as they are.");	
 
-		matchSubparser.addArgument("-noaln", "--noaln")
-			.action(Arguments.storeTrue())
-			.help("Do not align sequence, just match them (faster).");	
-
+		matchSubparser.addArgument("-aln", "--aln")
+			.choices("none", "global", "local")
+			.setDefault("global")
+			.help("Method to align sequences. Choose none to skip alignment.");	
+		
 		matchSubparser.addArgument("-noLD", "--noLD")
 			.action(Arguments.storeTrue())
 			.help("Do not compute Levenshtein distance (faster).");	

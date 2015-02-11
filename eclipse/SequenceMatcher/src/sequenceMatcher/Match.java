@@ -80,21 +80,23 @@ public class Match {
 	private String strand= ".";
 	private String seqA= ".";
 	private String seqB= ".";
-	private SequencePair<DNASequence, NucleotideCompound> alnPair= null; 
+	private SequencePair<DNASequence, NucleotideCompound> alnPair= null;
 	private Integer LD= -1; // Levenshtein dist
 	private Integer HD= -1; // Hamming dist
 	private Double JWD= -1.0; // JaroWinkler dist
 	private int len_A;
 	private int len_B;
 	private int NM= -1; // Nucleotide difference
-	private int aln_score= -1; // Needleman-wunch alignment score
+	private int aln_score= -1; // Alignment score
 	private int len_aln= -1;
 	private int n_ident= -1;
 	private int n_sim= -1;
 	private double pct_ident= -1;
 	private String alnA= ".";
 	private String alnB= ".";
-	
+	private String alnMethod;
+
+	/*         S e t t e r s    a n d   G e t t e r s  */
 	public String getNameA() {
 		return nameA;
 	}
@@ -221,6 +223,13 @@ public class Match {
 		this.alnPair = alnPair;
 	}
 	
+	public String getAlnMethod() {
+		return alnMethod;
+	}
+	public void setAlnMethod(String alnMethod) {
+		this.alnMethod = alnMethod;
+	}
+	
 	/* ------------------------------------------------------------------------ */
 	// Distances
 	// ---------
@@ -308,13 +317,21 @@ public class Match {
 				
 		List<DNASequence> lst= Arrays.asList(reference, read);
 		
-		int aln_score= Alignments.getAllPairsScores(lst,
-				PairwiseSequenceScorerType.GLOBAL, new SimpleGapPenalty(), matrix)[0];
-		
+		PairwiseSequenceScorerType scorerType= null;
+		PairwiseSequenceAlignerType alignerType= null;
+		if(this.getAlnMethod().equals("global")){
+			scorerType= PairwiseSequenceScorerType.GLOBAL;
+			alignerType= PairwiseSequenceAlignerType.GLOBAL;
+		} else if (this.getAlnMethod().equals("local")) {
+			scorerType= PairwiseSequenceScorerType.LOCAL;
+			alignerType= PairwiseSequenceAlignerType.LOCAL;
+		} else {
+			System.err.println("Invalid option for alignment method: " + this.getAlnMethod());
+			System.exit(1);
+		}
+		int aln_score= Alignments.getAllPairsScores(lst, scorerType, new SimpleGapPenalty(), matrix)[0];		
 		SequencePair<DNASequence, NucleotideCompound> alnPair= Alignments.getPairwiseAlignment(
-				read, 
-				reference,
-				PairwiseSequenceAlignerType.GLOBAL, gapP, matrix);
+				read, reference, alignerType, gapP, matrix);
 		
 		this.alnPair= alnPair;
 		this.len_aln= alnPair.getLength();
