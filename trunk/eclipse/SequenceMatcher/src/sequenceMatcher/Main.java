@@ -77,7 +77,7 @@ public class Main {
 		String method= opts.getString("method");
 		int nm= opts.getInt("nm");
 		boolean norc= opts.getBoolean("norc");
-		boolean noaln= opts.getBoolean("noaln");
+		String aln= opts.getString("aln");
 		boolean noLD= opts.getBoolean("noLD");
 		boolean noJWD= opts.getBoolean("noJWD");
 		String outfmt= opts.getString("outfmt");
@@ -151,7 +151,8 @@ public class Main {
 						if(!noJWD){
 							m.computeJWD();
 						}
-						if(!noaln){
+						if(!aln.equals("none")){
+							m.setAlnMethod(aln);
 							m.align();
 						}
 						nmatch++;
