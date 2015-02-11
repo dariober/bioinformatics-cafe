@@ -75,7 +75,7 @@ public class ArgParse {
 			.required(false)
 			.setDefault("LD")
 			.choices("LD", "HD")
-			.help("Method to determine the threshold edit distance: LD (Levenshtein) or HD (Hamming)"
+			.help("Method to determine the threshold edit distance: LD (Levenshtein, default) or HD (Hamming)\n"
 					+ "Hamming is much faster.");
 		
 		matchSubparser.addArgument("-nm", "--nm")
@@ -90,7 +90,7 @@ public class ArgParse {
 		matchSubparser.addArgument("-aln", "--aln")
 			.choices("none", "global", "local")
 			.setDefault("global")
-			.help("Method to align sequences. Choose none to skip alignment.");	
+			.help("Method to align sequences. Choose none to skip alignment. Default: global");	
 		
 		matchSubparser.addArgument("-noLD", "--noLD")
 			.action(Arguments.storeTrue())
