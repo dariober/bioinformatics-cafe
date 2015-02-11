@@ -37,6 +37,8 @@ public class ArgParse {
 				+ "\n"
 				+ "NOTES & TODO\n"
 				+ "Names of fasta sequences must be unique within file.\n"
+				+ "LD, HD, JWD, len_A, and len_B are computed on the raw input sequences NOT on the aligned sequences\n"
+				+ "So they are independent on the alignment method chosen.\n"
 				+ "Todo 1: Read fastq files and output quality scores, although scores are not used.\n"
 				+ "Todo 2: Support alternative scoring matrices.";
 		
