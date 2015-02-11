@@ -333,6 +333,11 @@ public class Match {
 		SequencePair<DNASequence, NucleotideCompound> alnPair= Alignments.getPairwiseAlignment(
 				read, reference, alignerType, gapP, matrix);
 		
+		// For aln position:
+		// Check: Use leftmost position on ref (seq_A)
+		// int pos= alnPair.getIndexInTargetAt(1);
+		// System.out.println(pos);
+		
 		this.alnPair= alnPair;
 		this.len_aln= alnPair.getLength();
 		this.aln_score= aln_score;

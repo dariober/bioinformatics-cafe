@@ -43,8 +43,9 @@ public class ArgParse {
 				+ "LD, HD, JWD, len_A, and len_B are computed on the raw input sequences NOT on the aligned sequences\n"
 				+ "so they are independent on the alignment method chosen.\n"
 				+ "\n"
-				+ "Todo 1: Read fastq files and output quality scores, although scores are not used.\n"
-				+ "Todo 2: Support alternative scoring matrices.";
+				+ "Todo: Add aln start position. If aln is local it's not always 1!!\n"
+				+ "Todo: Read fastq files and output quality scores, although scores are not used.\n"
+				+ "Todo: Support alternative scoring matrices.";
 		
 		ArgumentParser parser= ArgumentParsers
 				.newArgumentParser("SequenceMatcher")
