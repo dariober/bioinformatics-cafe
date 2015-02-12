@@ -49,12 +49,9 @@ public class MatchTest {
 	
 	@Test
 	public void canConvertStringToMatchObject(){
-		//seq_A	seq_B strand LD HD JWD len_A len_B NM aln_score len_aln n_ident n_sim pct_ident aln_A aln_B
-		String line= "seq1	seq2	-	16	20	0.74	30	30	22	2	14	16	0.39	36	NT------CGTGCGGCTATACGTGCAGGGCATTCAT	ATGAATGCCCTGCACGTATAGCCGCACG------AN";
+		String line= "seq1	seq2	-	16	20	0.74	30	30	1	22	2	14	16	0.39	36	NT------CGTGCGGCTATACGTGCAGGGCATTCAT	ATGAATGCCCTGCACGTATAGCCGCACG------AN";
 		Match m= new Match(); 
 		m.stringToMatchObj(line);
-		
-//		System.out.println(m);
 		
 		assertEquals("seq1", m.getNameA());
 		assertEquals("seq2", m.getNameB());
@@ -64,6 +61,7 @@ public class MatchTest {
 		assertEquals(0.74, m.getJWD(), 0.001);
 		assertEquals(30, m.getLen_A());
 		assertEquals(30, m.getLen_B());
+		assertEquals(1, m.getPos());
 		assertEquals(22, m.getNM());
 //		// ...
 		assertEquals("NT------CGTGCGGCTATACGTGCAGGGCATTCAT", m.getAlnA());
@@ -80,9 +78,9 @@ public class MatchTest {
 	}
 	
 	@Test
-	public void testLineToMatchObjAndBack(){
+	public void canConvertLineToMatchObjAndBack(){
 	
-		String line= "seq1	seq2	-	16	20	0.74	30	30	22	2	14	16	0.39	36	NT------CGTGCGGCTATACGTGCAGGGCATTCAT	ATGAATGCCCTGCACGTATAGCCGCACG------AN";
+		String line= "seq1	seq2	-	16	20	0.74	30	30	1	22	2	14	16	0.39	36	NT------CGTGCGGCTATACGTGCAGGGCATTCAT	ATGAATGCCCTGCACGTATAGCCGCACG------AN";
 
 		Match m= new Match(); 
 		m.stringToMatchObj(line);
@@ -90,4 +88,15 @@ public class MatchTest {
 		String newLine= m.toString();
 		assertEquals(line, newLine);
 	}
+	
+	@Test 
+	public void canGetStartPosFromAlignment(){
+		Match m= new Match();
+		m.setSeqA("NNNNNACTGR");
+		m.setSeqB(     "ACTG");
+		m.setAlnMethod("local");
+		m.align();
+		assertEquals(6, m.getPos());
+	}
+	
 }

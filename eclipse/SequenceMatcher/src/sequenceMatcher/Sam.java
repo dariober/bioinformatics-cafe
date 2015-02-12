@@ -124,7 +124,6 @@ public class Sam {
 	public void setTags(String tags) {
 		this.tags = tags;
 	}
-	
 	/* ------------------------------------------------------------------------ */
 	
 	/**
@@ -169,6 +168,23 @@ public class Sam {
 		return sb.toString().trim();
 	}
 	
+	/**
+	 * Get leftmost position of read alignment on reference.
+	 * 
+	 * If in global alignment the aligned read begins with gaps, biojava still
+	 * says the start position is 1 when the method is GLOBAL. However, the sam
+	 * specs don't allow an alignment to start with gaps. E.g.
+	 * 
+	 * Ref  ACTGAACC 
+	 * Read ----AACC
+	 * 
+	 * Biojava says alignment start at 1, SAM wants 5. So if the alignment
+	 * starts with gaps you have to push the start position forward.
+	 * 
+	 * @param read
+	 * @param ref
+	 * @return
+	 */
 	public static int getAlnStartPos(String read, String ref) {
 
 		if(read.length() != ref.length()){
@@ -176,7 +192,7 @@ public class Sam {
 			System.exit(1);
 		}
 		
-		int start= 1;
+		int start= 0;
 		for(int i=0; i < read.length(); i++){
 			char a= read.charAt(i);
 			char r= ref.charAt(i);
@@ -341,7 +357,7 @@ public class Sam {
 	
 	public static String matchToTagString(Match m){
 		ArrayList<String> tagList= matchToTagList(m);
-		String tagStr= Joiner.on("\t").join(tagList);
+		String tagStr= Joiner.on("\t").join(tagList) + "\tRG:Z:NA";
 		return tagStr;
 	}
 	
@@ -355,7 +371,7 @@ public class Sam {
 		sam.setQname(m.getNameB());
 		sam.setFlag(m.getStrand());
 		sam.setRname(m.getNameA());
-		sam.setPos(Sam.getAlnStartPos(m.getAlnB(), m.getAlnA()));
+		sam.setPos(m.getPos() + Sam.getAlnStartPos(m.getAlnB(), m.getAlnA()));
 		sam.setMapq(255);
 		sam.setCigar(Sam.getCigarFromAln(m.getAlnB(), m.getAlnA()));
 

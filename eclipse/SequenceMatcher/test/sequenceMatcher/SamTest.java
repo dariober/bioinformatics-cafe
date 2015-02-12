@@ -7,6 +7,12 @@ import java.util.ArrayList;
 
 import org.junit.Test;
 
+/* The SAM output should be validated with 
+ * java -jar SequenceMatcher.jar match -a seqA.fa -b seqB.fa -aln local -o sam > match.sam
+ * java -jar picard.jar ValidateSamFile I=match.sam
+ * 
+ */
+
 public class SamTest {
 
 	@Test
@@ -39,38 +45,39 @@ public class SamTest {
 		assertEquals(expect, sqHeader);
 	}
 
+	
 	@Test
 	public void canGetAlnStartPosFromRefAndReadStrings(){
 		int s;
 		String aln= "ACTG";
 		String ref= "ACTG";
 		s= Sam.getAlnStartPos(aln, ref);
-		assertTrue(1 == s);
+		assertEquals(0, s);
 		
 		aln= "NACTG";
 		ref= "-ACTG";
 		s= Sam.getAlnStartPos(aln, ref);
-		assertTrue(1 == s);
+		assertEquals(0, s);
 		
 		aln= "--TG";
 		ref= "ACTG";
 		s= Sam.getAlnStartPos(aln, ref);
-		assertTrue(3 == s);
+		assertEquals(2, s);
 		
 		aln= "---G";
 		ref= "ACTG";
 		s= Sam.getAlnStartPos(aln, ref);
-		assertTrue(4 == s);
+		assertEquals(3, s);
 
 		aln= "ACTG";
 		ref= "----";
 		s= Sam.getAlnStartPos(aln, ref);
-		assertTrue(-1 == s);
+		assertEquals(-1, s);
 
 		aln= "----";
 		ref= "----";
 		s= Sam.getAlnStartPos(aln, ref);
-		assertTrue(-1 == s);
+		assertEquals(-1, s);
 		
 	}
 	
@@ -153,6 +160,7 @@ public class SamTest {
 		Match m= new Match();
 		m.setSeqA("ACTGN");
 		m.setSeqB("ACTGA");
+		m.setAlnMethod("global");
 		m.setStrand("+");
 		m.setNameA("read1");
 		m.setNameB("ref1");
