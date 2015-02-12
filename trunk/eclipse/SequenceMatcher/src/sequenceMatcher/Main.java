@@ -9,7 +9,10 @@ import org.biojava3.core.sequence.DNASequence;
 import net.sourceforge.argparse4j.inf.Namespace;
 
 public class Main {
-
+	
+	public final static String HDline= "@HD\tVN:1.0";
+	public final static String RGline= "@RG\tID:NA\tLB:NA\tSM:NA\tPL:NA\tPU:NA\tPG:NA";
+	
 	public static void main(String[] args) throws IOException{
 
 		/* Start parsing arguments */
@@ -43,7 +46,8 @@ public class Main {
 			// * Convert tab to sam: 
 			// ** Read reference file, output as sam header
 			if(a != null){
-				System.out.println("@HD\tVN:1.0");
+				System.out.println(HDline);
+				System.out.println(RGline);
 				System.out.println(Sam.fastaFileToSQHeader(a));
 			}
 			// This is use to understand if first line is the header.
@@ -103,7 +107,8 @@ public class Main {
 		/* -------------------------------------------------------------------- */
 		// Prepare header:
 		if(outfmt.equals("sam")){
-			System.out.println("@HD\tVN:1.0");
+			System.out.println(HDline);
+			System.out.println(RGline);
 			System.out.println(Sam.fastaListToSQHeader(fastaFileA));
 		} else if(outfmt.equals("tab")){
 			System.out.println(new Match().getHeader());

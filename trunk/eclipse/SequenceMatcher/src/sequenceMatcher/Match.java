@@ -4,7 +4,6 @@ package sequenceMatcher;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
@@ -49,14 +48,15 @@ public class Match {
         header.put(5, "JWD");
         header.put(6, "len_A");
         header.put(7, "len_B");
-        header.put(8, "NM");
-        header.put(9, "aln_score");
-        header.put(10, "n_ident");
-        header.put(11, "n_sim");
-        header.put(12, "pct_ident");
-        header.put(13, "len_aln");
-        header.put(14, "alnA");
-        header.put(15, "alnB");
+        header.put(8, "pos");
+        header.put(9, "NM");
+        header.put(10, "aln_score");
+        header.put(11, "n_ident");
+        header.put(12, "n_sim");
+        header.put(13, "pct_ident");
+        header.put(14, "len_aln");
+        header.put(15, "alnA");
+        header.put(16, "alnB");
         HEADER= Collections.unmodifiableMap(header);
     }
 
@@ -86,6 +86,7 @@ public class Match {
 	private Double JWD= -1.0; // JaroWinkler dist
 	private int len_A;
 	private int len_B;
+	private int pos= -1; // Aln start pos on reference (seqA): Leftmost position as per sam spec
 	private int NM= -1; // Nucleotide difference
 	private int aln_score= -1; // Alignment score
 	private int len_aln= -1;
@@ -156,6 +157,10 @@ public class Match {
 		this.pct_ident = pct_ident;
 	}
 
+	public int getPos() {
+		return pos;
+	}
+	
 	public int getNM() {
 		return NM;
 	}
@@ -174,10 +179,6 @@ public class Match {
 	}
 	public void setLen_B(int len_B) {
 		this.len_B = len_B;
-	}
-
-	public void setaln_score(int aln_score) {
-		aln_score = aln_score;
 	}
 	public void setLD(Integer lD) {
 		LD = lD;
@@ -307,18 +308,16 @@ public class Match {
 		
 		AmbiguityDNACompoundSet ambiguityDNACompoundSet= new AmbiguityDNACompoundSet();
 		
-		DNASequence read= new DNASequence(); 
-		read= new DNASequence(this.seqA, ambiguityDNACompoundSet);
-
-		DNASequence reference= new DNASequence(this.seqB, ambiguityDNACompoundSet);
-	
 		SubstitutionMatrix<NucleotideCompound> matrix = SubstitutionMatrixHelper.getNuc4_4();	 
 		SimpleGapPenalty gapP = new SimpleGapPenalty();
 				
-		List<DNASequence> lst= Arrays.asList(reference, read);
 		
 		PairwiseSequenceScorerType scorerType= null;
 		PairwiseSequenceAlignerType alignerType= null;
+		if(this.getAlnMethod() == null ){
+			System.err.println("Alignment method not set!");
+			System.exit(1);
+		}
 		if(this.getAlnMethod().equals("global")){
 			scorerType= PairwiseSequenceScorerType.GLOBAL;
 			alignerType= PairwiseSequenceAlignerType.GLOBAL;
@@ -329,15 +328,20 @@ public class Match {
 			System.err.println("Invalid option for alignment method: " + this.getAlnMethod());
 			System.exit(1);
 		}
-		int aln_score= Alignments.getAllPairsScores(lst, scorerType, new SimpleGapPenalty(), matrix)[0];		
+		
+		// Nomenclature Ours -> SAM -> Biojava:
+		// seqA -> ref -> query
+		// seqB -> read -> target
+		DNASequence refQuery= new DNASequence(this.seqA, ambiguityDNACompoundSet);
+		DNASequence readTarget= new DNASequence(this.seqB, ambiguityDNACompoundSet);
+		
+		int aln_score= Alignments.getAllPairsScores(
+				Arrays.asList(refQuery, readTarget), scorerType, new SimpleGapPenalty(), matrix)[0];		
+		
 		SequencePair<DNASequence, NucleotideCompound> alnPair= Alignments.getPairwiseAlignment(
-				read, reference, alignerType, gapP, matrix);
+				refQuery, readTarget, alignerType, gapP, matrix);
 		
-		// For aln position:
-		// Check: Use leftmost position on ref (seq_A)
-		// int pos= alnPair.getIndexInTargetAt(1);
-		// System.out.println(pos);
-		
+		this.pos= alnPair.getIndexInQueryAt(1);		
 		this.alnPair= alnPair;
 		this.len_aln= alnPair.getLength();
 		this.aln_score= aln_score;
@@ -367,6 +371,7 @@ public class Match {
 			if(h.equals("JWD")) 		{sa[k]= String.format("%.2f", this.JWD);} else
 			if(h.equals("len_A")) 		{sa[k]= Integer.toString(this.len_A);} else
 			if(h.equals("len_B")) 		{sa[k]= Integer.toString(this.len_B);} else
+			if(h.equals("pos")) 		{sa[k]= Integer.toString(this.pos);} else
 			if(h.equals("NM")) 			{sa[k]= Integer.toString(this.NM);} else
 			if(h.equals("aln_score")) 	{sa[k]= Integer.toString(this.aln_score);} else
 			if(h.equals("n_ident"))   	{sa[k]= Integer.toString(this.n_ident);} else
@@ -402,6 +407,12 @@ public class Match {
 	public void stringToMatchObj(String line) {
 
 		String[] aline= line.trim().split("\t", -1);
+		if(aline.length != rev_header.size()){
+			System.err.println("Incorrectly formatted string: " + aline.length + " filed found. Expected: " + rev_header.size());
+			System.err.println("String: " + line);
+			System.err.println("Header: " + this.getHeader());
+			System.exit(1);
+		}
 		this.nameA= aline[rev_header.get("seq_A")];
 		this.nameB= aline[rev_header.get("seq_B")];
 		this.strand= aline[rev_header.get("strand")];
@@ -410,6 +421,7 @@ public class Match {
 		this.JWD= Double.parseDouble(aline[rev_header.get("JWD")]);
 		this.len_A= Integer.parseInt(aline[rev_header.get("len_A")]);
 		this.len_B= Integer.parseInt(aline[rev_header.get("len_B")]);
+		this.pos= Integer.parseInt(aline[rev_header.get("pos")]);
 		this.NM= Integer.parseInt(aline[rev_header.get("NM")]);
 		this.aln_score= Integer.parseInt(aline[rev_header.get("aln_score")]);
 		this.n_ident= Integer.parseInt(aline[rev_header.get("n_ident")]);
