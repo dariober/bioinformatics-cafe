@@ -344,7 +344,6 @@ def prepare_nonbam_file(infile_name, outfile_handle, region, use_file_name):
     if open(infile.fn).readline().strip() == '':
         """If there are no intersecting features return 0
         """
-        print('Done')
         pass
     else:
         region_x_infile= pybedtools.BedTool().intersect(a= infile,
