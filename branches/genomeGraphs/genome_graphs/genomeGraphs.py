@@ -624,9 +624,11 @@ def main():
               overplot= pycoverage.quoteStringList(args.overplot)
               )
         
-        if rgraph['stderr'] != '':
-            print('\nExpection in executing R script "%s"\n' %(rscript))
+        if rgraph['returncode'] == 0:
+            print('\ngenomeGraphs.py: Exception in executing R script "%s"; returncode: %s\n' %(rscript, rgraph['returncode']))
+            print('** Captured stdout:')
             print(rgraph['stdout'])
+            print('** Captured stderr:')
             sys.exit(rgraph['stderr'])
         if args.verbose:
             print(rgraph['stderr'])
