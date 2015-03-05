@@ -257,9 +257,9 @@ If you find some of the graphics features annoying, here's how to turn them off:
 || `--nwinds 1000000` || Don't group read counts or score from `--ibam` in windows (could generate huge pdf files!) ||
 || `--slop 0`             || Don't extend `--bed` features for plotting. Plot them exactly as they are ||
 || `--maxseq 0`           || Don't print sequence at the bottom of the plotting figure  ||
-|| `--col_seq NA`         || _Same effect as above_ ||
+|| `--col_seq NA`         || Same as `--maxseq 0` ||
 || `--names ''`           || Don't print the name (e.g. the file name) on each plot ||
-|| `--col_names NA`       || _Same effect as above_ ||
+|| `--col_names NA`       || Same as `--names ''` ||
 || `--no_col_bases`       || Don't colour individual nucleotides even if the region span is < maxseq ||
 || --title ''             || Don't print the figure title ||
 || `-o /dev/null/`        || Don't save the pdf output (if `--tmpdir` is None nothing is saved) ||
