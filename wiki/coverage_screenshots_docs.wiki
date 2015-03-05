@@ -14,7 +14,7 @@ TO DO:
 = Introduction  & Description =
 
 ----
-http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr18_702863_703208.pdf
+http://bioinformatics-misc.googlecode.com/svn/wiki/images/chr18_702863_703208.png
 ----
 
 *genomeGraphs* produces coverage files and plots for one or more input files
