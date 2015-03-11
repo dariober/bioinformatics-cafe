@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-docstring="Get read count from BAM file.
+docstring=' Get read count from BAM file.
 \n\n
 This script parses the output of samtools idxstats to quickly get the total read
 count from a bam file.
@@ -11,24 +11,30 @@ count from a bam file.
 Requires awk and samtools on PATH.
 \n\n
 USAGE \n
-readCountFromBam.sh <aln.bam>
+readCountFromBam.sh <aln.bam> <aln2.bam> ... \n
+
 \n\n
 OUTPUT \n
-* Input file name
-# mapped (sum 3rd col) \n
-# mate unmapped (sum 4th col) \n
-# unmapped (* line) \n
-# ref size (sum 2nd col) \n
-"
+Tab separated table with columns:\n
+1. Input file name \n
+2. Count mapped (sum 3rd col) \n
+3. Count mate unmapped (sum 4th col) \n
+4. Count unmapped (\* line) \n
+5. Ref size (sum 2nd col) \n
+'
 
-bam=$1
+bams="$*"
 
-if [[ ${bam} = "" || ${bam} = "-h" || ${bam} == "--help" ]]
+if [[ ${bams} = "" || ${bams} = "-h" || ${bams} == "--help" ]]
 then
     echo -e $docstring
     exit 1
 fi
 
+# ----------------------------------------------------------
+
+for bam in ${bams}
+do
 if [[ ! -f ${bam}.bai && ! -f ${bam%.bam}.bai ]]
 then
     echo "Index file ${bam}.bai or ${bam%.bam}.bai not found"
@@ -52,5 +58,6 @@ samtools idxstats ${bam} \
         refsize+=$2
     }
 }END{print bam, mapped, mateun, unmapped, refsize}'  
+done
 
 exit 0
