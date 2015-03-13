@@ -336,12 +336,18 @@ acceptedCalls(bases, qual_string, minq)
 if __name__ == '__main__':
 
    args= parser.parse_args()
+
+   if not os.path.isfile(args.input):
+      sys.stderr.write('\nError: File %s not found\n\n' %(args.input))
+      sys.exit(1)
+   if not os.path.isfile(args.ref):
+      sys.stderr.write('\nError: File %s not found\n\n' %(args.ref))
+      sys.exit(1)
    
    tmpdir= tempfile.mkdtemp(prefix= 'tmp_bam2methylation_')
    if not args.keeptmp:
        atexit.register(shutil.rmtree, tmpdir)
-
-   
+      
    outpiles= bam2methylation(bam= args.input, ref= args.ref, bed= args.l, tmpdir= tmpdir)
    mergeMpileup(outpiles[0], outpiles[1], args.mismatch)
    sys.exit()
