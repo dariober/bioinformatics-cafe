@@ -6,6 +6,7 @@ import os
 import subprocess
 import tempfile
 import shutil
+import atexit
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -337,76 +338,10 @@ if __name__ == '__main__':
    args= parser.parse_args()
    
    tmpdir= tempfile.mkdtemp(prefix= 'tmp_bam2methylation_')
+   if not args.keeptmp:
+       atexit.register(shutil.rmtree, tmpdir)
+
+   
    outpiles= bam2methylation(bam= args.input, ref= args.ref, bed= args.l, tmpdir= tmpdir)
    mergeMpileup(outpiles[0], outpiles[1], args.mismatch)
-
-   if not args.keeptmp:
-      shutil.rmtree(tmpdir)   
    sys.exit()
-
-#def pileup2mismatch(chrom, pos, callString, ref, is_second= False):
-#   """Count mismatches at cytosines. I.e. Where the reference has C and the read is
-#   neither C or T.
-#   chrom, pos:
-#      Chromosome (string) and position (int) on the pileup
-#   callString:
-#      String of bases obtained by cleanCallString
-#   ref:
-#      Reference base as obtained from 3nd column of mpileup
-#   
-#   Output format:
-#      chrom, start, end, % mismatch, cnt mismatch, cnt total, strand
-#   Note that count total includes count of ACTG only, not N in the read.
-#   
-#   Memo: mpileup input looks like this:
-#   chr7    3002089 C       2       .^~.    IA
-#   chr7    3002090 G       2       ..      HE
-#   chr7    3002114 C       2       ..      HE
-#   
-#   Read base column:
-#   -----------------
-#   Dot:   Stands for a MATCH to the reference
-#   Comma: For a MATCH on the reverse strand
-#   ACGTN: For a MISmatch on the forward strand
-#   acgtn: For a MISmatch on the reverse strand
-#   """
-#   cnt_M= 0 ## Count mismatches [A or G when ref has C]
-#   cnt_m= 0 ## Count matches    [C or T when ref has C]
-# 
-#   if ref.upper() == 'G':
-#      strand= '-'
-#      if is_second:
-#          cnt_M += (callString.count('C') + callString.count('T'))
-#          cnt_m += (callString.count('.') + callString.count('A'))
-#      else:
-#          cnt_M += (callString.count('c') + callString.count('t'))
-#          cnt_m += (callString.count(',') + callString.count('a'))
-#   elif ref.upper() == 'C':
-#      strand= '+'
-#      if is_second:
-#          cnt_M += (callString.count('a') + callString.count('g'))
-#          cnt_m += (callString.count(',') + callString.count('t'))
-#      else:
-#          cnt_M += (callString.count('A') + callString.count('G'))
-#          cnt_m += (callString.count('.') + callString.count('T'))
-#   else:
-#      return(None)
-#   if (cnt_m + cnt_M) == 0:
-#      return(None)
-#   totreads= cnt_M + cnt_m
-#   methList= [chrom, str(pos-1), str(pos), str(round(100*(float(cnt_M)/totreads), 4)), str(cnt_M), str(totreads), strand]
-#   return(methList)
-
-#def getMetCalls(mpileupLine, is_second= False):
-#   """Extract methylation calls from mpileup line.
-#   mpileupLine:
-#      Line returned from `samtools mpileup`
-#   is_second:
-#      Is the mpileup file generated from read 2?
-#   Return:
-#      Output from pileup2methylation
-#   """
-#   line= line.strip().split('\t')
-#   callString= cleanCallString(line[4])
-#   methList= pileup2methylation(chrom= line[0], pos= int(line[1]), callString= callString, ref= line[2], is_second= is_second)
-#   return(methList)
