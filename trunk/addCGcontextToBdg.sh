@@ -21,8 +21,8 @@ REQUIREMENTS
     - bedtools on path
     - fastaFromBed.py on path (bedtools fastaFromBed will do the same but very slow for
         long files)
-    - Fasta file indexed with index named `<seqname>.fai` in the same dir as input fasta.
-      Use e.g `samtools faidx` to create it.
+    - Fasta file indexed with index named <seqname>.fai in the same dir as input fasta.
+      Use e.g 'samtools faidx' to create it.
 
 USAGE
     addCGcontextToBdg.sh <bedgraph> <fasta-ref> <strand-column-index>
@@ -39,7 +39,7 @@ fi
 awk -v strandCol=$strand 'BEGIN{OFS="\t"} {print $1, $2, $3, ".", ".", $strandCol}' $bdg \
 | awk '{if ($6 != "+" && $6 != "-") {print "Strand information must be coded as + and -" > "/dev/stderr"; exit 1} else {print $0}}' \
 | slopBed -l 0 -r 2 -s -i - -g ${ref}.fai \
-| fastaFromBed.py -q -bed - -fi $ref -fo - -tab -s \
+| fastaFromBed.py -bed - -fi $ref -fo - -tab -s \
 | awk 'BEGIN{IGNORECASE=1} {if ($2~/^CG/)
                                 {print "CG"}
                             else if ($2~/^C[ACTU][G]/)
