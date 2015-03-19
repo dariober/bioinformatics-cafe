@@ -16,7 +16,7 @@ test.failIfAppNotFound<- function(){
 realToken<- getBasespaceToken(app_name= APP_NAME, x= '~/.basespace_login')
 
 test.canGetFilesForProjID<- function(){
-    fqfiles<- getFastqFromBaseSpace(proj_id= '18434424', accessToken= realToken, echo= TRUE, verbose= FALSE)
+    fqfiles<- getFastqFromBaseSpace(proj_id= TEST_PROJ_ID, accessToken= realToken, echo= TRUE, verbose= FALSE)
     checkTrue(length(fqfiles) > 0)
     checkTrue(length(fqfiles) == 5, "\nFail might be due to files added to project\n")
     checkIdentical("Ldono-chem1_S1_L001_R1_001.fastq.gz", Name(fqfiles[[1]]), "\n\nFail might be due changes in project\n")
