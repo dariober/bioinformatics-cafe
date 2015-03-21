@@ -1,6 +1,11 @@
 #! /usr/bin/env Rscript
 
-VERSION<- '0.1.0a'
+# TODO
+# * Better reporting for failed files. Make it obvious what has failed
+#   and what has succeded.
+# * After downloading check file size matches what reported by basespace
+
+VERSION<- '0.2.0'
 APP_NAME= 'Get FASTQ files' # App name to get fastq files
 
 done<- suppressWarnings(suppressMessages(require(BaseSpaceR)))
@@ -57,6 +62,8 @@ getFastqFromBaseSpace<- function(
     #   If TRUE, only show which files would be downloaded.
     # Returns:
     #   Vector of downloaded files
+    # TODO:
+    #     This function is too complex and needs to be split.
     files<- vector()
     aAuth<- AppAuth(access_token = accessToken)
     myProj <- listProjects(aAuth)
@@ -72,8 +79,24 @@ getFastqFromBaseSpace<- function(
                 if(verbose){
                     print(f)
                 }
+                attempt<- 1
                 if(!echo){
-                    getFiles(aAuth, id= Id(f), destDir = dest_dir, verbose = TRUE)
+		    # Try to download file up to five times.
+		    while(attempt <= 5){
+                        out<- tryCatch(
+                            expr= {getFiles(aAuth, id= Id(f), destDir = dest_dir, verbose = TRUE)},
+                            error= function(e) {
+                               cat(sprintf('\nAttempt: %s failed with\n', attempt))
+			       message(e)
+ 			       return(NA)
+			    }
+                        )
+                        if(!is.na(out)){
+			    break
+			} else {
+			    attempt<- attempt + 1
+			}
+		    }
                 }
             }
         }
@@ -139,5 +162,5 @@ files<- getFastqFromBaseSpace(
     verbose= TRUE
 )
 cat(sprintf('\n%s files found with regex "%s"\n\n', length(files), xargs$regex))
-
+warnings()
 quit(save= 'no')
