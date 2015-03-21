@@ -64,14 +64,17 @@ getFastqFromBaseSpace<- function(
     sampl <- listSamples(selProj, limit= 1000)
     inSample <- Samples(aAuth, id = Id(sampl), simplify = TRUE)
     for(s in inSample){ 
-        f <- listFiles(s)
-        if( grepl(regex, Name(f), perl= TRUE) ){
-            files<- append(files, f)
-            if(verbose){
-                print(f)
-            }
-            if(!echo){
-                getFiles(aAuth, id= Id(f), destDir = dest_dir, verbose = TRUE)
+        ff <- listFiles(s)
+        for(i in 1:length(ff)){
+            f<- ff[i]
+            if( grepl(regex, Name(f), perl= TRUE) ){
+                files<- append(files, f)
+                if(verbose){
+                    print(f)
+                }
+                if(!echo){
+                    getFiles(aAuth, id= Id(f), destDir = dest_dir, verbose = TRUE)
+                }
             }
         }
     }
