@@ -17,23 +17,27 @@ realToken<- getBasespaceToken(app_name= APP_NAME, x= '~/.basespace_login')
 
 test.canGetFilesForProjID<- function(){
     fqfiles<- getFastqFromBaseSpace(proj_id= TEST_PROJ_ID, accessToken= realToken, echo= TRUE, verbose= FALSE)
-    checkTrue(length(fqfiles) > 0)
-    checkTrue(length(fqfiles) == 5, "\nFail might be due to files added to project\n")
-    checkIdentical("Ldono-chem1_S1_L001_R1_001.fastq.gz", Name(fqfiles[[1]]), "\n\nFail might be due changes in project\n")
+    checkTrue(nrow(fqfiles) > 0)
+    checkTrue(nrow(fqfiles) == 5, "\nFail might be due to files added to project\n")
+    checkIdentical("Ldono-chem1_S1_L001_R1_001.fastq.gz", fqfiles$filename[1], "\n\nFail might be due changes in project\n")
+}
+
+test.verbosePrinter<- function(){
+    fqfiles<- getFastqFromBaseSpace(regex= '.*\\.gz', proj_id= TEST_PROJ_ID, accessToken= realToken, echo= TRUE, verbose= TRUE)
 }
 
 test.canGetFilesForRegex<- function(){
     fqfiles<- getFastqFromBaseSpace(regex= '.*\\.gz', proj_id= TEST_PROJ_ID, accessToken= realToken, echo= TRUE, verbose= FALSE)
-    checkTrue(length(fqfiles) == 5, "\nFail might be due to files added to project\n")
+    checkTrue(nrow(fqfiles) == 5, "\nFail might be due to files added to project\n")
 
     fqfiles<- getFastqFromBaseSpace(regex= 'Ldono-chem[1-2].*\\.gz', proj_id= TEST_PROJ_ID, accessToken= realToken, echo= TRUE, verbose= FALSE)
-    checkTrue(length(fqfiles) == 2, fqfiles)
+    checkTrue(nrow(fqfiles) == 2, fqfiles)
     
     fqfiles<- getFastqFromBaseSpace(regex= '^Ldono-chem1.*\\.gz$', proj_id= TEST_PROJ_ID, accessToken= realToken, echo= TRUE, verbose= FALSE)
-    checkIdentical("Ldono-chem1_S1_L001_R1_001.fastq.gz", Name(fqfiles[[1]]), "\n\nFail might be due changes in project\n")
+    checkIdentical("Ldono-chem1_S1_L001_R1_001.fastq.gz", fqfiles$filename[1], "\n\nFail might be due changes in project\n")
 
     fqfiles<- getFastqFromBaseSpace(regex= '.*\\.nonsense', proj_id= TEST_PROJ_ID, accessToken= realToken, echo= TRUE, verbose= FALSE)
-    checkTrue(length(fqfiles) == 0, "\nThis regex should return 0 downloadable files\n")
+    checkTrue(nrow(fqfiles) == 0, "\nThis regex should return 0 downloadable files\n")
 
 }
 

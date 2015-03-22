@@ -15,6 +15,14 @@ if(done == FALSE){
     quit(save= 'no', status= 1)
 }
 
+done<- suppressWarnings(suppressMessages(require(data.table)))
+if(done == FALSE){
+    cat('\nPlease install the "data.table" package. Open an R session and execute:\n\n')
+    cat('> install.packages("data.table")\n\n')
+    quit(save= 'no', status= 1)
+}
+
+
 getBasespaceToken<- function(app_name= APP_NAME, x= '~/.basespace_login'){
     # x:
     #   Log in file to read and get the access token
@@ -64,7 +72,7 @@ getFastqFromBaseSpace<- function(
     #   Vector of downloaded files
     # TODO:
     #     This function is too complex and needs to be split.
-    files<- vector()
+    fileDT<- data.table(filename= NA, SampleId= NA, ExperimentName= NA)[0,]
     aAuth<- AppAuth(access_token = accessToken)
     myProj <- listProjects(aAuth)
     selProj <- Projects(aAuth, id = proj_id, simplify = TRUE) 
@@ -74,34 +82,36 @@ getFastqFromBaseSpace<- function(
         ff <- listFiles(s)
         for(i in 1:length(ff)){
             f<- ff[i]
+            stopifnot(length(f@data@Items) == 1)
             if( grepl(regex, Name(f), perl= TRUE) ){
-                files<- append(files, f)
+                infoList<- list(filename= f@data@Items[[1]]@Name, SampleId= s@data@Name, ExperimentName= s@data@ExperimentName)
+                fileDT<- rbindlist(list(fileDT, infoList))
                 if(verbose){
                     print(f)
                 }
                 attempt<- 1
                 if(!echo){
-		    # Try to download file up to five times.
-		    while(attempt <= 5){
+                    # Try to download file up to five times.
+                    while(attempt <= 5){
                         out<- tryCatch(
                             expr= {getFiles(aAuth, id= Id(f), destDir = dest_dir, verbose = TRUE)},
                             error= function(e) {
-                               cat(sprintf('\nAttempt: %s failed with\n', attempt))
-			       message(e)
- 			       return(NA)
-			    }
+                                cat(sprintf('\nAttempt: %s failed with\n', attempt))
+                                message(e)
+                                return(NA)
+                            }
                         )
                         if(!is.na(out)){
-			    break
-			} else {
-			    attempt<- attempt + 1
-			}
-		    }
+                            break
+                        } else {
+                            attempt<- attempt + 1
+                        }
+                    }
                 }
             }
         }
     }
-    return(files)
+    return(fileDT)
 }
 
 
@@ -121,8 +131,6 @@ done<- suppressWarnings(suppressMessages(require(argparse)))
 if(done == FALSE){
     cat('\nPlease install the "argparse" package. Open an R session and execute:\n\n')
     cat('> install.packages("argparse")\n\n')
-    cat('Once you are at it, install also the data.table package, if not already installed:\n\n')
-    cat('> install.packages("data.table")\n\n')
     quit(save= 'no', status= 1)
 }
 
@@ -153,7 +161,7 @@ if(length(xargs$token) == 0){
     accessToken<- xargs$token
 }
 
-files<- getFastqFromBaseSpace(
+fileDT<- getFastqFromBaseSpace(
     proj_id= xargs$projid,
     accessToken= accessToken,
     dest_dir= xargs$outdir ,
@@ -161,6 +169,8 @@ files<- getFastqFromBaseSpace(
     echo= xargs$echo,
     verbose= TRUE
 )
-cat(sprintf('\n%s files found with regex "%s"\n\n', length(files), xargs$regex))
+write.table(fileDT, file= stdout(), sep= '\t', row.names= FALSE, quote= FALSE)
+
+cat(sprintf('\n%s files found with regex "%s"\n\n', nrow(fileDT), xargs$regex))
 warnings()
 quit(save= 'no')
