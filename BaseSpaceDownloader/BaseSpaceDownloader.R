@@ -169,7 +169,9 @@ fileDT<- getFastqFromBaseSpace(
     echo= xargs$echo,
     verbose= TRUE
 )
+cat('<sampleTable>\n')
 write.table(fileDT, file= stdout(), sep= '\t', row.names= FALSE, quote= FALSE)
+cat('</sampleTable>\n')
 
 cat(sprintf('\n%s files found with regex "%s"\n\n', nrow(fileDT), xargs$regex))
 warnings()
