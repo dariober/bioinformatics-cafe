@@ -84,7 +84,7 @@ getFastqFromBaseSpace<- function(
             f<- ff[i]
             stopifnot(length(f@data@Items) == 1)
             if( grepl(regex, Name(f), perl= TRUE) ){
-                infoList<- list(filename= f@data@Items[[1]]@Name, SampleId= s@data@Name, ExperimentName= s@data@ExperimentName)
+                infoList<- list(filename= f@data@Items[[1]]@Name, SampleId= s@data@SampleId, ExperimentName= s@data@ExperimentName)
                 fileDT<- rbindlist(list(fileDT, infoList))
                 if(verbose){
                     print(f)
