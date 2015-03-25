@@ -14,6 +14,11 @@ Within R:
 xv<- system('vennBedTwoWay.py a.bed b.bed', intern= TRUE)
 ab<- eval(parse(text= xv))
 
+See also https://pythonhosted.org/pybedtools/3-brief-examples.html
+
+*Important note* The intersection count is not symmetrical! I.e. A x B != B x A
+so the output here should be taken with care.
+
 Version %s""" %(version)
 
 def venn2(a, b):
@@ -25,8 +30,9 @@ def venn2(a, b):
     B= pyb.BedTool(b)
     aonly= (A-B).count()
     bonly= (B-A).count()
-    both= (B+A).count()
-    return({'only_a': aonly, 'only_b': bonly, 'both': both})
+    both= (A+B).count()
+    vdict= {'only_a': aonly, 'only_b': bonly, 'both': both}
+    return(vdict)
 
 def vdict2R(vdict):
     """Print the dict produced by venn2 in an R-friendly format as
