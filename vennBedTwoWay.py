@@ -19,6 +19,11 @@ See also https://pythonhosted.org/pybedtools/3-brief-examples.html
 *Important note* The intersection count is not symmetrical! I.e. A x B != B x A
 so the output here should be taken with care.
 
+A.bed  ----    -------------        
+B.bed           ---     ---   ----
+
+There is only-A: 1; only-B: 1; both: 1 if A x B but 2 if B x A.
+
 Version %s""" %(version)
 
 def venn2(a, b):
