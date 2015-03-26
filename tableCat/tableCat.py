@@ -48,11 +48,11 @@ parser.add_argument('--idColName', '-id',
     help='''Name for the additional column with the file id. Default 'file_id'.
 ''')
 
-#parser.add_argument('--skip', '-S',
-#    type= int,
-#    default= 0,
-#    help='''Skip this many lines from *each* file.
-#''')
+parser.add_argument('--skip', '-S',
+    type= int,
+    default= 0,
+    help='''Skip this many lines from *each* file.
+''')
 
 parser.add_argument('--firsthdr', '-H',
     action= 'store_true',
@@ -114,8 +114,12 @@ if __name__ == '__main__':
         id= parseID(f, args.keepdir, args.regex)
         is_first_line= True
         n= 0
+        skip= args.skip
         for line in fin:
             line2= line.rstrip('\n') + args.sep + id
+            if skip > 0:
+                skip-=1
+                continue
             if args.firsthdr:
                 if is_first_file and is_first_line:
                     print line.rstrip('\n') + args.sep + args.idColName
