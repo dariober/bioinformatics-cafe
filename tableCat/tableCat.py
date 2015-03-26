@@ -9,9 +9,17 @@ import re
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
+    Concatenate files and add a column of file identifiers. The output is
+    going to be in "database long format".
+    
+    Typical use case: You have a pipeline that generates file in tabular format,
+    one file per input, all files the same format. You want to concatenate these
+    tables while keeping the identity of the files and optionally add une header
+    for the cat'd files.
+
 EXAMPLE
-REQUIRES:
-NOTES:
+    cd tableCat
+    ./tableCat.py -i test/*.txt -H
 """, formatter_class= argparse.RawTextHelpFormatter, prog= os.path.basename(__file__))
 
 parser.add_argument('--input', '-i',
