@@ -5,7 +5,7 @@
 #   and what has succeded.
 # * After downloading check file size matches what reported by basespace
 
-VERSION<- '0.2.0'
+VERSION<- '0.3.0'
 APP_NAME= 'Get FASTQ files' # App name to get fastq files
 
 done<- suppressWarnings(suppressMessages(require(BaseSpaceR)))
@@ -53,6 +53,7 @@ getFastqFromBaseSpace<- function(
     accessToken,
     dest_dir= '.' ,
     regex= '.*\\.gz$',
+    sample_regex= '.*',
     echo= FALSE,
     verbose= TRUE){
     # Download fastq files for project ID from BaseSpace.
@@ -77,7 +78,15 @@ getFastqFromBaseSpace<- function(
     myProj <- listProjects(aAuth)
     selProj <- Projects(aAuth, id = proj_id, simplify = TRUE) 
     sampl <- listSamples(selProj, limit= 1000)
-    inSample <- Samples(aAuth, id = Id(sampl), simplify = TRUE)
+
+    inSampleAll <- Samples(aAuth, id = Id(sampl), simplify = TRUE)
+    inSample<- c()
+    for(s in inSampleAll){
+        if(grepl(sample_regex, s@data@SampleId, perl= TRUE)){
+            inSample<- c(inSample, s)
+        }
+    }
+
     for(s in inSample){ 
         ff <- listFiles(s)
         for(i in 1:length(ff)){
@@ -149,6 +158,7 @@ parser$add_argument("-p", "--projid", help= "Project ID. Typically obtained from
 parser$add_argument("-t", "--token", help= "Access token")
 parser$add_argument("-o", "--outdir", help= "Output dir for fetched files.\\nBaseSpaceR will put here the dir Data/Intensities/BaseCalls/", default= '.')
 parser$add_argument("-r", "--regex", help= "Regex to filter by file name. Default all files ending in .gz", default= '.*\\.gz$')
+parser$add_argument("-s", "--sample_regex", help= "Regex to filter by sample. Default all samples", default= '.*')
 parser$add_argument("-e", "--echo", help= "Only show which files would be downloaded", action= 'store_true')
 
 xargs<- parser$parse_args()
@@ -166,6 +176,7 @@ fileDT<- getFastqFromBaseSpace(
     accessToken= accessToken,
     dest_dir= xargs$outdir ,
     regex= xargs$regex,
+    sample_regex= xargs$sample_regex,
     echo= xargs$echo,
     verbose= TRUE
 )

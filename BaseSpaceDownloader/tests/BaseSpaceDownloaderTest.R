@@ -41,6 +41,13 @@ test.canGetFilesForRegex<- function(){
 
 }
 
+test.canGetFilesForSampleRegex<- function(){
+    fqfiles<- getFastqFromBaseSpace(sample_regex= '.*chem.*', proj_id= TEST_PROJ_ID, accessToken= realToken, echo= TRUE, verbose= FALSE)
+    checkIdentical("Ldono-chem1_S1_L001_R1_001.fastq.gz", fqfiles$filename[1], "\n\nFail might be due changes in project\n")
+    checkIdentical("Ldono-chem2_S2_L001_R1_001.fastq.gz", fqfiles$filename[2], "\n\nFail might be due changes in project\n")
+}
+
+
 #test.failIfProjNotFound<- function(){
 #    checkException(
 #        getFastqFromBaseSpace(proj_id= 'NONSENSE', accessToken= realToken, echo= TRUE, verbose= FALSE)
