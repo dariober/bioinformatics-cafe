@@ -109,7 +109,7 @@ if __name__ == '__main__':
         sys.exit('No file found to concatenate!')
     is_first_file= True
     for f in files:
-        sys.stderr.write('File: %s ...' %(f))
+        # sys.stderr.write('File: %s ...' %(f))
         fin= xopen(f)
         id= parseID(f, args.keepdir, args.regex)
         is_first_line= True
@@ -135,6 +135,6 @@ if __name__ == '__main__':
                 print line2
                 n+=1
         is_first_file= False
-        sys.stderr.write(' %s lines printed\n' %(n))
+        # sys.stderr.write(' %s lines printed\n' %(n))
     sys.exit()
     
