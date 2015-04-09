@@ -21,19 +21,19 @@ then
     exit 1
 fi
 
-mydir=$(mktemp -dt "$0")
+tmp=$(mktemp tmp.XXXXXXXXXX)
 
 tableCat.py -i $beds \
 | awk -v OFS="\t" '{print $1, $2, $3, $NF}' \
 | sort -k1,1 -k2,2n \
-| mergeBed -c 4,4 -o distinct,count_distinct -i - > ${mydir}/merged.bed 
+| mergeBed -c 4,4 -o distinct,count_distinct -i - > ${tmp}
 
-cat ${mydir}/merged.bed 
+cat ${tmp}
 
-cut -f4 ${mydir}/merged.bed \
+cut -f4 ${tmp} \
 | sort \
 | uniq -c >&2
 
-rm -r $mydir
+rm $tmp
 
 exit
