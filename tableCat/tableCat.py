@@ -89,7 +89,7 @@ def xopen(x):
         try:
             fin= gzip.open(x)
         except IOError:
-            sys.exit('Cannot open %s' %(s))
+            sys.exit('Cannot open %s' %(x))
     return fin
 
 def parseID(filename, keepdir= False, regex= None):
