@@ -77,9 +77,9 @@ getFastqFromBaseSpace<- function(
     aAuth<- AppAuth(access_token = accessToken)
     myProj <- listProjects(aAuth)
     selProj <- Projects(aAuth, id = proj_id, simplify = TRUE) 
-    sampl <- listSamples(selProj, limit= 1000)
+    sampl <- listSamples(selProj, limit= 1024) # limit appears to be constrained btw 1 and 1024. What if you have more? 
 
-    inSampleAll <- Samples(aAuth, id = Id(sampl), simplify = TRUE)
+    inSampleAll <- Samples(aAuth, id = Id(sampl))
     inSample<- c()
     for(s in inSampleAll){
         if(grepl(sample_regex, s@data@SampleId, perl= TRUE)){
