@@ -93,8 +93,7 @@ parser.add_argument('--keeptmp',
 parser.add_argument('--version', action='version', version='%(prog)s 0.3')
 
 # ------------------------------------------------------------------------------
-
-def bam2methylation(bam, ref, bed, tmpdir):
+def bam2methylation(bam, ref, bed, tmpdir, args_A, args_region, args_minq, args_mismatch, args_samargs):
    """Convert input bam to methylation files separating read 1 and read 2.
    bam:
       Input bam file, sorted and indexed
@@ -111,7 +110,7 @@ def bam2methylation(bam, ref, bed, tmpdir):
       L= ''
    else:
       L= '-l %s' %(bed)
-   if args.A:
+   if args_A:
       A= '-A'
    else:
       A= ''
@@ -135,7 +134,7 @@ def bam2methylation(bam, ref, bed, tmpdir):
       sys.stderr.write('Methylation file: ' + outname + '\n')
       ## Prepare and execute mpileup with appropriate -F flag
       cmd_r= 'samtools view -u %(samargs)s %(F)s %(bam)s %(region)s | samtools mpileup -d100000000 -Q0 -B %(L)s -f %(ref)s %(A)s - | sort -k1,1 -s' %{
-            'samargs':args.samargs, 'F': F, 'bam':bam, 'region': args.region, 'L':L, 'ref': ref, 'A': A}
+            'samargs':args_samargs, 'F': F, 'bam':bam, 'region': args_region, 'L':L, 'ref': ref, 'A': A}
       sys.stderr.write(cmd_r + '\n')
       p= subprocess.Popen(cmd_r, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
 ##      procs.append(p)
@@ -145,8 +144,8 @@ def bam2methylation(bam, ref, bed, tmpdir):
       for line in iter(p.stdout.readline, b''):
          line= line.strip().split('\t')
          methList= pileup2methylation(chrom= line[0], pos= int(line[1]),
-                                   callString= acceptedCalls(bases= line[4], qual_string= line[5], minq= args.minq),
-                                   ref= line[2], is_second= is_second, add_mismatch= args.mismatch)
+                                   callString= acceptedCalls(bases= line[4], qual_string= line[5], minq= args_minq),
+                                   ref= line[2], is_second= is_second, add_mismatch= args_mismatch)
          
          if methList is not None:
             mpileup.write('\t'.join(methList) + '\n')
@@ -336,7 +335,11 @@ acceptedCalls(bases, qual_string, minq)
 if __name__ == '__main__':
 
    args= parser.parse_args()
-
+   if args.region:
+      region= "'" + args.region + "'"
+   else:
+      region= ''
+   # ------------------------------------------------------------------------------
    if not os.path.isfile(args.input):
       sys.stderr.write('\nError: File %s not found\n\n' %(args.input))
       sys.exit(1)
@@ -347,7 +350,7 @@ if __name__ == '__main__':
    tmpdir= tempfile.mkdtemp(prefix= 'tmp_bam2methylation_')
    if not args.keeptmp:
        atexit.register(shutil.rmtree, tmpdir)
-      
-   outpiles= bam2methylation(bam= args.input, ref= args.ref, bed= args.l, tmpdir= tmpdir)
+   outpiles=  bam2methylation(bam= args.input, ref= args.ref, bed= args.l, tmpdir= tmpdir, args_A= args.A, args_region= region, args_minq= args.minq, args_mismatch=args.mismatch, args_samargs= args.samargs)
+   #outpiles= bam2methylation(bam= args.input, ref= args.ref, bed= args.l, tmpdir= tmpdir)
    mergeMpileup(outpiles[0], outpiles[1], args.mismatch)
    sys.exit()
