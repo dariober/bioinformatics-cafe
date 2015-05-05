@@ -5,7 +5,7 @@
 #   and what has succeded.
 # * After downloading check file size matches what reported by basespace
 
-VERSION<- '0.3.0'
+VERSION<- '0.3.1'
 APP_NAME= 'Get FASTQ files' # App name to get fastq files
 
 done<- suppressWarnings(suppressMessages(require(BaseSpaceR)))
