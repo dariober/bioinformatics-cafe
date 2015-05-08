@@ -107,6 +107,7 @@ getFastqFromBaseSpace<- function(
                             error= function(e) {
                                 cat(sprintf('\nAttempt: %s failed with\n', attempt))
                                 message(e)
+                                cat('\n')
                                 return(NA)
                             }
                         )
