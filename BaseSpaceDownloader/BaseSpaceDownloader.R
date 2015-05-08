@@ -5,7 +5,7 @@
 #   and what has succeded.
 # * After downloading check file size matches what reported by basespace
 
-VERSION<- '0.3.1'
+VERSION<- '0.3.2'
 APP_NAME= 'Get FASTQ files' # App name to get fastq files
 
 done<- suppressWarnings(suppressMessages(require(BaseSpaceR)))
@@ -110,10 +110,10 @@ getFastqFromBaseSpace<- function(
                                 return(NA)
                             }
                         )
-                        if(!is.na(out)){
-                            break
+                        if(is.null(out) || !is.na(out)){
+                            break  # If getFiles returns NULL (older versions) or not NA download was ok.
                         } else {
-                            attempt<- attempt + 1
+                            attempt<- attempt + 1 # Something went wrong, try again.
                         }
                     }
                 }
