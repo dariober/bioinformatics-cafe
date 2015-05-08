@@ -1,0 +1,175 @@
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434642/content",
+	"Size" : 119157381,
+	"Path" : "Data/Intensities/BaseCalls/MspI-A_S1_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434642",
+	"Name" : "MspI-A_S1_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434642",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434643/content",
+	"Size" : 125317119,
+	"Path" : "Data/Intensities/BaseCalls/MspI-A_S1_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434643",
+	"Name" : "MspI-A_S1_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434643",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434649/content",
+	"Size" : 135917449,
+	"Path" : "Data/Intensities/BaseCalls/MspI-B_S2_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434649",
+	"Name" : "MspI-B_S2_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434649",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434650/content",
+	"Size" : 144308699,
+	"Path" : "Data/Intensities/BaseCalls/MspI-B_S2_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434650",
+	"Name" : "MspI-B_S2_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434650",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434656/content",
+	"Size" : 94214597,
+	"Path" : "Data/Intensities/BaseCalls/MspI-C_S3_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434656",
+	"Name" : "MspI-C_S3_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434656",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434657/content",
+	"Size" : 98351864,
+	"Path" : "Data/Intensities/BaseCalls/MspI-C_S3_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434657",
+	"Name" : "MspI-C_S3_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434657",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434663/content",
+	"Size" : 85397733,
+	"Path" : "Data/Intensities/BaseCalls/MspI-D_S4_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434663",
+	"Name" : "MspI-D_S4_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434663",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434664/content",
+	"Size" : 87215224,
+	"Path" : "Data/Intensities/BaseCalls/MspI-D_S4_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434664",
+	"Name" : "MspI-D_S4_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434664",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434670/content",
+	"Size" : 91401671,
+	"Path" : "Data/Intensities/BaseCalls/MspI-E_S5_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434670",
+	"Name" : "MspI-E_S5_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434670",
+	"DateCreated" : "2013-05-29T16:33:24.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434671/content",
+	"Size" : 93210219,
+	"Path" : "Data/Intensities/BaseCalls/MspI-E_S5_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434671",
+	"Name" : "MspI-E_S5_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434671",
+	"DateCreated" : "2013-05-29T16:33:24.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434677/content",
+	"Size" : 119800134,
+	"Path" : "Data/Intensities/BaseCalls/MspI-F_S6_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434677",
+	"Name" : "MspI-F_S6_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434677",
+	"DateCreated" : "2013-05-29T16:33:24.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434678/content",
+	"Size" : 125422902,
+	"Path" : "Data/Intensities/BaseCalls/MspI-F_S6_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434678",
+	"Name" : "MspI-F_S6_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434678",
+	"DateCreated" : "2013-05-29T16:33:24.0000000"
+} 
+
+<sampleTable>
+filename	SampleId	ExperimentName
+MspI-A_S1_L001_R1_001.fastq.gz	MspI-A	MspI enrich test
+MspI-A_S1_L001_R2_001.fastq.gz	MspI-A	MspI enrich test
+MspI-B_S2_L001_R1_001.fastq.gz	MspI-B	MspI enrich test
+MspI-B_S2_L001_R2_001.fastq.gz	MspI-B	MspI enrich test
+MspI-C_S3_L001_R1_001.fastq.gz	MspI-C	MspI enrich test
+MspI-C_S3_L001_R2_001.fastq.gz	MspI-C	MspI enrich test
+MspI-D_S4_L001_R1_001.fastq.gz	MspI-D	MspI enrich test
+MspI-D_S4_L001_R2_001.fastq.gz	MspI-D	MspI enrich test
+MspI-E_S5_L001_R1_001.fastq.gz	MspI-E	MspI enrich test
+MspI-E_S5_L001_R2_001.fastq.gz	MspI-E	MspI enrich test
+MspI-F_S6_L001_R1_001.fastq.gz	MspI-F	MspI enrich test
+MspI-F_S6_L001_R2_001.fastq.gz	MspI-F	MspI enrich test
+</sampleTable>
+
+12 files found with regex ".*\.gz$"
+
+NULL

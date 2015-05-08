@@ -1,0 +1,63 @@
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434663/content",
+	"Size" : 85397733,
+	"Path" : "Data/Intensities/BaseCalls/MspI-D_S4_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434663",
+	"Name" : "MspI-D_S4_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434663",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434664/content",
+	"Size" : 87215224,
+	"Path" : "Data/Intensities/BaseCalls/MspI-D_S4_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434664",
+	"Name" : "MspI-D_S4_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434664",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434677/content",
+	"Size" : 119800134,
+	"Path" : "Data/Intensities/BaseCalls/MspI-F_S6_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434677",
+	"Name" : "MspI-F_S6_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434677",
+	"DateCreated" : "2013-05-29T16:33:24.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434678/content",
+	"Size" : 125422902,
+	"Path" : "Data/Intensities/BaseCalls/MspI-F_S6_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434678",
+	"Name" : "MspI-F_S6_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434678",
+	"DateCreated" : "2013-05-29T16:33:24.0000000"
+} 
+
+<sampleTable>
+filename	SampleId	ExperimentName
+MspI-D_S4_L001_R1_001.fastq.gz	MspI-D	MspI enrich test
+MspI-D_S4_L001_R2_001.fastq.gz	MspI-D	MspI enrich test
+MspI-F_S6_L001_R1_001.fastq.gz	MspI-F	MspI enrich test
+MspI-F_S6_L001_R2_001.fastq.gz	MspI-F	MspI enrich test
+</sampleTable>
+
+4 files found with regex ".*\.gz$"
+
+NULL

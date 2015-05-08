@@ -1,0 +1,63 @@
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434642/content",
+	"Size" : 119157381,
+	"Path" : "Data/Intensities/BaseCalls/MspI-A_S1_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434642",
+	"Name" : "MspI-A_S1_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434642",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434643/content",
+	"Size" : 125317119,
+	"Path" : "Data/Intensities/BaseCalls/MspI-A_S1_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434643",
+	"Name" : "MspI-A_S1_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434643",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434656/content",
+	"Size" : 94214597,
+	"Path" : "Data/Intensities/BaseCalls/MspI-C_S3_L001_R1_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434656",
+	"Name" : "MspI-C_S3_L001_R1_001.fastq.gz",
+	"Href" : "v1pre3/files/109434656",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+FilesSummary object:
+Collection with 1 fileItem objects (out of a total of 2 objects).
+{
+	"HrefContent" : "v1pre3/files/109434657/content",
+	"Size" : 98351864,
+	"Path" : "Data/Intensities/BaseCalls/MspI-C_S3_L001_R2_001.fastq.gz",
+	"ContentType" : "application/x-gzip",
+	"Id" : "109434657",
+	"Name" : "MspI-C_S3_L001_R2_001.fastq.gz",
+	"Href" : "v1pre3/files/109434657",
+	"DateCreated" : "2013-05-29T16:33:23.0000000"
+} 
+
+<sampleTable>
+filename	SampleId	ExperimentName
+MspI-A_S1_L001_R1_001.fastq.gz	MspI-A	MspI enrich test
+MspI-A_S1_L001_R2_001.fastq.gz	MspI-A	MspI enrich test
+MspI-C_S3_L001_R1_001.fastq.gz	MspI-C	MspI enrich test
+MspI-C_S3_L001_R2_001.fastq.gz	MspI-C	MspI enrich test
+</sampleTable>
+
+4 files found with regex "MspI-[AC]"
+
+NULL
