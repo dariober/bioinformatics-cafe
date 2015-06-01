@@ -1,8 +1,11 @@
 #!/bin/bash
 
 docstring="Peak merger and overlap report \\n
-USAGE \\n
+USAGE & EXAMPLE\\n
 mergePeaks.sh <a.bed> [b.bed ...] \\n
+\\n
+mergePeaks.sh a.bed b.bed c.bed > merged.bed 2> summary.txt
+\\n
 \\n
 REQUIRES on PATH \\n
 - bedtools merge Version: v2.23.0+ \\n
