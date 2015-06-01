@@ -2,8 +2,6 @@
 
 For usage and examples see `BaseSpaceDownloader.R -h`.
 
-Current depen
-
 ## TODO
 
 * Check downloaded file size match size reported by BaseSpace
