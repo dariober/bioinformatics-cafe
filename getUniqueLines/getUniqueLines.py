@@ -2,6 +2,8 @@
 
 import sys
 
+VERSION= '0.1.0'
+
 docstring= """
 DESCRIPTION
 Read from stdin a (sorted) file and output non-duplicate lines.
@@ -9,7 +11,9 @@ Duplicates are identified by the first record in each line, tab separated.
 
 EXAMPLE USAGE
 sort -k1,1 f.sam rc.sam | getUniqueLines.py 
-"""
+
+Version %s 
+""" %(VERSION)
 
 if len(sys.argv) != 1:
     print docstring
