@@ -104,6 +104,7 @@ getFastqFromBaseSpace<- function(
     accessToken,
     dest_dir= '.' ,
     regex= '.*\\.gz$',
+    expm_regex= '.*',
     sample_regex= '.*',
     echo= FALSE,
     verbose= TRUE){
@@ -133,7 +134,7 @@ getFastqFromBaseSpace<- function(
     inSampleAll <- Samples(aAuth, id = Id(sampl))
     inSample<- c()
     for(s in inSampleAll){
-        if(grepl(sample_regex, s@data@SampleId, perl= TRUE)){
+        if(grepl(expm_regex, s@data@ExperimentName, perl= TRUE) && grepl(sample_regex, s@data@SampleId, perl= TRUE)){
             inSample<- c(inSample, s)
         }
     }
@@ -221,6 +222,7 @@ parser<- ArgumentParser(description= docstring, formatter_class= 'argparse.RawTe
 parser$add_argument("-p", "--projid", help= "Project ID. Typically obtained from project's URL", required= TRUE)
 parser$add_argument("-t", "--token", help= "Access token")
 parser$add_argument("-r", "--regex", help= "Regex to filter by file name. Default all files ending in .gz", default= '.*\\.gz$')
+parser$add_argument("-E", "--expm_regex", help= "Regex to filter by experiment name. Default all experiments", default= '.*')
 parser$add_argument("-s", "--sample_regex", help= "Regex to filter by sample. Default all samples", default= '.*')
 parser$add_argument("-e", "--echo", help= "Only show which files would be downloaded", action= 'store_true')
 parser$add_argument("-o", "--outdir", help= "DEPRECATED: Output dir for fetched files.\\n", default= '.')
@@ -241,6 +243,7 @@ fileDT<- getFastqFromBaseSpace(
     accessToken= accessToken,
     dest_dir= xargs$outdir ,
     regex= xargs$regex,
+    expm_regex= xargs$expm_regex,
     sample_regex= xargs$sample_regex,
     echo= xargs$echo,
     verbose= TRUE
@@ -249,6 +252,6 @@ cat('<sampleTable>\n')
 write.table(fileDT, file= stdout(), sep= '\t', row.names= FALSE, quote= FALSE)
 cat('</sampleTable>\n')
 
-cat(sprintf('\n%s files found with regex "%s"\n\n', nrow(fileDT), xargs$regex))
-warnings()
+cat(sprintf('\n%s files found with regexes\n  experiment: "%s"\n  sample "%s"\n  file: "%s"\n\n', nrow(fileDT), xargs$expm_regex, xargs$sample_regex, xargs$regex))
+warnings() 
 quit(save= 'no')
