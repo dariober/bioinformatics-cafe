@@ -3,9 +3,8 @@
 # TODO
 # * Better reporting for failed files. Make it obvious what has failed
 #   and what has succeded.
-# * After downloading check file size matches what reported by basespace
 
-VERSION<- '0.3.2'
+VERSION<- '0.4.0'
 APP_NAME= 'Get FASTQ files' # App name to get fastq files
 
 done<- suppressWarnings(suppressMessages(require(BaseSpaceR)))
@@ -48,6 +47,58 @@ getBasespaceToken<- function(app_name= APP_NAME, x= '~/.basespace_login'){
     return(token)
 }
 
+getFileSizeFromFileItem<- function(fileItem){
+    # Returns the size of a file as stored in a FileItem obj.
+    # fileItem:
+    #      FileItem obj typically returned from a Samples obj with
+    #      listFiles(s)
+    # Return:
+    #      Named list with file name and file size.
+    fitems<- fileItem@data@Items
+    stopifnot(length(fitems) == 1) ## Items is a list so presulmably it could contain more than 1
+                                   ## element. Stop if it has more than 1.
+    fileSize<- fitems[[1]]@Size
+    fileName<- fitems[[1]]@Path # This includes Path and Name
+    return(list(fileName= fileName, fileSize= fileSize))
+}
+
+compareFileSizes<- function(fileItem){
+    # Compare the file size in a FileItem obj (expected) vs the size of the
+    # downloaded file (observed). The downloaded file is expected to be on the
+    # same path as in the fileItem obj, typically in current dir or in
+    # Data/Intensities/...
+    # Return:
+    #   Named list with file name, exp size, obs size.  
+    fileNameSize<- getFileSizeFromFileItem(fileItem)
+    if(!file.exists(fileNameSize$fileName)){
+        print(fileNameSize$fileName)
+        print(fileItem)
+        stop('File not found!')
+    }
+    obsSize<- file.size(fileNameSize$fileName)
+    expObs<- list(fileName= fileNameSize$fileName, sizeExp= fileNameSize$fileSize, sizeObs= obsSize)
+    return(expObs)
+}
+
+checkFileExists<- function(fileItem){
+    # Check whether the file in FileItem obj exists on disk (i.e. jhas been
+    # downloaded already) and check whether file size on disk matches file size in
+    # FileItem object.
+    # Return:
+    #   TRUE if filename and size on disk match name and size in FileItem.
+    #   FALSE otherwise.
+    expFileNameSize<- getFileSizeFromFileItem(fileItem)
+    if(file.exists(expFileNameSize$fileName) == FALSE){
+        return(FALSE)
+    }
+    expObsSize<- compareFileSizes(fileItem)
+    if(expObsSize$sizeExp == expObsSize$sizeObs){
+        return(TRUE)
+    } else {
+        return(FALSE)
+    }
+}
+
 getFastqFromBaseSpace<- function(
     proj_id,
     accessToken,
@@ -87,9 +138,10 @@ getFastqFromBaseSpace<- function(
         }
     }
 
-    for(s in inSample){ 
+    for(s in inSample){
         ff <- listFiles(s)
         for(i in 1:length(ff)){
+            # Iterate thorough the FileItem objects
             f<- ff[i]
             stopifnot(length(f@data@Items) == 1)
             if( grepl(regex, Name(f), perl= TRUE) ){
@@ -100,6 +152,10 @@ getFastqFromBaseSpace<- function(
                 }
                 attempt<- 1
                 if(!echo){
+                    if(checkFileExists(f)){
+                        cat('\nFile found, skipping download\n')
+                        next
+                    }
                     # Try to download file up to five times.
                     while(attempt <= 5){
                         out<- tryCatch(
@@ -112,10 +168,17 @@ getFastqFromBaseSpace<- function(
                             }
                         )
                         if(is.null(out) || !is.na(out)){
-                            break  # If getFiles returns NULL (older versions) or not NA download was ok.
+                            break  # If getFiles returns NULL (older versions) or not NA download was ok.                            
                         } else {
                             attempt<- attempt + 1 # Something went wrong, try again.
                         }
+                    }
+                    # Check expected and downloaded file sizes:
+                    expObsSize<- compareFileSizes(f)
+                    if(expObsSize$sizeExp != expObsSize$sizeObs){
+                        print(f)
+                        stop(sprintf('\nFile %s: Expected size from FileItem object is %s but downloaded file is %s\n\n', expObsSize$fileName, expObsSize$sizeExp, expObsSize$sizeObs))
+                        stop()
                     }
                 }
             }
@@ -157,12 +220,13 @@ parser<- ArgumentParser(description= docstring, formatter_class= 'argparse.RawTe
 
 parser$add_argument("-p", "--projid", help= "Project ID. Typically obtained from project's URL", required= TRUE)
 parser$add_argument("-t", "--token", help= "Access token")
-parser$add_argument("-o", "--outdir", help= "Output dir for fetched files.\\nBaseSpaceR will put here the dir Data/Intensities/BaseCalls/", default= '.')
 parser$add_argument("-r", "--regex", help= "Regex to filter by file name. Default all files ending in .gz", default= '.*\\.gz$')
 parser$add_argument("-s", "--sample_regex", help= "Regex to filter by sample. Default all samples", default= '.*')
 parser$add_argument("-e", "--echo", help= "Only show which files would be downloaded", action= 'store_true')
+parser$add_argument("-o", "--outdir", help= "DEPRECATED: Output dir for fetched files.\\n", default= '.')
 
 xargs<- parser$parse_args()
+xargs$outdir<- '.'
 
 # ==============================================================================
 
