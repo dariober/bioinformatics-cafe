@@ -34,7 +34,8 @@ USAGE
     addContextToBed.sh <bedgraph> <fasta-ref> <strand-column-index> <up> <down>
 
 NOTES:
-    Error handling is not very robust, if one of the pipes fails the script keeps going!
+    * Error handling is not very robust, if one of the pipes fails the script keeps going!
+    * If an extended interval is beyond a chromosome length, the reported sequence is truncated.
 
 Version: $VERSION
 "
