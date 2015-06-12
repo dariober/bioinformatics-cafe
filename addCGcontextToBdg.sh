@@ -3,6 +3,8 @@
 set -e
 set -o pipefail
 
+VERSION='0.3.0'
+
 bdg=$1
 ref=$2
 strand=$3
@@ -30,7 +32,7 @@ USAGE
 NOTES:
     Error handling is not very robust, if one of the pipes fails the script keeps going!
 
-Version: 0.2
+Version: $VERSION
 "
 exit 1
 fi
@@ -43,7 +45,7 @@ awk -v strandCol=$strand 'BEGIN{OFS="\t"} {print $1, $2, $3, ".", ".", $strandCo
 | awk 'BEGIN{IGNORECASE=1} {if ($2~/^CG/)
                                 {print "CG"}
                             else if ($2~/^C[ACTU][G]/)
-                                {print "CHH"}
+                                {print "CHG"}
                             else if ($2~/^C[ACTU][ACTU]/)
                                 {print "CHH"}
                             else if ($2~/^C/)
