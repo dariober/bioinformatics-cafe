@@ -18,7 +18,7 @@ DESCRIPTION
 
 POSITIONAL ARGUMENTS
 1. Bed file to annotate 
-2. Reeference fasta file. *.fai index must be present in the same dir.
+2. Reference fasta file. *.fai index must be present in the same dir.
 3. Column index (1-based) in bed file with strand info. '+' for forward '-' for reverse
 4. Add this many bases to from UPstream of the interval (i.e. to the left if +strand on forw)
 5. Add this many bases to from DOWNstream of the C (i.e. to the right if -strand on forw)
@@ -48,8 +48,4 @@ awk -v strandCol=$strand 'BEGIN{OFS="\t"} {print $1, $2, $3, ".", ".", $strandCo
 | cut -f 2 \
 | paste $bdg -
 
-echo $?
 
-if [[ $? != 0 ]]; then
-    echo "WRONG!!"
-fi
