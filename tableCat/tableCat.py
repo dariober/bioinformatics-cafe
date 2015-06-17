@@ -84,10 +84,12 @@ def xopen(x):
     Return: Open file handle ready to iterate through
     """
     try:
-        fin= open(x)
+        fin= gzip.open(x, 'rb')
+        fin.readline()
+        fin.seek(0)
     except IOError:
         try:
-            fin= gzip.open(x)
+            fin= open(x)
         except IOError:
             sys.exit('Cannot open %s' %(x))
     return fin
