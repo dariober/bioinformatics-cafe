@@ -6,7 +6,7 @@ import argparse
 import re
 import gzip
 
-VERSION= '0.1.0'
+VERSION= '0.22.0'
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
