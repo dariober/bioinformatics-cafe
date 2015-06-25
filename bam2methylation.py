@@ -90,7 +90,7 @@ parser.add_argument('--keeptmp',
                   help='''Keep tmp dir. Use for debugging.
                    ''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.3')
+parser.add_argument('--version', action='version', version='%(prog)s 0.3.1')
 
 # ------------------------------------------------------------------------------
 def bam2methylation(bam, ref, bed, tmpdir, args_A, args_region, args_minq, args_mismatch, args_samargs):
@@ -137,19 +137,16 @@ def bam2methylation(bam, ref, bed, tmpdir, args_A, args_region, args_minq, args_
             'samargs':args_samargs, 'F': F, 'bam':bam, 'region': args_region, 'L':L, 'ref': ref, 'A': A}
       sys.stderr.write(cmd_r + '\n')
       p= subprocess.Popen(cmd_r, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
-##      procs.append(p)
-      
-      ## Get methylation call as output becomes available
-      ## See http://stackoverflow.com/questions/17411966/printing-stdout-in-realtime-from-a-subprocess-that-requires-stdin
-      for line in iter(p.stdout.readline, b''):
-         line= line.strip().split('\t')
-         methList= pileup2methylation(chrom= line[0], pos= int(line[1]),
+      for line in p.stdout:
+          line= line.strip().split('\t')
+          methList= pileup2methylation(chrom= line[0], pos= int(line[1]),
                                    callString= acceptedCalls(bases= line[4], qual_string= line[5], minq= args_minq),
                                    ref= line[2], is_second= is_second, add_mismatch= args_mismatch)
-         
-         if methList is not None:
-            mpileup.write('\t'.join(methList) + '\n')
-      mpileup.close()   
+
+          if methList is not None:
+              mpileup.write('\t'.join(methList) + '\n')
+      mpileup.close()
+
       # Check clean exit
       stdout, stderr= p.communicate()
       if p.returncode != 0:
