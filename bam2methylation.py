@@ -181,6 +181,8 @@ def cleanCallString(bases):
          skip= True
       elif skip:
          skip= False
+      elif x == '$':
+         continue # Skip end-of-read marker
       elif x in ('+', '-'):
          getIndel= True
       elif getIndel:
@@ -193,10 +195,6 @@ def cleanCallString(bases):
       else:
          callString += x
    
-   ## Remove the end of read marker. Do this now. If you do it earlier you might
-   ## remove the mapping quality following ^ and mess up the string
-   ## Obviuosly the all thing could be better done...
-   callString= callString.replace('$', '')
    return(callString)
       
 def pileup2methylation(chrom, pos, callString, ref, is_second= False, add_mismatch= False):
