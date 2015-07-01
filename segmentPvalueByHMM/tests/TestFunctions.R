@@ -44,6 +44,24 @@ test.canRecodeStates<- function(){
     checkEquals( expt, recoded )
 }
 
+test.canRecodeOneState<- function(){
+    # A stretch of only high pvals.
+    expt<- rep('u', 10)
+    states<- rep(1, 10)
+    obs<- runif(n= 10, min= 0.8, max= 1)
+
+    recoded<- recodeStates(states, obs, c('M', 'u'))
+    checkEquals( expt, recoded )
+    
+    ## Only small pvals
+    expt<- rep('M', 10)
+    states<- rep(1, 10)
+    obs<- runif(n= 10, min= 0, max= 0.1)
+
+    recoded<- recodeStates(states, obs, c('M', 'u'))
+    checkEquals(expt, recoded)
+}
+
 test.canRunHmmAndGetStates<- function(){
     bed<- data.table(chrom= rep('chr1', 100), pvals= c(
             runif(n= 30, min= 0.2, max= 1),
@@ -95,12 +113,12 @@ test.canRunHmmAndGetPosteriors<- function(){
 }
 
 test.canRunScript<- function(){
-    cmd<- './segmentPvalueByHMM.R -i tests/input-2.txt.gz -x 2'
+    cmd<- './segmentPvalueByHMM.R -i tests/input-2.txt.gz -p 2'
     exitCode<- system(cmd)
     checkEquals(0, exitCode)
     
     ## Can read from stdin:
-    cmd<- 'gunzip -c tests/input-2.txt.gz  | ./segmentPvalueByHMM.R -i - -x 2'
+    cmd<- 'gunzip -c tests/input-2.txt.gz  | ./segmentPvalueByHMM.R -i - -p 2'
     exitCode<- system(cmd)
     checkEquals(0, exitCode)
 }

@@ -107,6 +107,21 @@ prepareChromChunks<- function(chrSize, maxChunkSize){
     return(list(starts= starts, ends= ends))
 }
 
+recodeOneState<- function(states, obs, levels){
+    # Recode the vector of unique states accoring to pvalues and recoding levels
+    # If HMM gives a stretch of only one state (e.g. only demethylated) you
+    # want to make this state low pval or high pval
+    stopifnot(length(unique(states)) == 1)
+    med<- median(obs, na.rm= TRUE)
+    if(med > 0.1) {
+        # Educated guess for median. If above this threshold call the state "high pval"
+        newx<- rep(levels[length(levels)], length(states))
+    } else {
+        newx<- rep(levels[1], length(states))
+    }
+    return(newx)
+}
+
 recodeStates<- function(states, obs, levels){
     # Rename the HMM decoded states to match the given ones. Renaming is done by sorting
     # the decoded states by ascending obs
@@ -117,7 +132,8 @@ recodeStates<- function(states, obs, levels){
     #   states accordingly
     # levels:
     #   Vector of levels of length equal to the number of unique states to be used for
-    #   renaming
+    #   renaming. Must be sorted by increasing pvalue. E.g. c('M', 'u') for M (low p),
+    #   u (high p).
     # Return:
     #    Vector of renamed states
     # Example:
@@ -127,11 +143,15 @@ recodeStates<- function(states, obs, levels){
     #   recodeStates(states, obs, levels) #<<< c(L, L, L, H, H, H, L, L)
     # -------------------------------------------------------------------------
     stopifnot(length(states) == length(obs))
-    avg<- data.table(states, obs)
-    avg<- avg[, list(stateavg= mean(obs, na.rm= TRUE)), by= states]
-    avg<- avg[order(stateavg), ]
-    avg$newStates<- levels
-    newx<- levels[match(states, avg$states)]
+    if(length(unique(states)) == 1){
+        newx<- recodeOneState(states, obs, levels)
+    } else {
+        avg<- data.table(states, obs)
+        avg<- avg[, list(stateavg= mean(obs, na.rm= TRUE)), by= states]
+        avg<- avg[order(stateavg), ]
+        avg$newStates<- levels
+        newx<- levels[match(states, avg$states)]
+    }
     return(newx)
 }
 
