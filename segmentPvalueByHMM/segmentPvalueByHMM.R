@@ -20,15 +20,16 @@ if(done == FALSE){
 ## FUNCTIONS
 ## ---------
 
-readBedFile<- function(filename, pIndex, header= FALSE){
-    # Read bed file where p-values to segment are in column index `pIndex`
+readBedFile<- function(filename, pIndex, chromIndex= 1, header= FALSE){
+    # Read bed file where p-values to segment are in column index `pIndex` and chromosomes in 
+    # column `chromIndex`
     write('Reading in data file... ', stderr())
     if(filename == '-'){
-        bed<- data.table(read.table(file('stdin'), header= header, sep= '\t', stringsAsFactors= FALSE)[, c(1, pIndex)])
+        bed<- data.table(read.table(file('stdin'), header= header, sep= '\t', stringsAsFactors= FALSE)[, c(chromIndex, pIndex)])
     } else if(grepl('\\.gz$', filename)){
-        bed<- fread(sprintf('gunzip -c %s', filename), select= c(1, pIndex), header= header, sep= '\t', showProgress= FALSE)
+        bed<- fread(sprintf('gunzip -c %s', filename), select= c(chromIndex, pIndex), header= header, sep= '\t', showProgress= FALSE)
     } else {
-        bed<- fread(filename, select= c(1, pIndex), header= header, sep= '\t', showProgress= FALSE)
+        bed<- fread(filename, select= c(chromIndex, pIndex), header= header, sep= '\t', showProgress= FALSE)
     }
     setnames(bed, names(bed)[1], 'chrom')
     setnames(bed, names(bed)[2], 'pvals')
@@ -125,7 +126,7 @@ recodeStates<- function(states, obs, levels){
     #   levels<- c('L', 'H')
     #   recodeStates(states, obs, levels) #<<< c(L, L, L, H, H, H, L, L)
     # -------------------------------------------------------------------------
-    stopifnot(length(states) == length(obs), length(unique(states)) == length(unique(levels)))
+    stopifnot(length(states) == length(obs))
     avg<- data.table(states, obs)
     avg<- avg[, list(stateavg= mean(obs, na.rm= TRUE)), by= states]
     avg<- avg[order(stateavg), ]
@@ -220,8 +221,7 @@ if(done == FALSE){
 
 docstring<- sprintf("DESCRIPTION \\n\\
 Segment pvalues in input file in two states M: stretches of low pvalues; u: otherwise.\\n\\
-Input file must be tab separated with chromosomes in column 1, and p-values in \\n\\
-column given in --pIndex. For sensible results it must be sorted by position.\\n\\
+Input file must be tab separated with a column of chromosomes and a column of p-values. \\n\\
 \\n\\
 OUTPUT:\\n\\
 Tab separated file to stdout with columns: \\n\\
@@ -230,13 +230,14 @@ chrom, input pvalue, recoded pvalue, state, posterior prob of state M.\\n\\
 Version %s", VERSION)
 parser<- ArgumentParser(description= docstring, formatter_class= 'argparse.RawTextHelpFormatter')
 parser$add_argument("-i", "--input", help= "Input file, can be gzip'd, use - to read from stdin. Must have chrom names in column 1.", required= TRUE)
-parser$add_argument("-x", "--pIndex", help= "Column index with raw pvalues. 1-based. Columns other than the first and this one are ignored.", required= TRUE, type= 'integer')
+parser$add_argument("-p", "--pIndex", help= "Column index with raw pvalues. 1-based. Columns other than the first and this one are ignored.", required= TRUE, type= 'integer')
+parser$add_argument("-c", "--chromIndex", help= "Column index with chromosome. Columns other than the first and this one are ignored. Default 1", default= 1, type= 'integer')
 parser$add_argument("-H", "--header", help= "Input file has header", action= 'store_true')
 
 xargs<- parser$parse_args()
 
 # ==============================================================================
 
-bed<- readBedFile(xargs$input, xargs$pIndex, header= xargs$header)
+bed<- readBedFile(xargs$input, xargs$pIndex, chromIndex= xargs$chromIndex, header= xargs$header)
 states<- HMMrunner(bed)
 quit(save= 'no')
