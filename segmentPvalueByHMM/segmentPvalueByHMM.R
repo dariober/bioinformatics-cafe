@@ -25,9 +25,9 @@ readBedFile<- function(filename, pIndex, header= FALSE){
     if(filename == '-'){
         bed<- data.table(read.table(file('stdin'), header= header, sep= '\t', stringsAsFactors= FALSE)[, c(1, pIndex)])
     } else if(grepl('\\.gz$', filename)){
-        bed<- fread(sprintf('gunzip -c %s', filename), select= c(1, pIndex), header= header, sep= '\t')
+        bed<- fread(sprintf('gunzip -c %s', filename), select= c(1, pIndex), header= header, sep= '\t', showProgress= FALSE)
     } else {
-        bed<- fread(filename, select= c(1, pIndex), header= header, sep= '\t')
+        bed<- fread(filename, select= c(1, pIndex), header= header, sep= '\t', showProgress= FALSE)
     }
     setnames(bed, names(bed)[1], 'chrom')
     setnames(bed, names(bed)[2], 'pvals')
@@ -137,24 +137,25 @@ HMMrunner<- function(bed, MAXPOS= 40000){
     bed[, recode_P := recodePvals(pvals)]
     states<- vector()
     posteriors<- vector()
+    hmmOut<- data.table(state= NA, postM= NA)[0,]
     for (xchr in unique(bed$chrom)) {
         ## Loop through each chromosome to fit HMM.
         ## Need to split chroms in chunks due to memory limit
-        Chrom<- bed[chrom == xchr, ]
-        startsEnds<- prepareChromChunks(nrow(Chrom), MAXPOS)
+        xbed<- bed[chrom == xchr, ]
+        startsEnds<- prepareChromChunks(nrow(xbed), MAXPOS)
         starts<- startsEnds$starts
         ends<- startsEnds$ends
     
         hmmNeeded<- TRUE
-        if(length(Chrom$recode_P) < 500000){
+        if(length(xbed$recode_P) < 500000){
             ## Fit the model to entire chrom, if not too big:
-            hmmfit<- HMMFit(Chrom$recode_P, nStates= 2, dis= 'DISCRETE')
+            hmmfit<- HMMFit(xbed$recode_P, nStates= 2, dis= 'DISCRETE')
             hmmNeeded<- FALSE
         }
         # print(hmmfit$HMM$transMat)
         for (j in 1:length(starts)){
             write(sprintf('%s %s %s %s', xchr, starts[j], ends[j], ends[j] - starts[j]), stderr())
-            dat<- Chrom[starts[j]:ends[j],]
+            dat<- xbed[starts[j]:ends[j],]
             recode_P<- as.numeric(dat$recode_P)
             if(hmmNeeded){
                 hmmfit<- HMMFit(recode_P, nStates= 2, dis= 'DISCRETE')
@@ -185,11 +186,15 @@ HMMrunner<- function(bed, MAXPOS= 40000){
             } else {
                 stop('Unexpected condition')
             }
-        posteriors<- append(posteriors, prob[,mx])
-        states<- append(states, xstates)
+        hmmOutSub<- data.table(state= xstates, posteriors= prob[,mx])
+        
+        ## Write to stout as results come through
+        write.table(cbind(xbed, hmmOutSub), stdout(), sep= '\t', col.names= TRUE, row.names= FALSE, quote= FALSE)
+
+        hmmOut<- rbindlist(list(hmmOut, hmmOutSub))
         }
     }
-    return(data.table(state= states, postM= posteriors))
+    return(hmmOut)
 }
 
 # END_OF_FUNCTIONS <- Don't change this string it is used to source in run_test.R
@@ -228,7 +233,8 @@ parser$add_argument("-H", "--header", help= "Input file has header", action= 'st
 
 xargs<- parser$parse_args()
 
+# ==============================================================================
+
 bed<- readBedFile(xargs$input, xargs$pIndex, header= xargs$header)
 states<- HMMrunner(bed)
-write.table(cbind(bed, states), stdout(), sep= '\t', col.names= TRUE, row.names= FALSE, quote= FALSE)
 quit(save= 'no')
