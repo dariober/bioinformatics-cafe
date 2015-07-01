@@ -161,6 +161,7 @@ HMMrunner<- function(bed, MAXPOS= 40000){
     states<- vector()
     posteriors<- vector()
     hmmOut<- data.table(state= NA, postM= NA)[0,]
+    outHeader<- TRUE
     for (xchr in unique(bed$chrom)) {
         ## Loop through each chromosome to fit HMM.
         ## Need to split chroms in chunks due to memory limit
@@ -175,7 +176,6 @@ HMMrunner<- function(bed, MAXPOS= 40000){
             hmmfit<- HMMFit(xbed$recode_P, nStates= 2, dis= 'DISCRETE')
             hmmNeeded<- FALSE
         }
-        # print(hmmfit$HMM$transMat)
         for (j in 1:length(starts)){
             write(sprintf('%s %s %s %s', xchr, starts[j], ends[j], ends[j] - starts[j]), stderr())
             dat<- xbed[starts[j]:ends[j],]
@@ -209,12 +209,12 @@ HMMrunner<- function(bed, MAXPOS= 40000){
             } else {
                 stop('Unexpected condition')
             }
-        hmmOutSub<- data.table(state= xstates, posteriors= prob[,mx])
-        
-        ## Write to stout as results come through
-        write.table(cbind(xbed, hmmOutSub), stdout(), sep= '\t', col.names= TRUE, row.names= FALSE, quote= FALSE)
-
-        hmmOut<- rbindlist(list(hmmOut, hmmOutSub))
+            hmmOutSub<- data.table(state= xstates, posteriors= prob[,mx])
+            ## Write to stout as results come through
+            out<- cbind(dat, hmmOutSub)
+            write.table(out, stdout(), sep= '\t', col.names= outHeader, row.names= FALSE, quote= FALSE)
+            outHeader<- FALSE
+            hmmOut<- rbindlist(list(hmmOut, hmmOutSub))
         }
     }
     return(hmmOut)
