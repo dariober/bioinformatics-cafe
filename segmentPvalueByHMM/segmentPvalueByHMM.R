@@ -22,6 +22,7 @@ if(done == FALSE){
 
 readBedFile<- function(filename, pIndex, header= FALSE){
     # Read bed file where p-values to segment are in column index `pIndex`
+    write('Reading in data file... ', stderr())
     if(filename == '-'){
         bed<- data.table(read.table(file('stdin'), header= header, sep= '\t', stringsAsFactors= FALSE)[, c(1, pIndex)])
     } else if(grepl('\\.gz$', filename)){
@@ -31,6 +32,7 @@ readBedFile<- function(filename, pIndex, header= FALSE){
     }
     setnames(bed, names(bed)[1], 'chrom')
     setnames(bed, names(bed)[2], 'pvals')
+    write(sprintf('Done: %s rows', nrow(bed)), stderr())
     return(bed)
 }
 
