@@ -209,7 +209,7 @@ HMMrunner<- function(bed, MAXPOS= 40000){
             } else {
                 stop('Unexpected condition')
             }
-            hmmOutSub<- data.table(state= xstates, posteriors= prob[,mx])
+            hmmOutSub<- data.table(state= xstates, postM= prob[,mx])
             ## Write to stout as results come through
             out<- cbind(dat, hmmOutSub)
             write.table(out, stdout(), sep= '\t', col.names= outHeader, row.names= FALSE, quote= FALSE)
