@@ -230,8 +230,8 @@ chrom, input pvalue, recoded pvalue, state, posterior prob of state M.\\n\\
 Version %s", VERSION)
 parser<- ArgumentParser(description= docstring, formatter_class= 'argparse.RawTextHelpFormatter')
 parser$add_argument("-i", "--input", help= "Input file, can be gzip'd, use - to read from stdin. Must have chrom names in column 1.", required= TRUE)
-parser$add_argument("-p", "--pIndex", help= "Column index with raw pvalues. 1-based. Columns other than the first and this one are ignored.", required= TRUE, type= 'integer')
-parser$add_argument("-c", "--chromIndex", help= "Column index with chromosome. Columns other than the first and this one are ignored. Default 1", default= 1, type= 'integer')
+parser$add_argument("-p", "--pIndex", help= "Column index with raw pvalues. 1-based.", required= TRUE, type= 'integer')
+parser$add_argument("-c", "--chromIndex", help= "Column index with chromosome. Default 1", default= 1, type= 'integer')
 parser$add_argument("-H", "--header", help= "Input file has header", action= 'store_true')
 
 xargs<- parser$parse_args()
