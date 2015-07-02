@@ -121,5 +121,11 @@ test.canRunScript<- function(){
     cmd<- 'gunzip -c tests/input-2.txt.gz  | ./segmentPvalueByHMM.R -i - -p 2'
     exitCode<- system(cmd)
     checkEquals(0, exitCode)
+
+    ## Multiple chroms:
+    cmd<- './segmentPvalueByHMM.R -i tests/input-3.txt -p 2'
+    exitCode<- system(cmd)
+    checkEquals(0, exitCode)
+
 }
 

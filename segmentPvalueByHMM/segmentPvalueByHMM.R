@@ -155,67 +155,77 @@ recodeStates<- function(states, obs, levels){
     return(newx)
 }
 
-HMMrunner<- function(bed, MAXPOS= 40000){
+HMMChrom<- function(chromBed, MAXPOS= 40000){
+    # Fit HMM thorugh chromosome.
+    # Input chromBed is data.table with columns:
+    stopifnot(c('pvals', 'recode_P') %in% names(chromBed))
+    hmmChrom<- data.table(chrom= NA, pvals= NA, state= NA, postM= NA, state_id= NA)[0,]
+    startsEnds<- prepareChromChunks(nrow(chromBed), MAXPOS)
+    starts<- startsEnds$starts
+    ends<- startsEnds$ends
+
+    hmmNeeded<- TRUE
+    if(length(chromBed$recode_P) < 500000){
+        ## Fit the model to entire chrom, if not too big:
+        hmmfit<- HMMFit(chromBed$recode_P, nStates= 2, dis= 'DISCRETE')
+        hmmNeeded<- FALSE
+    }
+    for (j in 1:length(starts)){
+        write(sprintf('from: %s to: %s length: %s', starts[j], ends[j], ends[j] - starts[j] + 1), stderr())
+        dat<- chromBed[starts[j]:ends[j],]
+        recode_P<- as.numeric(dat$recode_P)
+        if(hmmNeeded){
+            hmmfit<- HMMFit(recode_P, nStates= 2, dis= 'DISCRETE')
+        }           
+        ## DATA DECODING
+        vit<- viterbi(hmmfit, recode_P)
+     
+        ## Recode to have low pval Methylated
+        xstates<- recodeStates(vit$states, dat$pvals, levels= c('M', 'u'))  
+
+        ## POSTERIOR DECODING: Get the probability of each cytosine to belong to the M or u state
+        fbLog <- forwardBackward(hmmfit, dat$recode_P)
+        prob<- fbLog$Gamma # Matrix of probs. Rows: Observations (loci), Cols: States
+        # We need Need to pick the column corresponding to state 'M'.
+        stopifnot(ncol(prob) == 2)
+        if(xstates[1] == 'M'){
+            if(vit$states[1] == 1){
+                mx<- 1
+            } else {
+                mx<- 2
+            }
+        } else if(xstates[1] == 'u'){
+            if(vit$states[1] == 1){
+                mx<- 2
+            } else {
+                mx<- 1
+            }
+        } else {
+            stop('Unexpected condition')
+        }
+        hmmOutSub<- data.table(chrom= dat$chrom, pvals= dat$pvals, state= xstates, postM= prob[,mx])
+        xrle<- rle(hmmOutSub$state)
+        state_id<- paste0(hmmOutSub$state, rep(1:length(xrle$values), times= xrle$length))
+        hmmOutSub[, state_id := state_id]
+        hmmChrom<- rbindlist(list(hmmChrom, hmmOutSub))
+    }
+    return(hmmChrom)
+}
+
+HMMrunner<- function(bed){
     # Run HMM. bed is a bed file with columns 'chrom' and 'pvals'
     bed[, recode_P := recodePvals(pvals)]
-    states<- vector()
-    posteriors<- vector()
     hmmOut<- data.table(state= NA, postM= NA)[0,]
     outHeader<- TRUE
+    fromID<- 1
     for (xchr in unique(bed$chrom)) {
-        ## Loop through each chromosome to fit HMM.
-        ## Need to split chroms in chunks due to memory limit
+        write(sprintf('Chrom: %s', xchr), stderr())
         xbed<- bed[chrom == xchr, ]
-        startsEnds<- prepareChromChunks(nrow(xbed), MAXPOS)
-        starts<- startsEnds$starts
-        ends<- startsEnds$ends
-    
-        hmmNeeded<- TRUE
-        if(length(xbed$recode_P) < 500000){
-            ## Fit the model to entire chrom, if not too big:
-            hmmfit<- HMMFit(xbed$recode_P, nStates= 2, dis= 'DISCRETE')
-            hmmNeeded<- FALSE
-        }
-        for (j in 1:length(starts)){
-            write(sprintf('%s %s %s %s', xchr, starts[j], ends[j], ends[j] - starts[j]), stderr())
-            dat<- xbed[starts[j]:ends[j],]
-            recode_P<- as.numeric(dat$recode_P)
-            if(hmmNeeded){
-                hmmfit<- HMMFit(recode_P, nStates= 2, dis= 'DISCRETE')
-            }           
-            ## DATA DECODING
-            vit<- viterbi(hmmfit, recode_P)
-         
-            ## Recode to have low pval Methylated
-            xstates<- recodeStates(vit$states, dat$pvals, levels= c('M', 'u'))  
-
-            ## POSTERIOR DECODING: Get the probability of each cytosine to belong to the M or u state
-            fbLog <- forwardBackward(hmmfit, dat$recode_P)
-            prob<- fbLog$Gamma # Matrix of probs. Rows: Observations (loci), Cols: States
-            # We need Need to pick the column corresponding to state 'M'.
-            stopifnot(ncol(prob) == 2)
-            if(xstates[1] == 'M'){
-                if(vit$states[1] == 1){
-                    mx<- 1
-                } else {
-                    mx<- 2
-                }
-            } else if(xstates[1] == 'u'){
-                if(vit$states[1] == 1){
-                    mx<- 2
-                } else {
-                    mx<- 1
-                }
-            } else {
-                stop('Unexpected condition')
-            }
-            hmmOutSub<- data.table(state= xstates, postM= prob[,mx])
-            ## Write to stout as results come through
-            out<- cbind(dat, hmmOutSub)
-            write.table(out, stdout(), sep= '\t', col.names= outHeader, row.names= FALSE, quote= FALSE)
-            outHeader<- FALSE
-            hmmOut<- rbindlist(list(hmmOut, hmmOutSub))
-        }
+        hmmChrom<- HMMChrom(xbed)
+        ## At the end of each chromn write to results
+        write.table(hmmChrom, stdout(), sep= '\t', col.names= outHeader, row.names= FALSE, quote= FALSE)
+        outHeader<- FALSE    
+        hmmOut<- rbindlist(list(hmmOut, hmmChrom[, list(state, postM)]))
     }
     return(hmmOut)
 }
@@ -245,7 +255,7 @@ Input file must be tab separated with a column of chromosomes and a column of p-
 \\n\\
 OUTPUT:\\n\\
 Tab separated file to stdout with columns: \\n\\
-chrom, input pvalue, recoded pvalue, state, posterior prob of state M.\\n\\
+chrom, input pvalue, recoded pvalue, state, posterior prob of state M, state_id.\\n\\
 \\n\\
 Version %s", VERSION)
 parser<- ArgumentParser(description= docstring, formatter_class= 'argparse.RawTextHelpFormatter')
