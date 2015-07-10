@@ -75,7 +75,7 @@ compareFileSizes<- function(fileItem){
         print(fileItem)
         stop('File not found!')
     }
-    obsSize<- file.size(fileNameSize$fileName)
+    obsSize<- file.info(fileNameSize$fileName)$size
     expObs<- list(fileName= fileNameSize$fileName, sizeExp= fileNameSize$fileSize, sizeObs= obsSize)
     return(expObs)
 }
