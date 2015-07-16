@@ -51,7 +51,7 @@ Useful tip: Get genome file from bam file:
     | sed 's/\\tLN:/\\t/' > genome.txt
     
 REQUIRES:
-    - bedtools suite
+    - bedtools 2.24+
     - numpy, scipy 
 
 NOTES:
@@ -215,7 +215,7 @@ def countReadsInInterval(inbam, beds, countTable, tmpdir, verbose= False):
     cmd= """
 cat %(beds)s > %(catbeds)s &&
 samtools view -u -F 128 %(bam)s \\
-| coverageBed -counts -abam - -b %(catbeds)s \\
+| coverageBed -counts -b - -a %(catbeds)s \\
 | awk 'BEGIN{OFS="\\t"}{print $0, $3-$2}' \\
 | sort -s -k4,4n -k5,5 \\
 | groupBy -g 4,5 -c 6,7 -o sum,sum -prec 12 > %(countTable)s
