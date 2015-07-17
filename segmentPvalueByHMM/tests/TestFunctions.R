@@ -10,12 +10,17 @@ test.canReadBedFile<- function(){
 test.canRecodePvaluesToDiscrete<- function(){
     pvals<- c(0, 0.9, 0.07, 0.01, NA, 0.7, 0.3)
     expt<-  c(3, 0, 1, 2, NA, 0, 0)
-    rpval<- recodePvals(pvals)
+    rpval<- recodePvals(pvals, recodePval= c(0.1, 0.05, 0.001))
+    checkTrue(all(expt == rpval, na.rm= TRUE))
+
+    rpval<- recodePvals(pvals, recodePval= c(0.3, 0, 0)) # Two categories: >= 0.3 or < 0.3
+    expt<-  c(1, 0, 1, 1, NA, 0, 0)
     checkTrue(all(expt == rpval, na.rm= TRUE))
     
     checkException(recodePvals(-1))
     checkException(recodePvals(1.1))
     checkException(recodePvals(c(0, 'Bla')))
+    checkException(recodePvals(pvals, recodePval= c(0.1, 0.05, -1))) # -1 not allowed
 }
 
 test.canDivideChromInChunks<- function(){
@@ -127,5 +132,9 @@ test.canRunScript<- function(){
     exitCode<- system(cmd)
     checkEquals(0, exitCode)
 
+    ## Custom pvalue thresholds:
+    cmd<- './segmentPvalueByHMM.R -i tests/input-2.txt.gz -p 2 -P 0.01 0 0'
+    exitCode<- system(cmd)
+    checkEquals(0, exitCode)
 }
 

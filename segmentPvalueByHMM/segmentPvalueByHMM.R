@@ -4,7 +4,7 @@
 ## * If a chrom is fully demethylated or methylated the state might be wrongly assigned!!
 ## * Print results as they are produced by each loop of HMMrunner()
 
-VERSION<- '0.1.0'
+VERSION<- '0.2.0'
 done<- suppressWarnings(suppressMessages(require(RHmm)))
 if(done == FALSE){
     cat('Please install the "RHmm" package.\n')
@@ -37,28 +37,31 @@ readBedFile<- function(filename, pIndex, chromIndex= 1, header= FALSE){
     return(bed)
 }
 
-## Recode pvalues to be discrete
-recodeOnePvalue<- function(p){
+recodeOnePvalue<- function(p, recodePval= c(0.1, 0.05, 0.001)){
+    ## Recode pvalues to be discrete
+    stopifnot(recodePval >= 0 & recodePval <= 1)
+    stopifnot(sort(recodePval, decreasing= TRUE) == recodePval)
+    stopifnot(length(recodePval) == 3)
     if (is.na(p)){
         o<- NA
-    } else if (p >= 0.1 ){
+    } else if (p >= recodePval[1] ){
         o<- 0
-    } else if (p < 0.1 & p >= 0.05) {
+    } else if (p < recodePval[1] & p >= recodePval[2]) {
         o<- 1
-    } else if (p < 0.05 & p >= 0.001) {
+    } else if (p < recodePval[2] & p >= recodePval[3]) {
         o<- 2
-    } else if (p< 0.001){
+    } else if (p< recodePval[3]){
         o<- 3
     } else {
         stop('Unexpected p-value')
     }
     return(o)
 }
-recodePvals<- function(p){
+recodePvals<- function(p, recodePval= c(0.1, 0.05, 0.001)){
     stopifnot(is.numeric(p))
     stopifnot(min(p, na.rm= TRUE) >= 0)
     stopifnot(max(p, na.rm= TRUE) <= 1)
-    recoded<- sapply(p, recodeOnePvalue)
+    recoded<- sapply(p, recodeOnePvalue, recodePval=recodePval)
     return(recoded)    
 }
 
@@ -212,9 +215,9 @@ HMMChrom<- function(chromBed, MAXPOS= 40000){
     return(hmmChrom)
 }
 
-HMMrunner<- function(bed){
+HMMrunner<- function(bed, recodePval= c(0.1, 0.05, 0.001)){
     # Run HMM. bed is a bed file with columns 'chrom' and 'pvals'
-    bed[, recode_P := recodePvals(pvals)]
+    bed[, recode_P := recodePvals(pvals, recodePval= recodePval)]
     hmmOut<- data.table(state= NA, postM= NA)[0,]
     outHeader<- TRUE
     fromID<- 1
@@ -263,11 +266,15 @@ parser$add_argument("-i", "--input", help= "Input file, can be gzip'd, use - to 
 parser$add_argument("-p", "--pIndex", help= "Column index with raw pvalues. 1-based.", required= TRUE, type= 'integer')
 parser$add_argument("-c", "--chromIndex", help= "Column index with chromosome. Default 1", default= 1, type= 'integer')
 parser$add_argument("-H", "--header", help= "Input file has header", action= 'store_true')
+parser$add_argument("-P", "--recodePval", help= "List of three floats to recode pvalues in discrete categories. Default: 0.1 0.05 0.001.\\n\\
+I.e. pvals recoded as 0 if >= 0.1; 1 if 0.1 < p <= 0.5; 2 if 0.05 < p <= 0.001; 3 if p < 0.001.\\n\\
+To recode to less then 3 categories terminate the list with 0 e.g. `0.05 0 0`\\n\\
+to classify pvalues in >=0.05 or < 0.05", nargs= 3, type= 'double', default= c(0.1, 0.05, 0.001))
 
 xargs<- parser$parse_args()
 
 # ==============================================================================
 
 bed<- readBedFile(xargs$input, xargs$pIndex, chromIndex= xargs$chromIndex, header= xargs$header)
-states<- HMMrunner(bed)
+states<- HMMrunner(bed, recodePval= xargs$recodePval)
 quit(save= 'no')
