@@ -4,7 +4,7 @@
 # * Better reporting for failed files. Make it obvious what has failed
 #   and what has succeded.
 
-VERSION<- '0.4.0'
+VERSION<- '0.5.0'
 APP_NAME= 'Get FASTQ files' # App name to get fastq files
 
 done<- suppressWarnings(suppressMessages(require(BaseSpaceR)))
@@ -62,36 +62,39 @@ getFileSizeFromFileItem<- function(fileItem){
     return(list(fileName= fileName, fileSize= fileSize))
 }
 
-compareFileSizes<- function(fileItem){
+compareFileSizes<- function(fileItem, destDir){
     # Compare the file size in a FileItem obj (expected) vs the size of the
-    # downloaded file (observed). The downloaded file is expected to be on the
-    # same path as in the fileItem obj, typically in current dir or in
-    # Data/Intensities/...
+    # downloaded file (observed). 
+    # destDir: Look in this dir for the file to be checked. The actual file
+    #    might be in this dir or if MiSeq in <destDir>/Data/Intensities/BaseCalls/ 
     # Return:
     #   Named list with file name, exp size, obs size.  
     fileNameSize<- getFileSizeFromFileItem(fileItem)
-    if(!file.exists(fileNameSize$fileName)){
-        print(fileNameSize$fileName)
+    fileNameOnDisk<- file.path(destDir, fileNameSize$fileName)
+    if(!file.exists(fileNameOnDisk)){
+        print(fileNameOnDisk)
         print(fileItem)
         stop('File not found!')
     }
-    obsSize<- file.info(fileNameSize$fileName)$size
-    expObs<- list(fileName= fileNameSize$fileName, sizeExp= fileNameSize$fileSize, sizeObs= obsSize)
+    obsSize<- file.info(fileNameOnDisk)$size
+    expObs<- list(fileName= fileNameOnDisk, sizeExp= fileNameSize$fileSize, sizeObs= obsSize)
     return(expObs)
 }
 
-checkFileExists<- function(fileItem){
+checkFileExists<- function(fileItem, destDir){
     # Check whether the file in FileItem obj exists on disk (i.e. jhas been
     # downloaded already) and check whether file size on disk matches file size in
     # FileItem object.
+    # destDir: Look in this dir for the file to be checked.
     # Return:
     #   TRUE if filename and size on disk match name and size in FileItem.
     #   FALSE otherwise.
     expFileNameSize<- getFileSizeFromFileItem(fileItem)
-    if(file.exists(expFileNameSize$fileName) == FALSE){
+    fileNameOnDisk<- file.path(destDir, expFileNameSize$fileName) 
+    if(file.exists(fileNameOnDisk) == FALSE){
         return(FALSE)
     }
-    expObsSize<- compareFileSizes(fileItem)
+    expObsSize<- compareFileSizes(fileItem, destDir= destDir)
     if(expObsSize$sizeExp == expObsSize$sizeObs){
         return(TRUE)
     } else {
@@ -102,18 +105,15 @@ checkFileExists<- function(fileItem){
 getFastqFromBaseSpace<- function(
     proj_id,
     accessToken,
-    dest_dir= '.' ,
     regex= '.*\\.gz$',
     expm_regex= '.*',
     sample_regex= '.*',
     echo= FALSE,
     verbose= TRUE){
     # Download fastq files for project ID from BaseSpace.
-    # MEMO: Fastfile names might be slightly dofferent from BaseSpace. E.g.
+    # MEMO: Fastfile names might be slightly different from BaseSpace. E.g.
     # proj_id:
     #   Project ID. You can get this from extracted project URL
-    # dest_dir:
-    #   Destination dir. Fastq will be in Data/....
     # accessToken:
     #   Access token. If NULL, try to read it from '~/.basespace_login' where
     #   the app line 'Get FASTQ files' is expected to be found.
@@ -153,14 +153,15 @@ getFastqFromBaseSpace<- function(
                 }
                 attempt<- 1
                 if(!echo){
-                    if(checkFileExists(f)){
+                    destDir<- s@data@ExperimentName
+                    if(checkFileExists(f, destDir= destDir)){
                         cat('\nFile found, skipping download\n')
                         next
                     }
                     # Try to download file up to five times.
                     while(attempt <= 5){
                         out<- tryCatch(
-                            expr= {getFiles(aAuth, id= Id(f), destDir = dest_dir, verbose = TRUE)},
+                            expr= {getFiles(aAuth, id= Id(f), destDir = destDir, verbose = TRUE)},
                             error= function(e) {
                                 cat(sprintf('\nAttempt: %s failed with\n', attempt))
                                 message(e)
@@ -175,7 +176,7 @@ getFastqFromBaseSpace<- function(
                         }
                     }
                     # Check expected and downloaded file sizes:
-                    expObsSize<- compareFileSizes(f)
+                    expObsSize<- compareFileSizes(f, destDir= destDir)
                     if(expObsSize$sizeExp != expObsSize$sizeObs){
                         print(f)
                         stop(sprintf('\nFile %s: Expected size from FileItem object is %s but downloaded file is %s\n\n', expObsSize$fileName, expObsSize$sizeExp, expObsSize$sizeObs))
@@ -241,7 +242,6 @@ if(length(xargs$token) == 0){
 fileDT<- getFastqFromBaseSpace(
     proj_id= xargs$projid,
     accessToken= accessToken,
-    dest_dir= xargs$outdir ,
     regex= xargs$regex,
     expm_regex= xargs$expm_regex,
     sample_regex= xargs$sample_regex,

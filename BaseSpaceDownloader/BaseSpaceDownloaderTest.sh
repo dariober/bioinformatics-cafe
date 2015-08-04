@@ -28,6 +28,7 @@ then
     echo 'PASSED'
 else
     echo '**** FAILED ****'
+    echo $results
 fi
 rm out.txt
 
