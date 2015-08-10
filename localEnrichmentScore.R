@@ -1,17 +1,16 @@
-#! /usr/bin/env Rscript
+#!/usr/bin/env Rscript
+
+done<- suppressWarnings(suppressMessages(require(data.table)))
+if(done == FALSE){
+    cat('Please install the "data.table" package. Open an R session and execute:\n')
+    cat('install.packages("data.table")\n\n')
+    quit(save= 'no', status= 1)
+}
 
 done<- suppressWarnings(suppressMessages(require(argparse)))
 if(done == FALSE){
     cat('\nPlease install the "argparse" package. Open an R session and execute:\n\n')
     cat('> install.packages("argparse")\n\n')
-    cat('Once you are at it, install also the data.table package, if not already installed:\n\n')
-    cat('> install.packages("data.table")\n\n')
-    quit(save= 'no', status= 1)
-}
-done<- suppressWarnings(suppressMessages(require(data.table)))
-if(done == FALSE){
-    cat('Please install the "data.table" package. Open an R session and execute:\n')
-    cat('install.packages("data.table")\n\n')
     quit(save= 'no', status= 1)
 }
 
