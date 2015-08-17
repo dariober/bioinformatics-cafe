@@ -1,0 +1,55 @@
+#!/bin/bash
+
+VERSION='0.1.0'
+docstring="\n
+DESCRIPTION\n
+Simple wrapper around picard CheckTerminatorBlock. For each file return either 0\n
+for file OK or other exit code for missing terminator block.\n
+\n
+USAGE\n
+checkTerminatorBlock.sh <aln.bam> [aln2.bam ...]\n
+\n
+REQUIRES\n
+picard.jar 1.127+ on path.\n
+\n
+Version ${VERSION}"
+
+# ------------------------------------------------------------------------------
+
+bams="$*"
+
+if [[ ${bams} = "" || ${bams} = "-h" || ${bams} == "--help" ]]
+then
+    echo -e $docstring
+    exit 1
+fi
+
+# See http://stackoverflow.com/questions/5947742/how-to-change-the-output-color-of-echo-in-linux
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+picard=`which picard.jar`
+if [[ $? != 0 ]]
+then
+    echo -e "\npicard.jar not found on PATH or non-executable\n"
+    exit 1
+fi
+
+for bam in $bams
+do
+    if [[ ! -f ${bam} ]]
+    then
+        printf "\n${RED}File '${bam}' not found.${NC}\n\n"
+        exit 1
+    fi
+    java -Xmx200m -jar $picard CheckTerminatorBlock I=$bam 2> /dev/null
+    x=$?
+    if [[ ${x} == 0 ]]
+    then
+        col=${GREEN}
+    else
+        col=${RED}
+    fi
+    printf "${col}$bam\t$x${NC}\n"
+done
