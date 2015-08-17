@@ -53,7 +53,7 @@ do
     then
         col=${RED}
     else
-        echo -e "Unexpected output for file $bam"
+        echo -e "\n$result\n\nUnexpected output for file $bam\n"
         exit 1
     fi
     printf "${col}$bam\t$x${NC}\n"
