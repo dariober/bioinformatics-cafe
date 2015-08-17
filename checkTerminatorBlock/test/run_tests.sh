@@ -13,5 +13,9 @@ echo -e "\nCAN CHECK ONE FILES"
 echo -e "\nCAN GLOB FILES"
 ../checkTerminatorBlock.sh *.bam
 
-echo -e "\nCAN FAIL ON NON EXISTING FILE"
+echo -e "\nMUST FAIL ON NON EXISTING FILE"
 ../checkTerminatorBlock.sh not_exsisting.bam
+
+echo -e "\nCAN PRINT EXIT CODE FROM LAST picard"
+../checkTerminatorBlock.sh hasblock.bam defective.bam > /dev/null
+echo "Expected code 100. Actual: $?"

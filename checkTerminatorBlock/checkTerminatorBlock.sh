@@ -3,8 +3,11 @@
 VERSION='0.1.0'
 docstring="\n
 DESCRIPTION\n
-Simple wrapper around picard CheckTerminatorBlock. For each file return either 0\n
-for file OK or other exit code for missing terminator block.\n
+Simple wrapper around picard CheckTerminatorBlock. For each file print 0 for file\n
+OK or other exit code for missing terminator block (code 100).\n
+\n
+\n
+The exit code from checkTerminatorBlock.sh is the one from last file checked.
 \n
 USAGE\n
 checkTerminatorBlock.sh <aln.bam> [aln2.bam ...]\n
@@ -58,3 +61,5 @@ do
     fi
     printf "${col}$bam\t$x${NC}\n"
 done
+
+exit $x
