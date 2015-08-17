@@ -62,7 +62,7 @@ EXAMPLE:
         mychr	10	15	mychr_10_15_for	5	+	ACTGn
 
 DOWNLOAD
-    fastaRegexFinder.py is hosted at http://code.google.com/p/bioinformatics-misc/
+    fastaRegexFinder.py is hosted at https://github.com/dariober/bioinformatics-cafe/
 
     """, formatter_class= argparse.RawTextHelpFormatter)
 
