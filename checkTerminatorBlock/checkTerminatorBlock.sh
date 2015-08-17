@@ -43,13 +43,18 @@ do
         printf "\n${RED}File '${bam}' not found.${NC}\n\n"
         exit 1
     fi
-    java -Xmx200m -jar $picard CheckTerminatorBlock I=$bam 2> /dev/null
+    result=$((java -Xmx200m -jar $picard CheckTerminatorBlock I=$bam) 2>&1) # Redirect stderr to stdout then stdout to variable
     x=$?
-    if [[ ${x} == 0 ]]
+    result=`echo $result`
+    if [[ ${result} == *" HAS_TERMINATOR_BLOCK "* && ${x} == 0 ]]
     then
         col=${GREEN}
-    else
+    elif [[ ${result} == *" DEFECTIVE "* ]]
+    then
         col=${RED}
+    else
+        echo -e "Unexpected output for file $bam"
+        exit 1
     fi
     printf "${col}$bam\t$x${NC}\n"
 done
