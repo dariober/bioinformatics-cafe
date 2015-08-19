@@ -3,25 +3,30 @@
 set -e
 set -o pipefail
 
-docstring=' Get read count from BAM file.
-\n\n
-This script parses the output of samtools idxstats to quickly get the total read
-count from a bam file.
-\n\n
+docstring='
+\n
+Parse output of samtools idxstats to get alignment stats from one or more bam files.
+\n
 Requires awk and samtools on PATH.
 \n\n
 USAGE \n
 readCountFromBam.sh <aln.bam> <aln2.bam> ... \n
 
-\n\n
+\n
 OUTPUT \n
 Tab separated table with columns:\n
 1. Input file name \n
-2. Count mapped (sum 3rd col) \n
-3. Count mate unmapped (sum 4th col) \n
-4. Count unmapped (\* line) \n
+2. Count mapped. Sum 3rd col [samtools view -F4 -c aln.bam] \n
+3. Count reads unmapped, mate mapped. Sum 4th col [samtools view -f4 -F8 -c aln.bam]  \n
+4. Count unmapped (\* line) [samtools view -f4 -f8 -c aln.bam] \n
 5. Ref size (sum 2nd col) \n
-'
+6. Percent mapped. 100 x col#2 / (col#2 + col#3 + col#4)
+\n\n
+Note that a read unmapped but with mate mapped (col #3) is assigned to the \n
+same position as the mate (at last by bwa). This means that a read can be \n
+flagged as unmapped while having chrom and pos assigned. \n\n
+
+Version 0.2.0'
 
 bams="$*"
 
@@ -57,7 +62,7 @@ samtools idxstats ${bam} \
         mateun+=$4
         refsize+=$2
     }
-}END{print bam, mapped, mateun, unmapped, refsize}'  
+}END{print bam, mapped, mateun, unmapped, refsize, 100 * mapped / (mapped + mateun + unmapped)}'  
 done
 
 exit 0
