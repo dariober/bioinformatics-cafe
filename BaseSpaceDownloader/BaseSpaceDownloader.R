@@ -4,7 +4,7 @@
 # * Better reporting for failed files. Make it obvious what has failed
 #   and what has succeded.
 
-VERSION<- '0.5.0'
+VERSION<- '0.5.1'
 APP_NAME= 'Get FASTQ files' # App name to get fastq files
 
 done<- suppressWarnings(suppressMessages(require(BaseSpaceR)))
@@ -134,6 +134,10 @@ getFastqFromBaseSpace<- function(
     inSampleAll <- Samples(aAuth, id = Id(sampl))
     inSample<- c()
     for(s in inSampleAll){
+        if(identical(s@data@ExperimentName, character(0))){
+            # Missing experiment name this will cause troubles later. Put something in it
+            s@data@ExperimentName<- 'NA'
+        }
         if(grepl(expm_regex, s@data@ExperimentName, perl= TRUE) && grepl(sample_regex, s@data@SampleId, perl= TRUE)){
             inSample<- c(inSample, s)
         }
