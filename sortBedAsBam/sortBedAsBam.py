@@ -7,6 +7,8 @@ import os
 import tempfile
 import shutil
 import atexit
+import gzip
+import distutils.spawn
 
 VERSION= '0.1.0'
 
@@ -44,11 +46,25 @@ parser.add_argument('--version', '-v', action='version', version='%(prog)s %(VER
 args = parser.parse_args()
 
 # ------------------------------------------------------------------------------
+
+def isGzipFile(filename):
+    """Check file is gxip irrespective of extension
+    """
+    with open(filename) as f:
+        file_start = f.readline()
+    if file_start.startswith("\x1f\x8b\x08"):
+        return True
+    else:
+        return False
+    
 # Some checks
 # -----------
 assert os.path.isfile(args.bam)
 if args.inbed != "-":
     assert os.path.isfile(args.inbed)
+assert distutils.spawn.find_executable('samtools')
+assert distutils.spawn.find_executable('sort')
+assert distutils.spawn.find_executable('cut')
 
 # Get chrom names from bam
 # ------------------------
@@ -87,10 +103,15 @@ if args.verbose:
 
 if args.inbed == "-":
     fin= sys.stdin
+elif isGzipFile(args.inbed):
+    fin= gzip.open(args.inbed, 'rb')
 else:
     fin= open(args.inbed)
 for line in fin:
-    chrom= line.split('\t')[0]
+    ll= line.split('\t')
+    assert ll[1].isdigit()
+    assert ll[2].isdigit()
+    chrom= ll[0]
     try:
         x_idx= chrom_idx[chrom]
     except KeyError:

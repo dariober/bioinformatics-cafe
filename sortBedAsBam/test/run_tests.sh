@@ -54,3 +54,23 @@ else
     echo -e "Expected:\n$exp"
     echo -e "Observed:\n$obs"
 fi
+
+echo "CAN OPEN GZIP BED"
+python ../sortBedAsBam.py -i unsorted.bed.gz -b in.bam
+if [[ 0 ==  $? ]]
+then
+    printf "${GREEN}PASSED${NC}\n"
+else
+    printf "${RED}FAILED${NC}\n"
+fi
+
+echo "MUST FAIL ON INVALID BED"
+python ../sortBedAsBam.py -i invalid.bed -b in.bam
+if [[ 1 ==  $? ]]
+then
+    printf "${GREEN}PASSED${NC}\n"
+else
+    printf "${RED}FAILED${NC}\n"
+fi
+
+
