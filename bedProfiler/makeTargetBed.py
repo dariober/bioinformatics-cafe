@@ -25,8 +25,8 @@ chr1	1007	1008	2
 chr1	1008	1009	3
 """, formatter_class= argparse.RawTextHelpFormatter)
 
-parser.add_argument('--inbed', '-i', help='''Input bed file to use as target. Use - for reading from stdin.''')
-parser.add_argument('--genome', '-g', help='''Genome file giving the size of the chromosomes. Format: chrom<tab>size''')
+parser.add_argument('--inbed', '-i', required= True, help='''Input bed file to use as target. Use - for reading from stdin.''')
+parser.add_argument('--genome', '-g', required= True, help='''Genome file giving the size of the chromosomes. Format: chrom<tab>size''')
 parser.add_argument('--center', '-c', action= 'store_true', help='''If set, input regions are reduced to a single-base interval in the middle of the region.
                     Maybe useful if the target bed has peaky features or motifs.''')
 parser.add_argument('--slop', '-s', type= int, default= 1000, help='''Extend each target interval by this many bases left and right''')
