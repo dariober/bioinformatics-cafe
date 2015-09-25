@@ -6,6 +6,7 @@ import pybedtools
 import argparse
 import sys
 import random
+import subprocess
 
 VERSION='0.0.1'
 
@@ -21,7 +22,8 @@ TODO: Accept --regions from stdin
 
 parser.add_argument('--regions', '-R', required= True, help='''Input bed file with regions to plot. Typically produced by makeTargetBed.py''')
 parser.add_argument('--scoreBedGraph', '-s', required= True, help='''Bedgraph file with scores to plot. - for stdin''')
-
+parser.add_argument('--nTargets', '-n', type= int, help='''Number of targets (e.g. CTCF sites) to use as normalizing factor. 
+        If not given it's calculated by counting the number of '0' bins in input region.''')
 parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
 
 args= parser.parse_args()
@@ -58,31 +60,46 @@ def featureToOutput(feature, nTargets):
     avg= float(feature[2]) / nTargets
     outlst= [feature[0], feature[1], feature[2], nTargets, avg]
     return outlst
-    
-nTargets= regions.filter(lambda x: x.name == '0').count()
+
+def binListContains(xstr, xbin= '0'):
+    """Return True if the string `xstr` contains the bin `xbin`. The list 
+    of bins overlapping this interval must be in 4th field (name), comma
+    separated as produced by `groupBy -o collapse`
+    """
+    bins= xstr.split(',')
+    has_bin= xbin in bins
+    return has_bin
+
+if not args.nTargets:
+    if args.regions.endswith('.gz'):
+        cmd= 'gunzip -c '
+    else:
+        cmd= 'cat '
+    cmd += '%s | cut -f 5 | grep -w "0" | wc -l' %(args.regions)
+    p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
+    p.wait()
+    out, err = p.communicate()
+    if p.returncode != 0:
+        sys.stderr.write(err)
+        sys.exit(1)
+    nTargets= int(out.strip())
+else:
+    nTargets= args.nTargets
 
 tab= pybedtools.BedTool(regions).intersect(b= scoreBedGraph, wa= True, wb= True, sorted= True) \
     .each(prepareForSortGroup) \
     .sort() \
-    .groupby(g= [1], c= [1, 8], o= ['count', 'sum'])
+    .groupby(g= [1], c= [1, 9], o= ['count', 'sum'])
+
+# This is another hack: Resort to have bin (1st col) sorted as numeric
+cmd= 'sort -k1,1n -s %s' %(tab.fn)
+p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
 
 print '\t'.join(HEADER)
-for line in open(tab.fn):
+for line in p.stdout:
     line= line.strip().split('\t')
     outline= featureToOutput(line, nTargets)
     outline= '\t'.join(str(x) for x in outline)
     print outline
 
-#for feature in tab:
-#    outline= featureToOutput(feature, nTargets)
-#    print outline
-
-"""
-intersectBed -sorted -a targets.bed.gz -b $bdg -wa -wb \
-| cut -f 4,8,9 \
-| sort -k1,1n -s \
-| awk -v OFS='\t' '{print \$1, 0, 0, \$2, \$3}' \
-| groupBy -i - -g 1 -c 1,4,5 -o count,sum,sum \
-| cut -f 1,2,3,4 \
-| awk -v OFS='\t' -v nTargets=$nTargets '{print \$1, \$2, nTargets, \$3/nTargets, \$4/nTargets}' > $tab" > ${tab}.sh
-"""
+sys.exit()

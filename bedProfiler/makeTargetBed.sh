@@ -92,7 +92,7 @@ for line in sys.stdin:
 | slopBed -g $GENOME -b $SLOP \
 | windowMaker -b - -i winnum -w $BIN_SIZE \
 | awk -v OFS='\t' -v slop=$SLOP '{print $1, $2, $3, $4 - (slop+1)}' \
-| sort -k1,1 -k2,2n -s -S 2G \
+| sort -k1,1 -k2,2n -S 2G \
 | groupBy -g 1,2,3 -c 4 -o collapse \
 | python -c "
 import sys
@@ -102,11 +102,22 @@ for line in sys.stdin:
     bins= line[3].split(',')
     random.seed(line[3]) # Random but same results from same input.
     bin= random.choice(bins)
-    line[3]= bin
-    print '\t'.join(line)
+    print '\t'.join([line[0], line[1], line[2], bin, line[3]])
 "
 
 exit 0
+
+# Each + is a target site (say CTCF) along the chromosome
+# -------------+----+---+---+---------------------------------
+#         -----+-----
+#              -----+-----
+#                  -----+-----
+#                      -----+-----
+#        1    1/2  1/3 1/3         = 2.17 <- N. times we expect the leftmost bin after rnd picking
+#             1/2  1/3 1/3  1/2    = 1.67 <- N. times we expect the central bin after rnd picking
+# So: If targets are clustered (and they are) we select the outer bins more often than the middle ones.
+
+
 
 #slop=3000
 #grep -P '^2\t|^1\t' ../../20150914_nucleo_5fc/ctcf_brain_embryo/fimo_out/fimo_global.bed \
