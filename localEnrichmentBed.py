@@ -37,22 +37,17 @@ OUTPUT:
 
 EXAMPLE
     localEnrichmentBed.py -b rhh047.bam -t rhh047.macs_peaks.bed -g genome.fa.fai -bl blacklist.bed > out.bed
-    
-    ## Using pipes:
-    samtools view -u rhh047.bam chr18 \\
-    | localEnrichmentBed.py -b - -t rhh047.macs_peaks.bed -g genome.fa.fai > out.bed
 
-    
 Useful tip: Get genome file from bam file:
 
     samtools view -H rhh047.bam \\
     | grep -P "@SQ\\tSN:" \\
     | sed 's/@SQ\\tSN://' \\
     | sed 's/\\tLN:/\\t/' > genome.txt
-    
+
 REQUIRES:
-    - bedtools 2.24+
-    - numpy, scipy 
+    - bedtools 2.25+
+    - numpy, scipy
 
 NOTES:
 For PE reads, the second read in pair is excluded (by samtools view -F 128) 
@@ -68,7 +63,7 @@ Use - to read from stdin.
 parser.add_argument('--bam', '-b',
                    required= True,
                    help='''Bam file of the library for which enrichment is to be
-computed. Use - to read from stdin.
+computed.
                    ''')
 
 parser.add_argument('--genome', '-g',
@@ -110,7 +105,7 @@ parser.add_argument('--verbose', '-V',
                    help='''Print to stderr the commands that are executed. 
                    ''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.1')
+parser.add_argument('--version', action='version', version='%(prog)s 0.2')
 
 args= parser.parse_args()
 # ------------------------------------------------------------------------------
@@ -121,13 +116,13 @@ def prepareTargetBed(inbed, outbed, verbose= False):
     inbed:
         Name of input bed file
     outbed:
-        Name for output bed file        
-    
+        Name for output bed file
+
     Returns True on exit.
     """
     if verbose:
         sys.stderr.write('\nWriting target bed to "%s"\n' %(outbed))
-        
+
     if inbed == '-':
         fin= sys.stdin
     else:
@@ -148,7 +143,7 @@ def prepareFlankingRegions(targetBed, slop, genome, blacklistBed= None, flanking
     background. If a flanking region overlaps other targets or a blacklisted
     region, the intersection is removed (so flanking regions are not necessarily
     one left and one right).
-        
+
     targetBed:
         Name of file of target regions to extend.
         Typically from prepareTargetBed
@@ -174,13 +169,13 @@ def prepareFlankingRegions(targetBed, slop, genome, blacklistBed= None, flanking
         pct= ''
     else:
         pct= '-pct'
-    
+
     # Prepare subcommand for blacklist. If BL is not given, do nothing
     if blacklistBed:
         cmdBL= """| subtractBed -a - -b %(blacklist)s \\""" %{'blacklist': blacklistBed}
     else:
         cmdBL= "\\"
-    
+
     # Flanking
     cmd= """
 slopBed %(pct)s -l %(S)s -r %(S)s -g %(genome)s -i %(target)s \\
@@ -188,10 +183,10 @@ slopBed %(pct)s -l %(S)s -r %(S)s -g %(genome)s -i %(target)s \\
 %(cmdBL)s
 | awk 'BEGIN{OFS="\\t"}{print $1, $2, $3, $4, "flank"}' > %(flankingBed)s
 """ %{'pct':pct, 'S':S, 'genome': genome, 'target': targetBed, 'cmdBL': cmdBL, 'flankingBed': flankingBed}
-    
+
     if verbose:
         sys.stderr.write(cmd)
-    
+
     p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
     stdout, stderr= p.communicate()
     if p.returncode != 0:
@@ -200,40 +195,79 @@ slopBed %(pct)s -l %(S)s -r %(S)s -g %(genome)s -i %(target)s \\
         sys.exit(1)
     return(True)
 
-def countReadsInInterval(inbam, beds, countTable, tmpdir, verbose= False):
+def sortBedAsBam(beds, bam, outbed, verbose= False):
+    """Sort bed file to have chrom names in the same order as bam chroms
+    beds:
+        List of bed files to be concatenated and resorted. Typically these are
+        targetBed and flankingBed.
+    bam:
+        Bam file to extract list of chromosomes from.
+    outbed:
+        Sorted output bed.
+    verbose:
+        Print executed commands
+    """
+    # Get chrom order from bam
+    chromfile= outbed + '.chroms.txt'
+    cmd= "samtools view -H %s | grep -P '^@SQ' | sed 's/.*\tSN://' | sed 's/\t.*//' > %s" %(bam, chromfile)
+    if verbose:
+        sys.stderr.write(cmd + "\n")
+    p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
+    p.wait()
+    if p.returncode != 0:
+        sys.stderr.write('Returncode: %s for\n' %(p.returncode))
+        sys.stderr.write(cmd + "\n")
+        sys.stderr.write(p.stdout.read() + "\n")
+        sys.exit(1)
+    # Sort according to chroms
+    cmd= "cat %s | sortBed -i - -faidx %s > %s" %(' '.join(beds), chromfile, outbed)
+    p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
+    p.wait()
+    if verbose:
+        sys.stderr.write(cmd + "\n")
+    if p.returncode != 0:
+        sys.stderr.write('Returncode: %s for\n' %(p.returncode))
+        sys.stderr.write(cmd + "\n")
+        sys.stderr.write(p.stdout.read() + "\n")
+        sys.exit(1)
+
+
+def countReadsInInterval(inbam, bed, countTable, tmpdir, verbose= False):
     """Count reads overalapping intervals in bed file and group by target id
     (4th columns) and region type (5th column).
     inbam:
         Name of bam file to get reads from
-    beds:
-        List of bed file names where reads will be counted. They will be concatenated.
-        Typically these are targetBed and flankingBed.
+    bed:
+        bed file to use for counting. Must be sorted by pos with chroms in the same
+        order as in the bam file. Use sortBedAsBam() for sorting 
     countTable:
         Name of output file where counts will be stored.
     """
-    
+
+
     cmd= """
-cat %(beds)s > %(catbeds)s &&
 samtools view -u -F 128 %(bam)s \\
-| coverageBed -counts -b - -a %(catbeds)s \\
+| coverageBed -sorted -counts -b - -a %(bed)s \\
 | awk 'BEGIN{OFS="\\t"}{print $0, $3-$2}' \\
 | sort -s -k4,4n -k5,5 \\
 | groupBy -g 4,5 -c 6,7 -o sum,sum -prec 12 > %(countTable)s
-""" %{'beds': ' '.join(beds), 'catbeds': os.path.join(tmpdir, 'cat.bed'), 'bam': inbam, 'countTable':countTable}
-    
+""" %{'bam': inbam, 'bed': bed, 'countTable':countTable}
+
     if verbose:
         sys.stderr.write(cmd)
 
-    p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE, stdin= subprocess.PIPE)
-    if inbam == '-':
-        for line in sys.stdin:
-            p.stdin.write(line)
-    
-    stdout, stderr= p.communicate()
-    if p.returncode != 0:
-        print(stderr)
-        print('Exit code %s' %(p.returncode))
-        sys.exit(1)
+    subprocess.check_call(cmd, shell= True)
+
+#    p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE, stdin= subprocess.PIPE)
+#    if inbam == '-':
+#        for line in sys.stdin:
+#            p.stdin.write(line)
+#
+#    stdout, stderr= p.communicate()
+#    if p.returncode != 0:
+#        print(stderr)
+#        print('Exit code %s' %(p.returncode))
+#        sys.exit(1)
 
     return(True)
 
@@ -274,23 +308,31 @@ def localEnrichment(countTuple):
         countsToDict.
     Return: Tuple with dictionary updated with -log10(pvalue) and log2 FC
     """
+    numpy.seterr(all='raise') # Make numpy fail rather then throwing WarningError
+
     # ct= {'flank': {'cnt': 142, 'len': 7110}, 'target': {'cnt': 111, 'len': 711}}
     ct= countTuple[1]
     cnt= [ct['flank']['cnt'], ct['target']['cnt']]
     length= [ct['flank']['len'], ct['target']['len']]
-    
+
+    # Here and below: You should catch the exact Exception.
     try:
         ct['log10_pval']= -numpy.log10(scipy.stats.chi2_contingency([cnt, length])[1])
-    except ValueError:
+    except:
+        sys.stderr.write('Warning: Set to NA -numpy.log10(...) for\n' + str(ct) + '\n')
         ct['log10_pval']= 'NA'
-        
+
     if ct['flank']['cnt'] == 0 or ct['flank']['len'] == 0:
         ct['log2fc']= 'NA'
     else:
-        ct['log2fc']= numpy.log2(
-             float((ct['target']['cnt']) / float(ct['target']['len'])) /
-            (float(ct['flank']['cnt']) / float(ct['flank']['len'])))
-        
+        try:
+            ct['log2fc']= numpy.log2(
+                 float((ct['target']['cnt']) / float(ct['target']['len'])) /
+                (float(ct['flank']['cnt']) / float(ct['flank']['len'])))
+        except:
+            sys.stderr.write('Warning: Set to NA the in numpy.log2 for\n' + str(ct) + '\n')
+            ct['log2fc']= 'NA'
+
     countTupleUp= (countTuple[0], ct)
     return(countTupleUp)
 
@@ -311,7 +353,9 @@ prepareFlankingRegions(targetBed= targetBed, slop= args.slop, genome= args.genom
     blacklistBed= args.blacklist, flankingBed= flankingBed, verbose= args.verbose)
 
 countTable= os.path.join(tmpdir, 'countTable.txt')
-countReadsInInterval(inbam= args.bam, beds= [targetBed, flankingBed],
+sortBedAsBam(beds= [targetBed, flankingBed], bam= args.bam, outbed= os.path.join(tmpdir, 'targetChromSorted.bed'),
+        verbose= args.verbose)
+countReadsInInterval(inbam= args.bam, bed= os.path.join(tmpdir, 'targetChromSorted.bed'),
     countTable= countTable, tmpdir= tmpdir, verbose= args.verbose)
 
 header= 'chrom, start, end, targetID, flank_cnt, target_cnt, flank_len, target_len, log10_pval, log2fc'.replace(', ', '\t')
