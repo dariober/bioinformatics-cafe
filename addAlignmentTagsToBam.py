@@ -5,7 +5,7 @@ import sys
 import os
 import argparse
 
-VERSION= '0.1.0'
+VERSION= '0.2.0'
 PN= os.path.basename(__file__)
 
 parser= argparse.ArgumentParser(formatter_class= argparse.RawTextHelpFormatter, description ="""
@@ -21,6 +21,7 @@ Version: %s
 parser.add_argument('--inbam', '-i', help= 'Input bam or sam with header, use - to read from stdin (default)', required= True)
 parser.add_argument('--aseq', '-aq', help= 'Tag for query alignment sequence. Default "YQ"', default= 'YQ')
 parser.add_argument('--alen', '-al', help= 'Tag for reference alignment length. Default "YL"', default= 'YL')
+parser.add_argument('--qlen', '-ql', help= 'Tag for query alignment length. Useful to get the amount of sequencing matched to the reference. Default "XQ"', default= 'XQ')
 parser.add_argument('--astart', '-as', help= 'Tag for reference start. Default "YS"', default= 'YS')
 parser.add_argument('--aend', '-ae', help= 'Tag for reference end. Default "YE"', default= 'YE')
 parser.add_argument('--outfmt', '-f', help= 'Output format. Default compressed bam (b)', default= 'b', choices= ['b', 'bu', 'h', 's'])
@@ -43,6 +44,8 @@ for line in sam:
         line.set_tag(args.aseq, line.query_alignment_sequence)
     if args.alen != 'None':
         line.set_tag(args.alen, line.reference_length)
+    if args.qlen != 'None':
+        line.set_tag(args.qlen, line.query_alignment_length)
     if args.astart != 'None':
         line.set_tag(args.astart, line.reference_start)
     if args.aend != 'None':
