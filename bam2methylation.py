@@ -67,6 +67,7 @@ E.g. -s ' -q 15 -F 256'
 
 parser.add_argument('--region', '-R',
                    required= False,
+                   nargs= '+',
                    default= '',
                    help='''Region passed to `samtools view` to extract reads from.
 E.g. -R 'chr1:0-10000'
@@ -90,7 +91,7 @@ parser.add_argument('--keeptmp',
                   help='''Keep tmp dir. Use for debugging.
                    ''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.3.1')
+parser.add_argument('--version', action='version', version='%(prog)s 0.4.0')
 
 # ------------------------------------------------------------------------------
 def bam2methylation(bam, ref, bed, tmpdir, args_A, args_region, args_minq, args_mismatch, args_samargs):
@@ -331,7 +332,7 @@ if __name__ == '__main__':
 
    args= parser.parse_args()
    if args.region:
-      region= "'" + args.region + "'"
+      region= ' '.join(args.region)
    else:
       region= ''
    # ------------------------------------------------------------------------------
