@@ -24,3 +24,11 @@ if [[ $out == 'AACNNA' ]]; then
 else
     echo "*** FAILED ***"
 fi
+
+# Gzip files
+out=`../addContextToBed.sh in.bed.gz ref.fa 7 2 3 | awk 'NR == 1 {print $NF}'`
+if [[ $out == 'CTAC' ]]; then
+  echo "PASS"
+else 
+  echo "*** FAILED ***"
+fi

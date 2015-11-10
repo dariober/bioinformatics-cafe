@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-VERSION='0.1.0'
+VERSION='0.2.0'
 
 bdg=$1
 ref=$2
@@ -42,7 +42,15 @@ Version: $VERSION
 exit 1
 fi
 
-awk -v strandCol=$strand 'BEGIN{OFS="\t"} {print $1, $2, $3, ".", ".", $strandCol}' $bdg \
+if [[ $bdg =~ \.gz$ ]]
+then
+    cmd="gunzip -c $bdg"
+else
+    cmd="cat $bdg"
+fi
+
+$cmd \
+| awk -v strandCol=$strand 'BEGIN{OFS="\t"} {print $1, $2, $3, ".", ".", $strandCol}' \
 | awk '{if ($6 != "+" && $6 != "-") {print "Strand information must be coded as + and -" > "/dev/stderr"; exit 1} else {print $0}}' \
 | slopBed -l $l -r $r -s -i - -g ${ref}.fai \
 | fastaFromBed.py -bed - -fi $ref -fo - -tab -s 2> /dev/null \
