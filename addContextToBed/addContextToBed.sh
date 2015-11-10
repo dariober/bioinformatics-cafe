@@ -55,6 +55,6 @@ $cmd \
 | slopBed -l $l -r $r -s -i - -g ${ref}.fai \
 | fastaFromBed.py -bed - -fi $ref -fo - -tab -s 2> /dev/null \
 | cut -f 2 \
-| paste $bdg -
+| paste <($cmd) -
 
 
