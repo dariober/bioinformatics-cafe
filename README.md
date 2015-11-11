@@ -3,7 +3,6 @@ Unsorted scripts for bioinformatics.
 
 Formerly was on google.code as [bioinformatics-misc](https://bioinformatics-misc.googlecode.com/)
 
-test commit
 
 # TODO
 `bam2methylation.py` 
