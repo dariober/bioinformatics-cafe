@@ -4,7 +4,7 @@
 ## * If a chrom is fully demethylated or methylated the state might be wrongly assigned!!
 ## * Print results as they are produced by each loop of HMMrunner()
 
-VERSION<- '0.2.0'
+VERSION<- '0.3.0'
 done<- suppressWarnings(suppressMessages(require(RHmm)))
 if(done == FALSE){
     cat('Please install the "RHmm" package.\n')
@@ -32,7 +32,7 @@ readBedFile<- function(filename, pIndex, chromIndex= 1, header= FALSE){
         bed<- fread(filename, select= c(chromIndex, pIndex), header= header, sep= '\t', showProgress= FALSE)
     }
     setnames(bed, names(bed)[1], 'chrom')
-    setnames(bed, names(bed)[2], 'pvals')
+    setnames(bed, names(bed)[2], 'yData')
     write(sprintf('Done: %s rows', nrow(bed)), stderr())
     return(bed)
 }
@@ -158,19 +158,19 @@ recodeStates<- function(states, obs, levels){
     return(newx)
 }
 
-HMMChrom<- function(chromBed, MAXPOS= 40000){
+HMMChrom<- function(chromBed, MAXPOS= 40000, dis= 'DISCRETE'){
     # Fit HMM thorugh chromosome.
     # Input chromBed is data.table with columns:
-    stopifnot(c('pvals', 'recode_P') %in% names(chromBed))
-    hmmChrom<- data.table(chrom= NA, pvals= NA, state= NA, postM= NA, state_id= NA)[0,]
+    stopifnot(c('yData', 'recode_P') %in% names(chromBed))
+    hmmChrom<- data.table(chrom= NA, yData= NA, state= NA, postM= NA, state_id= NA)[0,]
     startsEnds<- prepareChromChunks(nrow(chromBed), MAXPOS)
     starts<- startsEnds$starts
     ends<- startsEnds$ends
 
     hmmNeeded<- TRUE
-    if(length(chromBed$recode_P) < 500000){
+    if(length(chromBed$recode_P) < 1000000){
         ## Fit the model to entire chrom, if not too big:
-        hmmfit<- HMMFit(chromBed$recode_P, nStates= 2, dis= 'DISCRETE')
+        hmmfit<- HMMFit(chromBed$recode_P, nStates= 2, dis= dis)
         hmmNeeded<- FALSE
     }
     for (j in 1:length(starts)){
@@ -178,13 +178,13 @@ HMMChrom<- function(chromBed, MAXPOS= 40000){
         dat<- chromBed[starts[j]:ends[j],]
         recode_P<- as.numeric(dat$recode_P)
         if(hmmNeeded){
-            hmmfit<- HMMFit(recode_P, nStates= 2, dis= 'DISCRETE')
+            hmmfit<- HMMFit(recode_P, nStates= 2, dis= dis)
         }           
         ## DATA DECODING
         vit<- viterbi(hmmfit, recode_P)
      
         ## Recode to have low pval Methylated
-        xstates<- recodeStates(vit$states, dat$pvals, levels= c('M', 'u'))  
+        xstates<- recodeStates(vit$states, dat$yData, levels= c('M', 'u'))  
 
         ## POSTERIOR DECODING: Get the probability of each cytosine to belong to the M or u state
         fbLog <- forwardBackward(hmmfit, dat$recode_P)
@@ -206,7 +206,7 @@ HMMChrom<- function(chromBed, MAXPOS= 40000){
         } else {
             stop('Unexpected condition')
         }
-        hmmOutSub<- data.table(chrom= dat$chrom, pvals= dat$pvals, state= xstates, postM= prob[,mx])
+        hmmOutSub<- data.table(chrom= dat$chrom, yData= dat$yData, state= xstates, postM= prob[,mx])
         xrle<- rle(hmmOutSub$state)
         state_id<- paste0(hmmOutSub$state, rep(1:length(xrle$values), times= xrle$length))
         hmmOutSub[, state_id := state_id]
@@ -215,20 +215,84 @@ HMMChrom<- function(chromBed, MAXPOS= 40000){
     return(hmmChrom)
 }
 
-HMMrunner<- function(bed, recodePval= c(0.1, 0.05, 0.001)){
-    # Run HMM. bed is a bed file with columns 'chrom' and 'pvals'
-    bed[, recode_P := recodePvals(pvals, recodePval= recodePval)]
+HMMChromNormal<- function(chromBed, MAXPOS= 40000, dis= 'NORMAL', nStates= 2){
+    # Fit HMM thorugh chromosome.
+    # Input chromBed is data.table with columns:
+    stopifnot(c('yData', 'recode_P') %in% names(chromBed))
+    hmmChrom<- data.table(chrom= NA, yData= NA, state= NA)
+    for(i in 1:nStates){
+        vn<- paste0('probState_', i)
+        hmmChrom[[vn]]<- NA    
+    }
+    hmmChrom$state_id<- NA
+    hmmChrom<- hmmChrom[0,]
+    
+    startsEnds<- prepareChromChunks(nrow(chromBed), MAXPOS)
+    starts<- startsEnds$starts
+    ends<- startsEnds$ends
+
+    hmmNeeded<- TRUE
+    if(length(chromBed$recode_P) < 1000000){
+        ## Fit the model to entire chrom, if not too big:
+        hmmfit<- HMMFit(chromBed$recode_P, nStates= nStates, dis= dis)
+        sink(stderr()); print(hmmfit); sink(NULL)
+        hmmNeeded<- FALSE
+    }
+    for (j in 1:length(starts)){
+        write(sprintf('from: %s to: %s length: %s', starts[j], ends[j], ends[j] - starts[j] + 1), stderr())
+        dat<- chromBed[starts[j]:ends[j],]
+        recode_P<- as.numeric(dat$recode_P)
+        if(hmmNeeded){
+            hmmfit<- HMMFit(recode_P, nStates= nStates, dis= dis)
+            sink(stderr()); print(hmmfit); sink(NULL)
+        }           
+        ## DATA DECODING
+        vit<- viterbi(hmmfit, recode_P)
+        xstates<- vit$states
+        
+        ## POSTERIOR DECODING: Get the probability of each cytosine to belong to the M or u state
+        fbLog <- forwardBackward(hmmfit, dat$recode_P)
+        prob<- fbLog$Gamma # Matrix of probs. Rows: Observations (loci), Cols: States
+
+        hmmOutSub<- data.table(chrom= dat$chrom, yData= dat$yData, state= xstates, prob)
+        xrle<- rle(hmmOutSub$state)
+        state_id<- paste(hmmOutSub$state, rep(1:length(xrle$values), times= xrle$length), sep= "_")
+        hmmOutSub[, state_id := state_id]
+        hmmChrom<- rbindlist(list(hmmChrom, hmmOutSub))
+    }
+    return(hmmChrom)
+}
+
+
+HMMrunner<- function(bed, recodePval= c(0.1, 0.05, 0.001), dis= 'DISCRETE', nStates= 2){
+    # Run HMM. bed is a bed file with columns 'chrom' and 'yData'
+    if(dis == 'DISCRETE'){
+        bed[, recode_P := recodePvals(yData, recodePval= recodePval)]
+    } else {
+        bed[, recode_P := yData] 
+    }    
     hmmOut<- data.table(state= NA, postM= NA)[0,]
     outHeader<- TRUE
     fromID<- 1
     for (xchr in unique(bed$chrom)) {
         write(sprintf('Chrom: %s', xchr), stderr())
         xbed<- bed[chrom == xchr, ]
-        hmmChrom<- HMMChrom(xbed)
+        
+        if(dis == 'DISCRETE'){
+            hmmChrom<- HMMChrom(xbed, dis= dis)
+        } else if(dis == 'NORMAL'){
+            hmmChrom<- HMMChromNormal(xbed, nStates= nStates, dis= dis)
+        } else {
+            write(sprintf('Invalid option: %s', dis), stderr())
+        }
+        
         ## At the end of each chromn write to results
         write.table(hmmChrom, stdout(), sep= '\t', col.names= outHeader, row.names= FALSE, quote= FALSE)
-        outHeader<- FALSE    
-        hmmOut<- rbindlist(list(hmmOut, hmmChrom[, list(state, postM)]))
+        
+        if(dis == 'DISCRETE'){
+            outHeader<- FALSE    
+            hmmOut<- rbindlist(list(hmmOut, hmmChrom[, list(state, postM)]))
+        }
     }
     return(hmmOut)
 }
@@ -263,18 +327,25 @@ chrom, input pvalue, recoded pvalue, state, posterior prob of state M, state_id.
 Version %s", VERSION)
 parser<- ArgumentParser(description= docstring, formatter_class= 'argparse.RawTextHelpFormatter')
 parser$add_argument("-i", "--input", help= "Input file, can be gzip'd, use - to read from stdin. Must have chrom names in column 1.", required= TRUE)
-parser$add_argument("-p", "--pIndex", help= "Column index with raw pvalues. 1-based.", required= TRUE, type= 'integer')
+parser$add_argument("-p", "--pIndex", help= "Column index with raw data to segment. 1-based.", required= TRUE, type= 'integer')
 parser$add_argument("-c", "--chromIndex", help= "Column index with chromosome. Default 1", default= 1, type= 'integer')
 parser$add_argument("-H", "--header", help= "Input file has header", action= 'store_true')
-parser$add_argument("-P", "--recodePval", help= "List of three floats to recode pvalues in discrete categories. Default: 0.1 0.05 0.001.\\n\\
+parser$add_argument("-n", "--nStates", help= "Number of states for NORMAL distribution. If <= 0, DISCRETE distr. with 2 states is used", default= -1, type= 'integer')
+parser$add_argument("-P", "--recodePval", help= "List of three floats to recode data in discrete categories. Default: 0.1 0.05 0.001.\\n\\
 I.e. pvals recoded as 0 if >= 0.1; 1 if 0.1 < p <= 0.5; 2 if 0.05 < p <= 0.001; 3 if p < 0.001.\\n\\
 To recode to less then 3 categories terminate the list with 0 e.g. `0.05 0 0`\\n\\
-to classify pvalues in >=0.05 or < 0.05", nargs= 3, type= 'double', default= c(0.1, 0.05, 0.001))
+to classify pvalues in >=0.05 or < 0.05. Ignored if --normal is set.", nargs= 3, type= 'double', default= c(0.1, 0.05, 0.001))
 
 xargs<- parser$parse_args()
 
 # ==============================================================================
 
 bed<- readBedFile(xargs$input, xargs$pIndex, chromIndex= xargs$chromIndex, header= xargs$header)
-states<- HMMrunner(bed, recodePval= xargs$recodePval)
+if(xargs$nStates > 0){
+    dis= 'NORMAL'
+    nStates<- xargs$nStates
+} else {
+    dis= 'DISCRETE'
+}
+states<- HMMrunner(bed, recodePval= xargs$recodePval, dis= dis, nStates= nStates)
 quit(save= 'no')
