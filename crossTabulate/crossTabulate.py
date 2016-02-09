@@ -17,7 +17,7 @@ DESCRIPTION
 
 """, formatter_class= argparse.RawTextHelpFormatter)
 
-parser.add_argument('infiles',
+parser.add_argument('--infiles', '-i',
                    nargs= '+',
                    help='''One or more input files to cross-tabulate. Use - to
 read the list of files from stdin. File ending with .gz are opened with gzip.
@@ -32,7 +32,7 @@ The replacement is applied to the file name only unless --keepdir is active. Wit
 --keepdir the replacement is applied to the whole path as passed to the list of files.
                    ''')
 
-parser.add_argument('--nameCol', '-n', type= int, default= 1, help= 'Column index of the gene or feature name. 1-based, default 1 (1st column)')
+parser.add_argument('--nameCol', '-n', type= int, default= 1, nargs='+', help= 'One or more column indexes of the feature names. 1-based, default 1 (1st column)')
 parser.add_argument('--cntCol', '-c', type= int, default= 2, help= 'Column index of the counts. 1-based, default 2 (2nd column)')
 parser.add_argument('--sep', '-sep', type= str, default= '\t', help= 'Field separator for input and output files. Default to tab')
 
@@ -49,7 +49,7 @@ args = parser.parse_args()
 
 # ------------------------------------------------------------------------------
 
-name_col= args.nameCol - 1
+name_col= [x-1 for x in args.nameCol]
 cnt_col= args.cntCol - 1
 
 if args.infiles == ['-']:
@@ -62,10 +62,12 @@ else:
     header= [x for x in args.infiles]
 if args.strip is not None:
     header= [re.sub(args.strip, '', x) for x in header]
-header= ['feature_id'] + header
+
+fid= ['feature_' + str(i+1) for i in range(len(name_col))]
+header= fid + header
 
 print(args.sep.join(header))
-    
+
 infiles= []
 for lib in args.infiles:
     if(lib.endswith('.gz')):
@@ -80,14 +82,14 @@ while True:
             fline= infiles[i].readline().strip().split(args.sep)
             if fline == ['']:
                 break
-            feature_id= fline[name_col]        
-            line= [fline[name_col], fline[cnt_col]]
+            feature_id= args.sep.join( [fline[i] for i in name_col] )
+            line= [feature_id, fline[cnt_col]]
         else:
             # Following files: Include only count
             fline= infiles[i].readline().strip().split(args.sep)
             if fline == ['']:
                 break
-            this_feature= fline[name_col]
+            this_feature= args.sep.join(  [fline[i] for i in name_col] ) # fline[name_col]
             if this_feature != feature_id:
                 sys.exit('Error: Input files have the same features and/or they are not in the same order: %s, %s' %(feature_id, this_feature))
             line.append(fline[cnt_col])
