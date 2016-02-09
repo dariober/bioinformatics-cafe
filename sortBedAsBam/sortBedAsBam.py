@@ -108,9 +108,15 @@ elif isGzipFile(args.inbed):
 else:
     fin= open(args.inbed)
 for line in fin:
-    ll= line.split('\t')
-    assert ll[1].isdigit()
-    assert ll[2].isdigit()
+    ll= line.strip().split('\t')
+    if not ll[1].isdigit():
+        sys.stderr.write('Invalid start digit found:' + '\n')
+        sys.stderr.write(line + '\n')
+        sys.exit(1)
+    if not ll[2].isdigit():
+        sys.stderr.write('Invalid end digit found:' + '\n')
+        sys.stderr.write(line + '\n')
+        sys.exit(1)
     chrom= ll[0]
     try:
         x_idx= chrom_idx[chrom]
