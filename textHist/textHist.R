@@ -71,6 +71,6 @@ for(i in 1:length(hg$counts)){
 }
 cat('+', paste(rep('-', xargs$width - 2), collapse= ''), "+", '\n', sep= '')
 cat(0, paste(rep(' ', xargs$width - 2), collapse= ''), bmax, '\n', sep= '')
-cat(sprintf('|: %sx\n', barsPerUnit))
+cat(sprintf('|: %sx\n', 1/barsPerUnit))
 quit()
 
