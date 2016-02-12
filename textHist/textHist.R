@@ -18,18 +18,23 @@ Version %s", VERSION)
 
 parser<- ArgumentParser(description= docstring, formatter_class= 'argparse.RawTextHelpFormatter')
 
-parser$add_argument("-i", "--input", help= "File to read", required= TRUE)
+parser$add_argument("-i", "--input", help= "File to read or - for reading stdin", required= TRUE)
 parser$add_argument("-c", "--column", help= "Column index to get data for histogram", type= 'integer', required= TRUE)
-parser$add_argument("-H", "--header", help= "First line in input is header", action= 'store_true')
 parser$add_argument("-d", "--delim", help= "Column delimiter. Default tab", default= '\t')
 parser$add_argument("-w", "--width", help= "Width of the highest bar in number of chars", type= 'integer', default= 50)
 parser$add_argument("-b", "--breaks", help= "Number of breaks. Default is to use 'Sturges' method in R", type= 'integer', default= -1)
 parser$add_argument("-V", "--verbose", help= "Print some details of the processed data", action= 'store_true')
+# parser$add_argument("-H", "--header", help= "First line in input is header", action= 'store_true')
 xargs<- parser$parse_args()
 
 ## Read data
 ## ---------
-dat<- read.table(xargs$input, sep= xargs$delim, header= xargs$header, stringsAsFactors= FALSE, fill= TRUE)
+if(xargs$input == "-") {
+    dat<- read.table(file("stdin"), sep= xargs$delim, header= FALSE, stringsAsFactors= FALSE, fill= TRUE)
+} else {
+    dat<- read.table(xargs$input, sep= xargs$delim, header= FALSE, stringsAsFactors= FALSE, fill= TRUE)
+}
+
 xdat<- suppressWarnings(as.numeric(dat[, xargs$column]))
 nas<- sum(is.na(xdat))
 xdat<- xdat[!is.na(xdat)]

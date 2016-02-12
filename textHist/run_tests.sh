@@ -11,3 +11,9 @@ echo "CAN PLOT COL WITH MISSING DATA"
 
 echo "CAN SET WIDTH"
 ./textHist.R -i test_data/data.txt -c 1 -w 80
+
+echo "CAN SET BREAKS"
+./textHist.R -i test_data/data.txt -c 1 -b 20
+
+echo "CAN READ FROM STDIN"
+cat test_data/data.txt | ./textHist.R -i - -c 1
