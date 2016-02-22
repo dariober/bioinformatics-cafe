@@ -1,0 +1,322 @@
+#!/usr/bin/env Rscript
+
+VERSION<- '0.1.0'
+
+## Load packages
+## =============
+done<- suppressWarnings(suppressMessages(require(ggplot2)))
+if(done == FALSE){
+    cat('\nPlease install the "ggplot2" package. Open an R session and execute:\n\n')
+    cat('> install.packages("ggplot2")\n\n')
+    quit(save= 'no', status= 1)
+}
+
+# ==============================================================================
+
+printHelp<- function(opts, subcommand= NULL){
+    ## opts: List of arguments for which hep should be printed
+    ## subcommand: Print help for this subcommand group
+    if(is.null(subcommand)){
+        cat(opts$description)
+        cat('\nPLOT TYPES:\n')
+        for(x in names(opts$subcommands)){
+            cat(sprintf('%s\n    %s\n', x, opts$subcommand[[x]]))
+        }
+    } else {
+        cat(subcommand, ' ', opts$subcommands[[subcommand]], '\n')
+        for(x in names(opts$options)){
+            if(subcommand %in% opts$options[[x]]$subcommand){
+                cat(sprintf('-%s\n    %s\n', x, opts$options[[x]]$help))
+            }
+        }
+    }
+}
+
+getArgFromCmdLine<- function(opt, cmdArgs, nargs= 1){
+    # opt: Option to fetch from command line, w/o leading -
+    # cmdArgs: Vector of commands arguments collected from commandArgs()
+    # Return the values associated with opt or NA if opt is not found
+    xarg<- NA
+    cmdArg<- paste0('-', opt)
+    if(cmdArg %in% cmdArgs){
+        xarg<- cmdArgs[which(cmdArgs == cmdArg) + nargs]
+    }
+    return(xarg)
+}
+
+parseOptions<- function(opts, cmdArgs= NULL){
+    ## Parse options to comply with data type
+    xargs<- list()
+    for(opt in names(opts$options)){
+        x<- opts$options[[opt]]
+        xarg<- getArgFromCmdLine(opt, cmdArgs)
+        if(is.na(xarg)){
+            xarg<- x$arg
+        }
+        if(x$type == 'pos_num'){
+            n<- suppressWarnings(as.numeric(xarg))
+            if(is.na(n) || n <= 0){
+                cat('Invalid argument: ', xarg, ' to option -', opt, '\n', sep= '')
+                quit()
+            } else {
+                xarg<- n
+            }
+        }
+        if(x$type == 'numeric'){
+            n<- suppressWarnings(as.numeric(xarg))
+            if(is.na(n)){
+                cat('Invalid argument: ', xarg, ' to option -', opt, '\n', sep= '')
+                quit()                
+            } else {
+                xarg<- n
+            }
+        }
+        xargs[[opt]]<- xarg
+    }
+    return(xargs)
+}
+
+guessEOL<- function(buf){
+    ## Guess EOL in string by setting EOL to the most frequent
+    ## occurence of one of the candidate EOLs.
+    x<- substr(buf, 1, 1000000)
+    ll<- nchar(x)
+    eols<- list('\n'= 0, '\r'= 0, '\r\n'= 0)
+    for(n in names(eols)){
+        ss<- gsub(n, "", x, fixed= TRUE, useBytes = TRUE)
+        numOcc<- ll - nchar(ss)
+        eols[[n]]<- numOcc
+    }
+    eol<- which.max(eols)
+    return(names(eol))
+}
+
+readLines2<- function(con) {
+    ## Faster version of readLines from http://www.r-bloggers.com/faster-files-in-r/
+    ## Reading from stdin is much slower!
+    if(con != '-'){
+        s<- file.info(con)$size
+        buf<- readChar(con, s, useBytes=TRUE)
+        eol<- guessEOL(buf)
+        dat<- strsplit(buf, eol, fixed= TRUE, useBytes= TRUE)[[1]]
+    } else {
+        fin<- file('stdin', open= 'rb')
+        dat<- readLines(fin)
+        close(fin)
+    }
+    return(dat)
+}
+
+reader<- function(con, select, sep){
+    dat<- readLines2(con)
+    dat<- strsplit(dat, sep, fixed= TRUE, useBytes= TRUE)
+    dat<- lapply(dat, function(x) x[select])
+    dat<- do.call('rbind', dat)
+    return(data.frame(dat, stringsAsFactors= FALSE))
+}
+
+winsor2<- function (x, multiple=3){
+    ## From http://www.r-bloggers.com/winsorization/
+   if(length(multiple) != 1 || multiple <= 0) {
+      stop("bad value for 'multiple'")
+   }
+   med <- median(x)
+   y <- x - med
+   sc <- mad(y, center=0) * multiple
+   y[ y > sc ] <- sc
+   y[ y < -sc ] <- -sc
+   y + med
+}
+
+## =============================================================================
+## Initialize options
+## =============================================================================
+MAIN_HELP= sprintf('DESCRIPTION
+Lightweight inline plotter. Version %s.
+
+USAGE
+    plot <plot-type> <args to plot-type>
+
+HELP
+    plot <plot-type> -h
+    ', VERSION)
+
+opts<- list(
+    description= MAIN_HELP,
+    subcommands= list(
+        histogram= "Histogram of numeric x values",
+        xyplot= "Scatter plot of numeric x and y values",
+        boxplot= "Box or violin plot of numeric y values in x categories",
+        barplot= "Barplot of numeric y values in x categories"),
+    options= list(
+        i= list(arg= '-', help= 'Input file. Use - to read from stdin', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
+        d= list(arg= '\t', help= 'Column delimiter. Default tab', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
+        x= list(arg= 1, help= 'Column index for x values to plot. Default 1', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'pos_num'),
+        y= list(arg= 2, help= 'Column index for y values to plot. Default 2', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'pos_num'),
+        b= list(arg= 30, help= 'Number of bins', subcommand= 'histogram', type= 'pos_num'),
+        log= list(arg= 'na', help= 'Set axes in log10 scale. Options: "x", "y", "xy"', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'string'),
+        t= list(arg= 'p', help= 'Type of geom to plot. "p": point (default), "l": line,
+    "smooth": smooth scatter plot', subcommand= 'xyplot', type= 'string'),
+        xwin= list(arg= -1,
+            help= 'Reset outliers in X by winsorizing data beyond this multiple of the median.
+    2 or 3 is usually good choice. Set to <= 0 to disable', subcommand= c('histogram', 'xyplot'), type= 'numeric'),
+        ywin= list(arg= -1,
+            help= 'Reset outliers in Y by winsorizing data beyond this multiple of the median.
+    2 or 3 is usually good choice. Set to <= 0 to disable', subcommand= c('boxplot', 'xyplot', 'barplot'), type= 'numeric'),
+        bty= list(arg= 'box', help= 'Boxplot type. Options: "box" default boxplot, "varwidth" boxes with width proportional to n obs,
+    "notch" nocthed boxplot, "violin" violin plot', subcommand= 'boxplot', type= 'string'),
+        s= list(arg= 1, help= 'Size of the point or line', subcommand= 'xyplot', type= 'numeric'),
+        a= list(arg= 1, help= 'Alpha transparency [0, 1] (NB: Not always supported)', subcommand= 'xyplot', type= 'numeric'),
+        S= list(arg= 'T', help= 'F: to suppress smooth trendline', subcommand= 'xyplot', type= 'string'),
+        o= list(arg= '-', help= 'Output file. Default is to plot to x11 window', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
+        w= list(arg= 14, help= 'Width in cm of output window', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'pos_num'),
+        h= list(arg= 14, help= 'Height in cm of output window', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'pos_num')
+        )
+)
+## =============================================================================
+## Parse arguments
+## =============================================================================
+cmdArgs<- commandArgs(trailingOnly= TRUE)
+if(length(cmdArgs) == 0 || cmdArgs[1] == '-h'){
+    printHelp(opts)
+    quit()
+}
+subcmd<- cmdArgs[1]
+if(!subcmd %in% names(opts$subcommand)){
+    cat(sprintf("\nInvalid plot. Should be one of: %s\n\n", paste(names(opts$subcommand), collapse= ', ')))
+    quit()    
+}
+subcmdOpts<- cmdArgs[2:length(options)]
+if('-h' %in% subcmdOpts){
+    printHelp(opts, subcmd)
+    quit()
+}
+xargs<- parseOptions(opts, cmdArgs)
+
+## Plot data
+## =========
+if(subcmd == 'histogram'){
+    dat<- reader(xargs$i, sep= xargs$d, select= c(xargs$x))
+    # xdat<- as.vector(dat[, 1])
+    xdat<- suppressWarnings(as.numeric(dat[, 1]))
+    xdat<- xdat[!is.na(xdat)]
+    if(length(xdat) == 0) {
+        cat("No numeric data found!\n")
+        quit()
+    }
+    if(xargs$xwin > 0){
+        xdat<- winsor2(xdat, xargs$xwin)
+    }
+    gg<- ggplot(data= NULL, aes(x= xdat)) +
+        geom_histogram(binwidth = (range(xdat)[2] - range(xdat)[1]) / xargs$b, colour= 'white') +
+        xlab('') +
+        ggtitle(sprintf('N: %s', length(xdat)))
+}
+
+if(subcmd == 'xyplot'){
+    dat<- reader(xargs$i, sep= xargs$d, select= c(xargs$x, xargs$y))
+    names(dat)<- c('x', 'y')
+    dat$x<- suppressWarnings(as.numeric(dat$x))
+    dat$y<- suppressWarnings(as.numeric(dat$y))
+    cmp<- complete.cases(dat)
+    dat<- dat[cmp, ]
+    if(nrow(dat) == 0) {
+        cat("No numeric data found!\n")
+        quit()
+    }
+    if(xargs$xwin > 0){
+        dat$x<- winsor2(dat$x, xargs$xwin)
+    }
+    if(xargs$ywin > 0){
+        dat$y<- winsor2(dat$y, xargs$ywin)
+    }
+    gg<- ggplot(data= dat, aes(x= x, y= y)) + xlab('') + ylab('') + ggtitle(sprintf('N: %s', sum(cmp)))
+    if(xargs$t == 'p'){
+        gg<- gg + geom_point(size= xargs$s, alpha= xargs$a)
+    }
+    if(xargs$t == 'l'){
+        gg<- gg + geom_line(size= xargs$s, alpha= xargs$a)
+    }
+    if(xargs$t == 'smooth'){
+        ## From http://stackoverflow.com/questions/13094827/how-to-reproduce-smoothscatters-outlier-plotting-in-ggplot
+        gg<- gg + stat_density2d(geom="tile", aes(fill=(..density..)^0.5, alpha=1), contour=FALSE) + 
+        geom_point(size= 0.5) +
+        stat_density2d(geom="tile", aes(fill=(..density..)^0.5, alpha= ifelse((..density..)^0.5 < 0.1, 0, 1)), contour=FALSE) + 
+        scale_fill_gradientn(colours = colorRampPalette(c("white", blues9, "red", "yellow"))(256)) +
+        theme(legend.position = "none")
+    }
+    if(xargs$log == "x" || xargs$log == "xy"){
+        gg<- gg + scale_x_log10()
+    }
+    if(xargs$log == "y" || xargs$log == "xy"){
+        gg<- gg + scale_y_log10()
+    }
+    if(xargs$S != 'F'){
+        gg<- gg + geom_smooth()
+    }
+}
+
+if(subcmd == 'boxplot'){
+    dat<- reader(xargs$i, sep= xargs$d, select= c(xargs$x, xargs$y))
+    names(dat)<- c('x', 'y')
+    dat$y<- suppressWarnings(as.numeric(dat$y))
+    cmp<- complete.cases(dat)
+    dat<- dat[cmp, ]
+    if(nrow(dat) == 0) {
+        cat("No numeric data found!\n")
+        quit()
+    }
+    if(xargs$ywin > 0){
+        dat$y<- winsor2(dat$y, xargs$ywin)
+    }
+    gg<- ggplot(data= dat, aes(x= x, y= y)) +
+        xlab('') + ylab('') +
+        ggtitle(sprintf('N: %s', sum(cmp)))
+    if(xargs$bty == 'violin'){
+        gg<- gg + geom_violin()
+    } else {
+        gg<- gg + geom_boxplot(
+            varwidth= ifelse(xargs$bty == 'varwidth', TRUE, FALSE),
+            notch= ifelse(xargs$bty == 'notch', TRUE, FALSE))
+    }
+    if(xargs$log == "y" || xargs$log == "xy"){
+        gg<- gg + scale_y_log10()
+    }
+}
+
+if(subcmd == 'barplot'){
+    dat<- reader(xargs$i, sep= xargs$d, select= c(xargs$x, xargs$y))
+    names(dat)<- c('x', 'y')
+    dat$y<- suppressWarnings(as.numeric(dat$y))
+    cmp<- complete.cases(dat)
+    dat<- dat[cmp, ]
+    print(dat)
+    print(nrow(dat))
+    if(nrow(dat) == 0) {
+        cat("No numeric data found!\n")
+        quit()
+    }
+    if(xargs$ywin > 0){
+        dat$y<- winsor2(dat$y, xargs$ywin)
+    }
+    ## FIXME: Multiple x categories are stacked!
+    gg<- ggplot(data= dat, aes(x= factor(x, levels= unique(x)), y= y)) +
+        xlab('') + ylab('') +
+        ggtitle(sprintf('N: %s', sum(cmp))) +
+        geom_bar(stat= 'identity')
+    if(xargs$log == "y" || xargs$log == "xy"){
+        gg<- gg + scale_y_log10()
+    }
+}
+
+## Report
+## ======
+if(xargs$o == '-'){
+    x11(width= xargs$w/2.54, height= xargs$h/2.54)
+    suppressWarnings(print(gg))
+    message("Ctrl-C to terminate")
+    Sys.sleep(10000000)
+} else {
+    ggsave(xargs$o, width= xargs$w, height= xargs$h, units= 'cm')
+}
+quit()
