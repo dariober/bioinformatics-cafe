@@ -1,6 +1,17 @@
 ## A command line utility for quick data exploration
 
-Pourpose: Produce various types of plots directly from command line in order to get a quick overview of the input data. There should be minimal need to tweak input data and plot parameters. Plots are rendered using [R/ggplot](http://ggplot2.org/) but there's no need to know anything about R or ggplot.
+Pourpose: Produce various types of plots directly from command line in order to get a quick overview of the input data. There should be minimal need to tweak input data and plot parameters.
+Plots are rendered using [R/ggplot](http://ggplot2.org/) but there's no need to know anything about R or ggplot.
+
+## TOC
+
+* [Examples and Use cases](#examples-and-use-cases)
+* [Installation and requirements](#installation-and-requirements)
+* [Input and output](#input-and-output)
+* [Handling skewed data](#handling-skewed-data)
+* [Handling large dataset and performance](#handling-large-dataset-and-performance)
+* [TODO](#todo)
+
 
 ### Examples and Use cases
 
@@ -32,10 +43,18 @@ samtools view aln.bam | plot histogram -i - -x 9 -xwin 3
 
 ### Installation and requirements
 
+Download and make `plot` executable, optionally move to dir on PATH:
+
+```
+wget https://raw.githubusercontent.com/dariober/bioinformatics-cafe/master/quickPlots/plot
+chmod a+x plot
+mv plot ~/bin/
+```
+
+Requirements:
+
 * [R](https://cran.r-project.org/) and more specifically `Rscript` which should be already installed on *.nix systems.
 * R package [ggplot2](http://ggplot2.org/). To install open up the R terminal and issue: `install.packages('ggplot2')`
-
-Once these requirements are satisfied there is no installation needed, just execute `./plot` or put the `plot` script in directory on your PATH,  *e.g.* in `~/bin/`. It might be necessary to change permission of `plot` to be executable, for this execute `chmod 755 plot`.
 
 ### Input and output
 
