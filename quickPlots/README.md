@@ -22,9 +22,9 @@ Winsorize long tails:
 samtools view aln.bam | plot histogram -i - -x 9 -xwin 3
 ```
 
-||||
+|||
 :-------------------------:|:-------------------------:
-<img src="figures/hist.png" width="300">  |  <img src="figures/hist-win.png" width="300">
+<img src="figures/hist.png" width="350">  |  <img src="figures/hist-win.png" width="350">
 
 * Distribution of data across categories: Box and Violin plots
 
@@ -77,7 +77,7 @@ These two plots have been produce with and without winsorisation:
 
 |||
 :----------:|:---------:
-<img src="figures/boxplot.png" width="300">  |  <img src="figures/boxplot-ywin.png" width="300">
+<img src="figures/boxplot.png" width="350">  |  <img src="figures/boxplot-ywin.png" width="350">
 
 Another option might be to filter out outliers before passing data to `plot`. For example, to filter out values in column 1:
 
@@ -97,7 +97,7 @@ If data points are clustered, you might choose to add some transparency or plot 
 
 ||||
 :-------------------------:|:-------------------------:|:----|
-<img src="figures/xyplot-1.png" width="300">  | <img src="figures/xyplot-2.png" width="300">| <img src="figures/smooth.png" width="300">
+<img src="figures/xyplot-1.png" width="350">  | <img src="figures/xyplot-2.png" width="350">| <img src="figures/smooth.png" width="350">
 
 These three plots have been produced with (see also `figures/figures.sh`):
 
