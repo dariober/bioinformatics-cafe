@@ -3,6 +3,13 @@
 Pourpose: Produce various types of plots directly from command line in order to get a quick overview of the input data. There should be minimal need to tweak input data and plot parameters.
 Plots are rendered using [R/ggplot](http://ggplot2.org/) but there's no need to know anything about R or ggplot.
 
+Plot types
+
+* **histogram** Histogram of numeric x values
+* **xyplot** Scatter plot of numeric x and y values
+* **boxplot** Box or violin plot of numeric y values in x categories
+* **barplot** Barplot of numeric y values in x categories
+
 ## TOC
 
 * [Examples and Use cases](#examples-and-use-cases)
