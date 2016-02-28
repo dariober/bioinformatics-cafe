@@ -12,7 +12,7 @@ Plot types
 
 ## TOC
 
-* [Examples and Use cases](#examples-and-use-cases)
+* [Examples and use cases](#examples-and-use-cases)
 * [Installation and requirements](#installation-and-requirements)
 * [Input and output](#input-and-output)
 * [Handling skewed data](#handling-skewed-data)
@@ -20,7 +20,7 @@ Plot types
 * [TODO](#todo)
 
 
-### Examples and Use cases
+### Examples and use cases
 
 * What is the distribution of insert size in a bam file? Insert size is in column 9:
 
@@ -45,6 +45,10 @@ samtools view aln.bam | plot histogram -i - -x 9 -xwin 3
 <img src="figures/hist.png" width="350">  |  <img src="figures/hist-win.png" width="350">
 
 * Distribution of data across categories: Box and Violin plots
+
+```
+plot boxplot -i data.txt -x strain -y height -bty violin
+```
 
 <img src="figures/violin.png" width="400">
 
