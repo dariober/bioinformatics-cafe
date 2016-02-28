@@ -107,10 +107,43 @@ readLines2<- function(con) {
     return(dat)
 }
 
+columnSelector<- function(dat, select){
+    # Returns the column indexes corresponding to names in vector `select`
+    # along with the row number where the names are first found.
+    # dat:
+    #   List of vectors
+    hdrSel<- list(row= NA, idxs= NA)
+    if(!any(is.na(suppressWarnings(as.numeric(select))))){
+        hdrSel$row<- 1
+        hdrSel$idxs<- as.numeric(select)
+        return(hdrSel)
+    } else {
+        for(i in 1:length(dat)){
+            if(all(select %in% dat[[i]])){ # Does this row contain all the colnames?
+                hdrSel$row<- i+1
+                hdrSel$idxs<- match(select, dat[[i]]) # Indexes of colnames
+                return(hdrSel)
+            }
+        }
+        cat(sprintf('Required column name(s) not found: %s\n', paste(select, collapse= ', ')))
+        quit(status= 1)
+    }
+}
+
 reader<- function(con, select, sep){
+    # Return dataframe ready to be passed to plotting funcs
+    # con:
+    #   File connection to read from
+    # select:
+    #   Vector, if *numeric* column indexes to select. If *character*
+    #   name of columns.
+    # sep:
+    #   Char or string separating columns
     dat<- readLines2(con)
     dat<- strsplit(dat, sep, fixed= TRUE, useBytes= TRUE)
-    dat<- lapply(dat, function(x) x[select])
+    hdrSel<- columnSelector(dat, select)
+    dat<- dat[hdrSel$row:length(dat)]
+    dat<- lapply(dat, function(x) x[hdrSel$idxs])
     dat<- do.call('rbind', dat)
     return(data.frame(dat, stringsAsFactors= FALSE))
 }
@@ -151,8 +184,8 @@ opts<- list(
     options= list(
         i= list(arg= '-', help= 'Input file. Use - to read from stdin', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         d= list(arg= '\t', help= 'Column delimiter. Default tab', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
-        x= list(arg= 1, help= 'Column index for x values to plot. Default 1', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'pos_num'),
-        y= list(arg= 2, help= 'Column index for y values to plot. Default 2', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'pos_num'),
+        x= list(arg= 1, help= 'Column name or index for x values to plot. Default 1', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
+        y= list(arg= 2, help= 'Column name or index for y values to plot. Default 2', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'string'),
         b= list(arg= 30, help= 'Number of bins', subcommand= 'histogram', type= 'pos_num'),
         log= list(arg= 'na', help= 'Set axes in log10 scale. Options: "x", "y", "xy"', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'string'),
         t= list(arg= 'p', help= 'Type of geom to plot. "p": point (default), "l": line,
@@ -196,8 +229,8 @@ xargs<- parseOptions(opts, cmdArgs)
 ## Plot data
 ## =========
 if(subcmd == 'histogram'){
+    
     dat<- reader(xargs$i, sep= xargs$d, select= c(xargs$x))
-    # xdat<- as.vector(dat[, 1])
     xdat<- suppressWarnings(as.numeric(dat[, 1]))
     xdat<- xdat[!is.na(xdat)]
     if(length(xdat) == 0) {
@@ -209,7 +242,7 @@ if(subcmd == 'histogram'){
     }
     gg<- ggplot(data= NULL, aes(x= xdat)) +
         geom_histogram(binwidth = (range(xdat)[2] - range(xdat)[1]) / xargs$b, colour= 'white') +
-        xlab('') +
+        xlab(xargs$x) +
         ggtitle(sprintf('N: %s', length(xdat)))
 }
 
@@ -230,7 +263,7 @@ if(subcmd == 'xyplot'){
     if(xargs$ywin > 0){
         dat$y<- winsor2(dat$y, xargs$ywin)
     }
-    gg<- ggplot(data= dat, aes(x= x, y= y)) + xlab('') + ylab('') + ggtitle(sprintf('N: %s', sum(cmp)))
+    gg<- ggplot(data= dat, aes(x= x, y= y)) + xlab(xargs$x) + ylab(xargs$y) + ggtitle(sprintf('N: %s', sum(cmp)))
     if(xargs$t == 'p'){
         gg<- gg + geom_point(size= xargs$s, alpha= xargs$a)
     }
@@ -270,10 +303,10 @@ if(subcmd == 'boxplot'){
         dat$y<- winsor2(dat$y, xargs$ywin)
     }
     gg<- ggplot(data= dat, aes(x= x, y= y)) +
-        xlab('') + ylab('') +
+        xlab(xargs$x) + ylab(xargs$y) +
         ggtitle(sprintf('N: %s', sum(cmp)))
     if(xargs$bty == 'violin'){
-        gg<- gg + geom_violin()
+        gg<- gg + geom_violin() + geom_boxplot(width=.1)
     } else {
         gg<- gg + geom_boxplot(
             varwidth= ifelse(xargs$bty == 'varwidth', TRUE, FALSE),
@@ -290,8 +323,6 @@ if(subcmd == 'barplot'){
     dat$y<- suppressWarnings(as.numeric(dat$y))
     cmp<- complete.cases(dat)
     dat<- dat[cmp, ]
-    print(dat)
-    print(nrow(dat))
     if(nrow(dat) == 0) {
         cat("No numeric data found!\n")
         quit()
@@ -299,9 +330,9 @@ if(subcmd == 'barplot'){
     if(xargs$ywin > 0){
         dat$y<- winsor2(dat$y, xargs$ywin)
     }
-    ## FIXME: Multiple x categories are stacked!
+    ## FIXME? Multiple x categories are stacked!
     gg<- ggplot(data= dat, aes(x= factor(x, levels= unique(x)), y= y)) +
-        xlab('') + ylab('') +
+        xlab(xargs$x) + ylab(xargs$y) +
         ggtitle(sprintf('N: %s', sum(cmp))) +
         geom_bar(stat= 'identity')
     if(xargs$log == "y" || xargs$log == "xy"){
