@@ -9,6 +9,10 @@ import shutil
 import atexit
 
 parser = argparse.ArgumentParser(description= """
+
+*** DEPRECATED USE INSTEAD ***
+https://github.com/dariober/bioinformatics-cafe/tree/master/bam2methylation 
+
 DESCRIPTION
     Extract methylation calls from BAM file. Only positions with non-zero count are printed.
     If you want to get only the Cs in a certain context (e.g. CpG) you need to pass
