@@ -1,15 +1,6 @@
 ## Extract methylation calls from bam file
 
 Extract methylation calls from BAM file. Only positions with non-zero count are printed.
-If you want to get only the Cs in a certain context (e.g. CpGs) you need to pass
-a bed file where these positions are. For example, first extract all the CpGs in the genome with
-[fastaRegexFinder.py](https://raw.githubusercontent.com/dariober/bioinformatics-cafe/master/fastaRegexFinder.py):
-
-```
-fastaRegexFinder.py -f mmu.fa -r CG --noreverse > mm9.allcpg.bed
-```
-
-Then pass the bed file of regions of interest to `-l <reg.bed>` option.
 
 ## Usage and output
 
@@ -24,6 +15,17 @@ Return only target positions and filter out reads with mapq < 10, exclude reads 
 ```
 bam2methylation.py -i aln.bam -r ref.fa -l targets.bed -s ' -q 15 -F 256' -mq 15
 ```
+
+If you want to get only the Cs in a certain context (e.g. CpGs) you need to pass
+a bed file where these positions are. For example, first extract all the CpGs in the genome with
+[fastaRegexFinder.py](https://raw.githubusercontent.com/dariober/bioinformatics-cafe/master/fastaRegexFinder.py):
+
+```
+fastaRegexFinder.py -f mmu.fa -r CG --noreverse > mm9.allcpg.bed
+```
+
+Then pass the bed file of regions of interest to `-l <reg.bed>` option.
+
 
 Output goes to `stdout` as tab delimited columns in extended bedGraph format with columns:
 
