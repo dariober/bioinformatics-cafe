@@ -10,22 +10,14 @@ import atexit
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
-    Extract methylation calls from BAM file. Only positions with non-zero count are printed.
-    If you want to get only the Cs in a certain context (e.g. CpG) you need to pass
-    a bed file where these positions are. For example, to get all the
-    CpGs you could use:
-    fastaRegexFinder.py -f mmu.fa -r CG --noreverse > mm9.allcpg.bed
-    (Possibly pipe to `cut -f1-3 | gzip` to make the file smaller)
-
+    Extract methylation calls from BAM file.
+    
 OUTPUT:
    bedGraph with columns:
     <chrom>  <pos-1>  <pos>  <pct meth'd>  <cnt methylated>  <tot count>  <strand> [cnt mismatch]
-    Memo: bedGraph is 0-based, so if the first base of chr1 is C it will have position: `chrom 0 1 ... +`
-   Output is sorted by chromosome and position.
-   
-   With --mismatch option an additional column of mismatch count is after <tot count>.
-   This is the number of A or G when the reference is C.
-   The percent mismatch is given by: $7/($6+$7)
+
+SEE ALSO
+https://github.com/dariober/bioinformatics-cafe/tree/master/bam2methylation
 
 """, formatter_class= argparse.RawTextHelpFormatter, prog= os.path.basename(__file__))
 
