@@ -187,7 +187,7 @@ opts<- list(
         x= list(arg= 1, help= 'Column name or index for x values to plot. Default 1', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         y= list(arg= 2, help= 'Column name or index for y values to plot. Default 2', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'string'),
         b= list(arg= 30, help= 'Number of bins', subcommand= 'histogram', type= 'pos_num'),
-        log= list(arg= 'na', help= 'Set axes in log10 scale. Options: "x", "y", "xy"', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'string'),
+        log= list(arg= 'na', help= 'Set axes in log10 scale. Options: "x", "y", "xy"', subcommand= c('xyplot', 'boxplot', 'barplot', 'histogram'), type= 'string'),
         t= list(arg= 'p', help= 'Type of geom to plot. "p": point (default), "l": line,
     "smooth": smooth scatter plot', subcommand= 'xyplot', type= 'string'),
         xwin= list(arg= -1,
@@ -228,8 +228,10 @@ xargs<- parseOptions(opts, cmdArgs)
 
 ## Plot data
 ## =========
+axisTextX<- theme(axis.text.x= element_text(angle= 90, hjust= 1, vjust= 0.5))
+
 if(subcmd == 'histogram'){
-    
+
     dat<- reader(xargs$i, sep= xargs$d, select= c(xargs$x))
     xdat<- suppressWarnings(as.numeric(dat[, 1]))
     xdat<- xdat[!is.na(xdat)]
@@ -244,6 +246,12 @@ if(subcmd == 'histogram'){
         geom_histogram(binwidth = (range(xdat)[2] - range(xdat)[1]) / xargs$b, colour= 'white') +
         xlab(xargs$x) +
         ggtitle(sprintf('N: %s', length(xdat)))
+    if(xargs$log == "x" || xargs$log == "xy"){
+        gg<- gg + scale_x_log10()
+    }
+    if(xargs$log == "y" || xargs$log == "xy"){
+        gg<- gg + scale_y_log10()
+    }
 }
 
 if(subcmd == 'xyplot'){
@@ -304,7 +312,8 @@ if(subcmd == 'boxplot'){
     }
     gg<- ggplot(data= dat, aes(x= x, y= y)) +
         xlab(xargs$x) + ylab(xargs$y) +
-        ggtitle(sprintf('N: %s', sum(cmp)))
+        ggtitle(sprintf('N: %s', sum(cmp))) +
+        axisTextX
     if(xargs$bty == 'violin'){
         gg<- gg + geom_violin() + geom_boxplot(width=.1)
     } else {
@@ -334,7 +343,8 @@ if(subcmd == 'barplot'){
     gg<- ggplot(data= dat, aes(x= factor(x, levels= unique(x)), y= y)) +
         xlab(xargs$x) + ylab(xargs$y) +
         ggtitle(sprintf('N: %s', sum(cmp))) +
-        geom_bar(stat= 'identity')
+        geom_bar(stat= 'identity') +
+        axisTextX
     if(xargs$log == "y" || xargs$log == "xy"){
         gg<- gg + scale_y_log10()
     }
