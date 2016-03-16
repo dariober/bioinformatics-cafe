@@ -310,12 +310,14 @@ if(subcmd == 'boxplot'){
     if(xargs$ywin > 0){
         dat$y<- winsor2(dat$y, xargs$ywin)
     }
+    grpCnt<- table(dat$x)
     gg<- ggplot(data= dat, aes(x= x, y= y)) +
         xlab(xargs$x) + ylab(xargs$y) +
         ggtitle(sprintf('N: %s', sum(cmp))) +
-        axisTextX
+        axisTextX +
+        annotate('text', y= rep(Inf, length(grpCnt)), x= names(grpCnt), label= grpCnt, vjust= 1)
     if(xargs$bty == 'violin'){
-        gg<- gg + geom_violin() + geom_boxplot(width=.1)
+        gg<- gg + geom_violin(fill= 'blue', alpha= 0.5, colour= 'blue') + geom_boxplot(width=.1, alpha= 0.5, outlier.colour= 'transparent')
     } else {
         gg<- gg + geom_boxplot(
             varwidth= ifelse(xargs$bty == 'varwidth', TRUE, FALSE),
