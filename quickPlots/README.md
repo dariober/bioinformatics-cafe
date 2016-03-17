@@ -34,10 +34,11 @@ To avoid reading in the entire file let's take every *N*th read:
 samtools view aln.bam | awk 'NR % 1000 == 0' | plot histogram -i - -x 9
 ```
 
-Winsorize long tails:
+Winsorize long tails, note that partial matching of the plot name is allowed
+as long as it is unambiguous:
 
 ```
-samtools view aln.bam | plot histogram -i - -x 9 -xwin 3
+samtools view aln.bam | plot hist -i - -x 9 -xwin 3
 ```
 
 |||

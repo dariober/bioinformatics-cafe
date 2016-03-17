@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-VERSION<- '0.1.0'
+VERSION<- '0.1.1'
 
 ## Load packages
 ## =============
@@ -66,7 +66,7 @@ parseOptions<- function(opts, cmdArgs= NULL){
             n<- suppressWarnings(as.numeric(xarg))
             if(is.na(n)){
                 cat('Invalid argument: ', xarg, ' to option -', opt, '\n', sep= '')
-                quit()                
+                quit()
             } else {
                 xarg<- n
             }
@@ -214,11 +214,15 @@ if(length(cmdArgs) == 0 || cmdArgs[1] == '-h'){
     printHelp(opts)
     quit()
 }
+
 subcmd<- cmdArgs[1]
-if(!subcmd %in% names(opts$subcommand)){
-    cat(sprintf("\nInvalid plot. Should be one of: %s\n\n", paste(names(opts$subcommand), collapse= ', ')))
-    quit()    
-}
+tryCatch({
+    subcmd<- match.arg(subcmd, names(opts$subcommand))
+}, error = function(x) {
+    cat(sprintf("\nInvalid plot option: %s. Options are: %s\n\n", subcmd, paste(names(opts$subcommand), collapse= ', ')))
+    quit()
+})
+
 subcmdOpts<- cmdArgs[2:length(options)]
 if('-h' %in% subcmdOpts){
     printHelp(opts, subcmd)
