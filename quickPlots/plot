@@ -188,6 +188,7 @@ opts<- list(
         y= list(arg= 2, help= 'Column name or index for y values to plot. Default 2', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'string'),
         b= list(arg= 30, help= 'Number of bins', subcommand= 'histogram', type= 'pos_num'),
         log= list(arg= 'na', help= 'Set axes in log10 scale. Options: "x", "y", "xy"', subcommand= c('xyplot', 'boxplot', 'barplot', 'histogram'), type= 'string'),
+        flip= list(arg= 'F', help= 'T: Flip coordinates', subcommand= c('boxplot', 'barplot'), type= 'string'),
         t= list(arg= 'p', help= 'Type of geom to plot. "p": point (default), "l": line,
     "smooth": smooth scatter plot', subcommand= 'xyplot', type= 'string'),
         xwin= list(arg= -1,
@@ -329,6 +330,9 @@ if(subcmd == 'boxplot'){
     }
     if(xargs$log == "y" || xargs$log == "xy"){
         gg<- gg + scale_y_log10()
+    } 
+    if(xargs$flip == 'T'){
+        gg<- gg + coord_flip()
     }
 }
 
@@ -353,6 +357,9 @@ if(subcmd == 'barplot'){
         axisTextX
     if(xargs$log == "y" || xargs$log == "xy"){
         gg<- gg + scale_y_log10()
+    }
+    if(xargs$flip == 'T'){
+        gg<- gg + coord_flip()
     }
 }
 
