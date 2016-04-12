@@ -140,4 +140,10 @@ plot xyplot -i cloud.txt -x height -y weight -t smooth -d ',' -o smooth.png -w 1
 
 ## TODO
 
+* Allow the column separator to be repeated and be terated as a single one. 
+
+  Just like awk: `echo '  col1   col2' | awk '{print $1, $2}'`
+  
+  In fact column separtor should optionally take a regex?
+
 * Options to label axes `-xlab <lab> -ylab <lab>`?
