@@ -77,7 +77,12 @@ parser.add_argument('--keeptmp',
                   help='''Keep tmp dir. Use for debugging.
                    ''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.5.0')
+parser.add_argument('--quiet',
+                    action= 'store_true',
+                    help='''Do not print log messages
+                    ''')
+
+parser.add_argument('--version', action='version', version='%(prog)s 0.5.1')
 
 # ------------------------------------------------------------------------------
 
@@ -128,7 +133,7 @@ sys.exit()
 
 
 # ------------------------------------------------------------------------------
-def bam2methylation(bam, ref, bed, tmpdir, args_A, args_region, args_minq, args_mismatch, args_samargs):
+def bam2methylation(bam, ref, bed, tmpdir, args_A, args_region, args_minq, args_mismatch, args_samargs, quiet):
    """Convert input bam to methylation files separating read 1 and read 2.
    bam:
       Input bam file, sorted and indexed
@@ -166,11 +171,13 @@ def bam2methylation(bam, ref, bed, tmpdir, args_A, args_region, args_minq, args_
       outname= os.path.join(tmpdir, 'read%s.mpileup.txt' %(F))
       outfilenames.append(outname)
       mpileup= open(outname, 'w')
-      sys.stderr.write('Methylation file: ' + outname + '\n')
+      if not quiet:
+          sys.stderr.write('Methylation file: ' + outname + '\n')
       ## Prepare and execute mpileup with appropriate -F flag
       cmd_r= 'samtools view -u %(samargs)s %(F)s %(bam)s %(region)s | samtools mpileup -d100000000 -Q0 -B %(L)s -f %(ref)s %(A)s - | sort -k1,1 -s' %{
             'samargs':args_samargs, 'F': F, 'bam':bam, 'region': args_region, 'L':L, 'ref': ref, 'A': A}
-      sys.stderr.write(cmd_r + '\n')
+      if not quiet:
+          sys.stderr.write(cmd_r + '\n')
       p= subprocess.Popen(cmd_r, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
       for line in p.stdout:
           line= line.strip().split('\t')
@@ -288,7 +295,7 @@ pileup2methylation('chr1', 1, '', C, is_second= False)
    
    return(methList)
 
-def mergeMpileup(metCall_r1, metCall_r2, add_mismatch, groupbyExec):
+def mergeMpileup(metCall_r1, metCall_r2, add_mismatch, groupbyExec, quiet):
    """Merge the methylation call files from read 1 and read 2.
    """
    if add_mismatch:
@@ -302,7 +309,8 @@ def mergeMpileup(metCall_r1, metCall_r2, add_mismatch, groupbyExec):
            | python %(groupbyExec)s \
            | awk '{if($4==0 && $5==0){pct= 0} else {pct= 100*($4/$5)} printf("%%s\t%%s\t%%s\t%%0.2f\t%%s\t%%s\t%%s\\n", $1, $2, $3, pct, $4, $5, $6)}'
       ''' %{'metCall_r1': metCall_r1, 'metCall_r2': metCall_r2, 'groupbyExec': groupbyExec}
-   sys.stderr.write(cmd + '\n')
+   if not quiet:
+       sys.stderr.write(cmd + '\n')
    p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)   
    for line in iter(p.stdout.readline, b''):
       sys.stdout.write(line)
@@ -388,7 +396,9 @@ if __name__ == '__main__':
    
    if not args.keeptmp:
        atexit.register(shutil.rmtree, tmpdir)
-   outpiles=  bam2methylation(bam= args.input, ref= args.ref, bed= args.l, tmpdir= tmpdir, args_A= args.A, args_region= region, args_minq= args.minq, args_mismatch=args.mismatch, args_samargs= args.samargs)
+   outpiles=  bam2methylation(bam= args.input, ref= args.ref, bed= args.l, tmpdir= tmpdir, 
+           args_A= args.A, args_region= region, args_minq= args.minq, args_mismatch=args.mismatch, 
+           args_samargs= args.samargs, quiet= args.quiet)
    #outpiles= bam2methylation(bam= args.input, ref= args.ref, bed= args.l, tmpdir= tmpdir)
-   mergeMpileup(outpiles[0], outpiles[1], args.mismatch, groupbyExec= groupbyExec)
+   mergeMpileup(outpiles[0], outpiles[1], args.mismatch, groupbyExec= groupbyExec, quiet= args.quiet)
    sys.exit()
