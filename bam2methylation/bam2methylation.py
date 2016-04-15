@@ -72,6 +72,12 @@ parser.add_argument('--minq', '-mq',
 methylation call or a mismatch.
                    ''')
 
+parser.add_argument('--tmpdir',
+                   type= str,
+                   default= None,
+                   help='''Temp directory. If not given python will find one.
+                   ''')
+
 parser.add_argument('--keeptmp',
                   action= 'store_true',
                   help='''Keep tmp dir. Use for debugging.
@@ -386,7 +392,7 @@ if __name__ == '__main__':
       sys.stderr.write('\nError: File %s not found\n\n' %(args.ref))
       sys.exit(1)
    
-   tmpdir= tempfile.mkdtemp(prefix= 'tmp_bam2methylation_')
+   tmpdir= tempfile.mkdtemp(prefix= 'tmp_bam2methylation_', dir= args.tmpdir)
    
    ## Write out groupby.py script
    groupbyExec= os.path.join(tmpdir, 'groupby.py')
