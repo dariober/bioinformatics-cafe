@@ -145,5 +145,3 @@ plot xyplot -i cloud.txt -x height -y weight -t smooth -d ',' -o smooth.png -w 1
   Just like awk: `echo '  col1   col2' | awk '{print $1, $2}'`
   
   In fact column separtor should optionally take a regex?
-
-* Options to label axes `-xlab <lab> -ylab <lab>`?
