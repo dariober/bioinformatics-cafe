@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-VERSION<- '0.1.1'
+VERSION<- '0.1.2'
 
 ## Load packages
 ## =============
@@ -161,6 +161,28 @@ winsor2<- function (x, multiple=3){
    y + med
 }
 
+correctForLog<- function(x, add_pct= 0.01){
+    # Prepare data vector x to be log-transformed
+    # If all the values in x are > 0 then do nothing otherwise 
+    # if zeros are present, add a pseudo-increment 
+    # pct_add: Increment based on this % of the smalles value
+    # ...
+}
+
+getTitle<- function(N, xtitle){
+    # Prepare ggtitle object
+    # N: Integer giving the number of datapoints
+    # xtitle: String for the title
+    N_title<- sprintf('N: %s', N)
+    if(xargs$title != ''){
+        xtitle<- ggtitle(sprintf('%s\n%s', xargs$title, N_title))
+        # xtitle<- ggtitle(bquote(atop(.(sprintf(xargs$title)), atop(italic(.(N_title)), ""))))
+    } else {
+        xtitle<- ggtitle(N_title)
+    }
+    return(xtitle)
+}
+
 ## =============================================================================
 ## Initialize options
 ## =============================================================================
@@ -202,6 +224,9 @@ opts<- list(
         s= list(arg= 1, help= 'Size of the point or line', subcommand= 'xyplot', type= 'numeric'),
         a= list(arg= 1, help= 'Alpha transparency [0, 1] (NB: Not always supported)', subcommand= 'xyplot', type= 'numeric'),
         S= list(arg= 'T', help= 'F: to suppress smooth trendline', subcommand= 'xyplot', type= 'string'),
+        title= list(arg= '', help= 'Plot title', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
+        xlab= list(arg= '', help= 'Label for x-axis', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
+        ylab= list(arg= '', help= 'Label for y-axis', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         o= list(arg= '-', help= 'Output file. Default is to plot to x11 window', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         w= list(arg= 14, help= 'Width in cm of output window', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'pos_num'),
         h= list(arg= 14, help= 'Height in cm of output window', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'pos_num')
@@ -249,8 +274,12 @@ if(subcmd == 'histogram'){
     }
     gg<- ggplot(data= NULL, aes(x= xdat)) +
         geom_histogram(binwidth = (range(xdat)[2] - range(xdat)[1]) / xargs$b, colour= 'white') +
-        xlab(xargs$x) +
-        ggtitle(sprintf('N: %s', length(xdat)))
+       getTitle(length(xdat), xargs$title)
+    
+    # X and Y labs
+    if(xargs$xlab == '') {gg<- gg + xlab(xargs$x)} else {gg<- gg + xlab(xargs$xlab)}
+    if(xargs$ylab != '') {gg<- gg + ylab(xargs$ylab)}
+    
     if(xargs$log == "x" || xargs$log == "xy"){
         gg<- gg + scale_x_log10()
     }
@@ -276,7 +305,13 @@ if(subcmd == 'xyplot'){
     if(xargs$ywin > 0){
         dat$y<- winsor2(dat$y, xargs$ywin)
     }
-    gg<- ggplot(data= dat, aes(x= x, y= y)) + xlab(xargs$x) + ylab(xargs$y) + ggtitle(sprintf('N: %s', sum(cmp)))
+    gg<- ggplot(data= dat, aes(x= x, y= y)) + 
+          getTitle(sum(cmp), xargs$title) ##  ggtitle(sprintf('N: %s', sum(cmp)))
+    
+    # X and Y labs
+    if(xargs$xlab == '') {gg<- gg + xlab(xargs$x)} else {gg<- gg + xlab(xargs$xlab)}
+    if(xargs$ylab == '') {gg<- gg + ylab(xargs$y)} else {gg<- gg + ylab(xargs$ylab)}
+    
     if(xargs$t == 'p'){
         gg<- gg + geom_point(size= xargs$s, alpha= xargs$a)
     }
@@ -317,10 +352,14 @@ if(subcmd == 'boxplot'){
     }
     grpCnt<- table(dat$x)
     gg<- ggplot(data= dat, aes(x= x, y= y)) +
-        xlab(xargs$x) + ylab(xargs$y) +
-        ggtitle(sprintf('N: %s', sum(cmp))) +
+        getTitle(sum(cmp), xargs$title) + # ggtitle(sprintf('N: %s', sum(cmp))) +
         axisTextX +
         annotate('text', y= rep(Inf, length(grpCnt)), x= names(grpCnt), label= grpCnt, vjust= 1)
+
+    # X and Y labs
+    if(xargs$xlab == '') {gg<- gg + xlab(xargs$x)} else {gg<- gg + xlab(xargs$xlab)}
+    if(xargs$ylab == '') {gg<- gg + ylab(xargs$y)} else {gg<- gg + ylab(xargs$ylab)}
+
     if(xargs$bty == 'violin'){
         gg<- gg + geom_violin(fill= 'blue', alpha= 0.5, colour= 'blue') + geom_boxplot(width=.1, alpha= 0.5, outlier.colour= 'transparent')
     } else {
@@ -351,10 +390,14 @@ if(subcmd == 'barplot'){
     }
     ## FIXME? Multiple x categories are stacked!
     gg<- ggplot(data= dat, aes(x= factor(x, levels= unique(x)), y= y)) +
-        xlab(xargs$x) + ylab(xargs$y) +
-        ggtitle(sprintf('N: %s', sum(cmp))) +
+        getTitle(sum(cmp), xargs$title) # ggtitle(sprintf('N: %s', sum(cmp))) +
         geom_bar(stat= 'identity') +
         axisTextX
+
+    # X and Y labs
+    if(xargs$xlab == '') {gg<- gg + xlab(xargs$x)} else {gg<- gg + xlab(xargs$xlab)}
+    if(xargs$ylab == '') {gg<- gg + ylab(xargs$y)} else {gg<- gg + ylab(xargs$ylab)}
+
     if(xargs$log == "y" || xargs$log == "xy"){
         gg<- gg + scale_y_log10()
     }
@@ -362,6 +405,7 @@ if(subcmd == 'barplot'){
         gg<- gg + coord_flip()
     }
 }
+
 
 ## Report
 ## ======
