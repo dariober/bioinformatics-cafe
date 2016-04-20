@@ -306,7 +306,7 @@ if(subcmd == 'xyplot'){
         dat$y<- winsor2(dat$y, xargs$ywin)
     }
     gg<- ggplot(data= dat, aes(x= x, y= y)) + 
-          getTitle(sum(cmp), xargs$title) ##  ggtitle(sprintf('N: %s', sum(cmp)))
+          getTitle(sum(cmp), xargs$title)
     
     # X and Y labs
     if(xargs$xlab == '') {gg<- gg + xlab(xargs$x)} else {gg<- gg + xlab(xargs$xlab)}
@@ -352,7 +352,7 @@ if(subcmd == 'boxplot'){
     }
     grpCnt<- table(dat$x)
     gg<- ggplot(data= dat, aes(x= x, y= y)) +
-        getTitle(sum(cmp), xargs$title) + # ggtitle(sprintf('N: %s', sum(cmp))) +
+        getTitle(sum(cmp), xargs$title) +
         axisTextX +
         annotate('text', y= rep(Inf, length(grpCnt)), x= names(grpCnt), label= grpCnt, vjust= 1)
 
@@ -390,7 +390,7 @@ if(subcmd == 'barplot'){
     }
     ## FIXME? Multiple x categories are stacked!
     gg<- ggplot(data= dat, aes(x= factor(x, levels= unique(x)), y= y)) +
-        getTitle(sum(cmp), xargs$title) # ggtitle(sprintf('N: %s', sum(cmp))) +
+        getTitle(sum(cmp), xargs$title) +
         geom_bar(stat= 'identity') +
         axisTextX
 
