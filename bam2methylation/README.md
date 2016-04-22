@@ -1,9 +1,9 @@
 ## Table of Contents
 
-    * [Extract methylation calls from bam file](#extract-methylation-calls-from-bam-file" aria-hidden="true"><span aria-hidden="true)
-    * [Usage](#usage" aria-hidden="true"><span aria-hidden="true)
-    * [Output format](#output-format" aria-hidden="true"><span aria-hidden="true)
-    * [Installation and input requirements](#installation-and-input-requirements" aria-hidden="true"><span aria-hidden="true)
+  * [Description](#extract-methylation-calls-from-bam-file)
+  * [Usage](#usage)
+  * [Output format](#output-format)
+  * [Installation and input requirements](#installation-and-input-requirements)
 
 ## Extract methylation calls from bam file
 
