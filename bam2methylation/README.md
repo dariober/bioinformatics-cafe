@@ -1,3 +1,10 @@
+## Table of Contents
+
+    * [Extract methylation calls from bam file](#extract-methylation-calls-from-bam-file" aria-hidden="true"><span aria-hidden="true)
+    * [Usage](#usage" aria-hidden="true"><span aria-hidden="true)
+    * [Output format](#output-format" aria-hidden="true"><span aria-hidden="true)
+    * [Installation and input requirements](#installation-and-input-requirements" aria-hidden="true"><span aria-hidden="true)
+
 ## Extract methylation calls from bam file
 
 Extract methylation calls from BAM file. Any bam file, sorted and indexed, produced by a bisulphite-aware aligner such as [bwameth](https://github.com/brentp/bwa-meth) should be suitable.
