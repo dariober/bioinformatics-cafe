@@ -8,8 +8,8 @@ import sys
 
 docstring= """
 DESCRIPTION
-Intersects two bed files and return the portions overalapping only the 
-a-file, only the b-file, the intersection. E.g.
+Intersects two bed files and return the portions overlapping:
+only the a-file, only the b-file, the intersection. E.g.
 
 |-----------|        a.bed
    |--|   |-------|  b.bed
@@ -22,7 +22,11 @@ a-file, only the b-file, the intersection. E.g.
 USAGE
 partitionBed.py <a.bed> <b.bed>
 
+REQUIRES
+* bedtools on PATH
+
 See also 
+https://github.com/dariober/bioinformatics-cafe/tree/master/partitionBed
 """
 
 def checkExit(process, cmd):
