@@ -37,7 +37,7 @@ def checkExit(process, cmd):
         sys.exit(p.returncode)
 
 
-if sys.argv[1] == '-h' or len(sys.argv) != 3:
+if len(sys.argv) < 3 or sys.argv[1] == '-h':
     sys.stderr.write(docstring + '\n')
     sys.exit(1)
 
