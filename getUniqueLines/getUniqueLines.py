@@ -1,29 +1,53 @@
 #!/bin/env python
 
 import sys
+import argparse
+import os
 
-VERSION= '0.1.0'
-
-docstring= """
+parser = argparse.ArgumentParser(description= """
 DESCRIPTION
-Read from stdin a (sorted) file and output non-duplicate lines.
-Duplicates are identified by the first record in each line, tab separated.
+Read a sorted, TAB separated file and output non-duplicate lines.
+By default duplicates are identified by the first record in each line.
 
-EXAMPLE USAGE
-sort -k1,1 f.sam rc.sam | getUniqueLines.py 
+Example:
+sort -k1,1 infile.txt | getUniqueLines.py
 
-Version %s 
-""" %(VERSION)
+See also
+https://github.com/dariober/bioinformatics-cafe/tree/master/getUniqueLines
+""", formatter_class= argparse.RawTextHelpFormatter, prog= os.path.basename(__file__))
 
-if len(sys.argv) != 1:
-    print docstring
-    sys.exit()
+parser.add_argument('--input', '-i',
+                   required= False,
+		   default= '-',
+                   help='''Input file, appropriately sorted. Use - to read from stdin (default)
+                   ''')
 
-SEP= '\t' # In- out-put separator
-IDX= 0 # Column index to discriminating filed. I.e. 0 to use first column
+parser.add_argument('--col', '-c',
+                   required= False,
+		   type= int,
+                   default= 1,
+                   help='''Column index to use as unique key, default 1.
+                   ''')
+parser.add_argument('--version', action='version', version='%(prog)s 0.2.0')
+
+args= parser.parse_args()
+
+# ------------------------------------------------------------------------------
+
+if args.col < 1:
+    sys.stderr.write('\nColumn index must be > 0. Got %s\n\n' %(args.col))
+    sys.exit(1)
+
+SEP= '\t' # In/output separator
+IDX= args.col - 1
+
+if args.input == '-':
+    fin= sys.stdin
+else:
+    fin= open(args.input)
 
 stack= []
-for line in sys.stdin:
+for line in fin:
     line= line.strip().split(SEP)
     if len(stack) == 0 or stack[-1][IDX] == line[IDX]:
         # Put reads with the same name in the stack
@@ -33,18 +57,16 @@ for line in sys.stdin:
         # I.e. the read name in the stack is unique, output the read in the stack
         print SEP.join(stack[0])
         stack= [line]
-    elif len(stack) == 2:
-        # Two reads with the same name: Discard both as you can't tell from which
-        # genome they come from
+    elif len(stack) >= 2:
+        # Two reads with the same name: Discard both as you can't tell from which genome they come from
         stack= [line]
-    elif len(stack) > 2:
-        sys.stderr.write('\nError: At most two reads should have the same name. Got\n%s\n\n' %(stack))
-        sys.exit(1)
     else:
         sys.stderr.write('Unexpected case')
         sys.exit(1)
 
 if len(stack) == 1:
     print SEP.join(stack[0])
+
+fin.close()
 
 sys.exit()

@@ -18,5 +18,5 @@ tail -1 dups-1.txt | cat dups-1.txt - | ../getUniqueLines.py
 echo -e "\n--- Mix of dups and unique"
 cat dups-2.txt | ../getUniqueLines.py
 
-echo -e "\n--- Catch exception: 3 lines equal:"
+echo -e "\n--- 3 lines equal, nothing in output:"
 sort dups-1.txt dups-1.txt dups-1.txt | ../getUniqueLines.py
