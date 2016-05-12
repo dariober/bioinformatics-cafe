@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-VERSION<- '0.1.2'
+VERSION<- '0.2.0'
 
 ## Load packages
 ## =============
@@ -140,7 +140,12 @@ reader<- function(con, select, sep){
     # sep:
     #   Char or string separating columns
     dat<- readLines2(con)
-    dat<- strsplit(dat, sep, fixed= TRUE, useBytes= TRUE)
+    dat<- strsplit(dat, sep, perl= TRUE, useBytes= TRUE)
+    ## If first elements are always empty, drop the first column
+    xfirst<- sapply(dat, function (x) x[1])
+    if(unique(xfirst == "") == TRUE){
+        dat<- lapply(dat, function (x) x[2:length(x)]) 
+    }
     hdrSel<- columnSelector(dat, select)
     dat<- dat[hdrSel$row:length(dat)]
     dat<- lapply(dat, function(x) x[hdrSel$idxs])
@@ -183,6 +188,17 @@ getTitle<- function(N, xtitle){
     return(xtitle)
 }
 
+noNumericData<- function(dat= NULL){
+    # Function to print and exit if no numeric data is found
+    # dat:
+    #     object to show to help finding out why no numeric data
+    
+    #print(head(dat))
+    cat("No numeric data found!\n")
+    quit()
+}
+
+
 ## =============================================================================
 ## Initialize options
 ## =============================================================================
@@ -205,7 +221,7 @@ opts<- list(
         barplot= "Barplot of numeric y values in x categories"),
     options= list(
         i= list(arg= '-', help= 'Input file. Use - to read from stdin', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
-        d= list(arg= '\t', help= 'Column delimiter. Default tab', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
+        d= list(arg= '\\s+', help= 'Column delimiter interpreted as regex. Default splits at one or more tab or space: \\s+', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         x= list(arg= 1, help= 'Column name or index for x values to plot. Default 1', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         y= list(arg= 2, help= 'Column name or index for y values to plot. Default 2', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'string'),
         b= list(arg= 30, help= 'Number of bins', subcommand= 'histogram', type= 'pos_num'),
@@ -266,8 +282,7 @@ if(subcmd == 'histogram'){
     xdat<- suppressWarnings(as.numeric(dat[, 1]))
     xdat<- xdat[!is.na(xdat)]
     if(length(xdat) == 0) {
-        cat("No numeric data found!\n")
-        quit()
+         noNumericData()
     }
     if(xargs$xwin > 0){
         xdat<- winsor2(xdat, xargs$xwin)
@@ -296,8 +311,7 @@ if(subcmd == 'xyplot'){
     cmp<- complete.cases(dat)
     dat<- dat[cmp, ]
     if(nrow(dat) == 0) {
-        cat("No numeric data found!\n")
-        quit()
+        noNumericData()
     }
     if(xargs$xwin > 0){
         dat$x<- winsor2(dat$x, xargs$xwin)
@@ -344,8 +358,7 @@ if(subcmd == 'boxplot'){
     cmp<- complete.cases(dat)
     dat<- dat[cmp, ]
     if(nrow(dat) == 0) {
-        cat("No numeric data found!\n")
-        quit()
+        noNumericData()
     }
     if(xargs$ywin > 0){
         dat$y<- winsor2(dat$y, xargs$ywin)
@@ -382,8 +395,7 @@ if(subcmd == 'barplot'){
     cmp<- complete.cases(dat)
     dat<- dat[cmp, ]
     if(nrow(dat) == 0) {
-        cat("No numeric data found!\n")
-        quit()
+        noNumericData()
     }
     if(xargs$ywin > 0){
         dat$y<- winsor2(dat$y, xargs$ywin)

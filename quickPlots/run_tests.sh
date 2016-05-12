@@ -44,3 +44,6 @@ echo -e "\n---- HEADER SELECTION ----\n"
 ## These should fail with col not found:
 ./plot xyplot -i test_data/headers.txt -x x4 -y na -s 2 -d ','
 ./plot xyplot -i test_data/headers.txt -x x4 -y 2 -s 2 -d ','
+
+echo -e "\n---- CAN HANDLE MULTIPLE SEPARATORS ----"
+awk '{print $1 "\t\t  \t\t" $2}' test_data/bar.txt | ./plot barplot -i - -x 2 -y 1 -d '\s+'
