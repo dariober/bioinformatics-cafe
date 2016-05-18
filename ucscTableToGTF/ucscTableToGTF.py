@@ -371,7 +371,7 @@ Convert UCSC annotation table (genePred tables) to GTF.
 Usage:
 ucscTableToGTF.py <table|stdin>
 
-See also https://github.com/dariober/bioinformatics-cafe/trunk/ucscTableToGTF
+See also https://github.com/dariober/bioinformatics-cafe/tree/master/ucscTableToGTF
 """
     print docstring
     sys.exit(1)
