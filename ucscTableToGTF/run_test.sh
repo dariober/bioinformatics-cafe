@@ -9,6 +9,15 @@ curl -o - -O http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/vegaGene.tx
 | ./ucscTableToGTF.py \
 | sort -k1,1 -k4,4n -k5,5n > ucscTableToGTF.tmp.gtf
 
+grep 'start_codon' genePredToGtf.tmp.gtf | cut -f 1,3,4,5,7,8 > exp.tmp.txt
+grep 'start_codon' ucscTableToGTF.tmp.gtf | cut -f 1,3,4,5,7,8 > obs.tmp.txt
+diff exp.tmp.txt obs.tmp.txt
+
+
+grep 'CDS' genePredToGtf.tmp.gtf | cut -f 1,3,4,5,7,8 > exp.tmp.txt
+grep 'CDS' ucscTableToGTF.tmp.gtf | cut -f 1,3,4,5,7,8 > obs.tmp.txt
+diff exp.tmp.txt obs.tmp.txt
+
 ## NOT USED ANY MORE
 ## =================
 
