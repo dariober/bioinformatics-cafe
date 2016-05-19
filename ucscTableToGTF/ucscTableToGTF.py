@@ -34,17 +34,15 @@ class ucscLine:
             xlen += ((x[4] - x[3]) + 1)
         if xlen != 3:
             sys.stderr.write('\n' + line + '\n')
-            sys.stderr.write('Invalid codon length: ' + str(xlen) + '\n\n')
-            sys.exit(1)
+            raise ValueError('Invalid codon length: ' + str(xlen) + '\n\n')
 
     def checkCorrectCoords(self, gtf_line_list):
         for x in gtf_line_list:
             if x[3] > x[4]:
-                xout= [str(x) for x in gtf_line_list]
+                xout= [str(z) for z in gtf_line_list]
                 sys.stderr.write('\n' + line + '\n')
                 sys.stderr.write('\n' + '\n'.join(xout) + '\n')
-                sys.stderr.write('Error: start > end: %s-%s\n' %(str(x[3]), str(x[4])))
-                sys.exit(1)
+                raise ValueError('Error: start > end: %s-%s\n' %(x[3], x[4]))
 
     def hasCDS(self):
         for x in self.exonFrames:
@@ -79,7 +77,8 @@ class ucscLine:
     def getGtfIntrons(self):
         introns= []
         for i in range(self.exonCount-1):
-            introns.append( [self.chrom, '.', 'intron', self.exonEnds[i]+1, self.exonStarts[i+1], '0.000000', self.strand, '.', self.attrs] )
+            if self.exonEnds[i]+1 <= self.exonStarts[i+1]: ## This removes zero-length introns, which seem to happen
+                introns.append( [self.chrom, '.', 'intron', self.exonEnds[i]+1, self.exonStarts[i+1], '0.000000', self.strand, '.', self.attrs] )
         self.checkCorrectCoords(introns)
         return introns 
 
@@ -406,3 +405,4 @@ for line in fin:
     for feature in ucsc.getTES():
         print '\t'.join([str(x) for x in feature])
 fin.close()
+sys.exit()
