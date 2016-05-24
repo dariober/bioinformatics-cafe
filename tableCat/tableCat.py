@@ -127,13 +127,13 @@ def openGzip(x):
         return fin
     else:
         p= subprocess.Popen(['gunzip', '-c', x], shell= False, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
-        
-        err= []
-        for line in p.stderr:
-            err.append(line)
-        
-        if len(err) != 0:
-            raise Exception('%s\n' %('\n'.join(err)))
+
+        #err= []
+        #for line in p.stderr:
+        #    err.append(line)
+        #
+        #if len(err) != 0:
+        #    raise Exception('%s\n' %('\n'.join(err)))
         return p.stdout
 
 def xopen(x):
