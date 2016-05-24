@@ -6,6 +6,7 @@ import glob
 import os
 import gzip
 import re
+import subprocess
 
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
@@ -65,6 +66,27 @@ parser.add_argument('--version', action='version', version='%(prog)s 0.1.0')
 
 # -----------------------------------------------------------------------------
 
+def which(program):
+    """Test if program is on PATH, same as unix which.
+    From http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+    """
+    import os
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
 def globToList(glist):
     """Expand glob(s) to list of individual files. Duplicates removed!
     """
@@ -78,20 +100,51 @@ def globToList(glist):
     globbed= sorted(list(set(globbed)))
     return globbed
 
+def isGzip(x):
+    """Test if file x is gzip by attempting to open it with gzip module
+    """
+    try:
+        fin= gzip.open(x, 'rb')
+        fin.readline()
+        fin.close()
+        return True
+    except IOError:
+        return False
+
+
+def openGzip(x):
+    """Try to open file x with either system gunzip or with
+    python gzip module. Return None if file is not gzip
+    """
+    if not isGzip(x):
+        print "Not gzip"
+        return None
+
+    if which('gunzip') is None:
+        fin= gzip.open(x, 'rb')
+        fin.readline()
+        fin.seek(0)
+        return fin
+    else:
+        p= subprocess.Popen(['gunzip', '-c', x], shell= False, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
+        
+        err= []
+        for line in p.stderr:
+            err.append(line)
+        
+        if len(err) != 0:
+            raise Exception('%s\n' %('\n'.join(err)))
+        return p.stdout
+
 def xopen(x):
     """Seemlessly open flat or gzip file.
     x: File name
     Return: Open file handle ready to iterate through
     """
-    try:
-        fin= gzip.open(x, 'rb')
-        fin.readline()
-        fin.seek(0)
-    except IOError:
-        try:
-            fin= open(x)
-        except IOError:
-            sys.exit('Cannot open %s' %(x))
+    if not isGzip(x):
+        fin= open(x)
+    else:
+        fin= openGzip(x)
     return fin
 
 def parseID(filename, keepdir= False, regex= None):

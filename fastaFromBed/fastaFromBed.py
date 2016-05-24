@@ -4,6 +4,8 @@ import sys
 import argparse
 import gzip
 
+VERSION= '0.2.0'
+
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
     Extract DNA sequences into a fasta file based on feature coordinates.
@@ -12,12 +14,11 @@ DESCRIPTION
     in memory. This makes fastaFromBed.py much faster than bedtools when extracting
     several sequences (e.g. millions).
     
-    Note 1): It takes about 1 min and 4GB of memory to extract 1 million sequences from
+    Note: It takes about 1 min and 4GB of memory to extract 1 million sequences from
     the mouse genome mm9 (2.6GB)
 
-    Note 2): End coordinates that extend beyond the chromosome lenght will return
-    the sequence from start coordinate to the end of the chromosome without any warning.
-    
+    See also 
+   
 """, formatter_class= argparse.RawTextHelpFormatter)
 
 parser.add_argument('--fasta', '-fi',
@@ -32,9 +33,10 @@ from stdin.
                    ''')
 
 parser.add_argument('--fo', '-fo',
-                    default= None,
-                   help='''Output file (can be FASTA or TAB-delimited). Default
-to stdout.
+                   default= None,
+                   required= True,
+                   help='''Output file (can be FASTA or TAB-delimited). Use -
+for stdout.
                     ''')
 
 parser.add_argument('--name', '-name',
@@ -56,7 +58,13 @@ strand, the sequence will be reverse complemented.
 - By default, strand information is ignored.
                    ''')
 
-        
+parser.add_argument('--verbose', '-V',
+                    action= 'store_true',
+                   help='''Show some progress report
+                   ''')
+
+parser.add_argument('--version', action='version', version='%s' %(VERSION))
+   
 args= parser.parse_args()
 
 def DNAreverseComplement(x):
@@ -129,7 +137,8 @@ for line in fasta:
     line= line.strip()
     if line.startswith('>'):
         chrom= line.lstrip('>').split()[0]
-        sys.stderr.write('Reading: ' + chrom + '\n')
+        if args.verbose:
+            sys.stderr.write('Reading: ' + chrom + '\n')
         genome[chrom]= []
         continue
     genome[chrom].append(line)
@@ -138,18 +147,16 @@ fasta.close()
 for chrom in genome:
     genome[chrom]= ''.join(genome[chrom])
 
-## Sequence len:
-#chrom_len= {}
-#for chrom in genome:
-#    chrom_len[chrom]= len(genome[chrom])
-    
-## Extract sequenences
-## -------------------
+## Extract sequences
+## -----------------
 for line in bed:
     line= line.strip().split('\t')
     chrom= line[0]
     s= int(line[1])
     e= int(line[2])
+    if s >= e:
+        sys.stderr.write("Error: Start >= End. Line was: %s\n" %('\t'.join(line)))
+        sys.exit(1)
     if args.strand:
         strand= line[5]
     else:
@@ -163,7 +170,7 @@ for line in bed:
     else:
         name= chrom + ':' + line[1] + '-' + line[2]
         if args.strand:
-            name= name + ':' + "(" + strand + ")"
+            name= name + "(" + strand + ")"
 
     ## Get sequence    
     faseq= genome[chrom][s:e]
