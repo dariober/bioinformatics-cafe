@@ -14,9 +14,6 @@ DESCRIPTION
     in memory. This makes fastaFromBed.py much faster than bedtools when extracting
     several sequences (e.g. millions).
     
-    Note: It takes about 1 min and 4GB of memory to extract 1 million sequences from
-    the mouse genome mm9 (2.6GB)
-
     See also 
    
 """, formatter_class= argparse.RawTextHelpFormatter)

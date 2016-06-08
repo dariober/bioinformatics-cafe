@@ -29,6 +29,6 @@ diff exp.tmp.fa obs.tmp.fa
 ./fastaFromBed.py -name -tab -s -fi test_data/ref.fa -bed test_data/a.bed -fo obs.tmp.fa
 diff exp.tmp.fa obs.tmp.fa
 
-## Zero length features
-echo -e "chr1\t0\t0" |      fastaFromBed -fi test_data/ref.fa -bed - -fo -fo exp.tmp.fa
-echo -e "chr1\t0\t0" | ./fastaFromBed.py -fi test_data/ref.fa -bed - -fo -fo obs.tmp.fa
+## Zero length features: MUST FAIL
+echo -e "chr1\t0\t0" |      fastaFromBed -fi test_data/ref.fa -bed - -fo exp.tmp.fa
+echo -e "chr1\t0\t0" | ./fastaFromBed.py -fi test_data/ref.fa -bed - -fo obs.tmp.fa
