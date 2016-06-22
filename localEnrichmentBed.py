@@ -11,6 +11,12 @@ import numpy
 import atexit
 
 parser = argparse.ArgumentParser(description= """
+                   =========
+                   DEPRECTED
+
+Use instead https://github.com/dariober/bioinformatics-cafe/tree/master/localEnrichmentBed/  
+===========================================================================================
+
 DESCRIPTION
     Compute the read enrichment in target intervals relative to local background.
     
@@ -38,13 +44,6 @@ OUTPUT:
 EXAMPLE
     localEnrichmentBed.py -b rhh047.bam -t rhh047.macs_peaks.bed -g genome.fa.fai -bl blacklist.bed > out.bed
 
-Useful tip: Get genome file from bam file:
-
-    samtools view -H rhh047.bam \\
-    | grep -P "@SQ\\tSN:" \\
-    | sed 's/@SQ\\tSN://' \\
-    | sed 's/\\tLN:/\\t/' > genome.txt
-
 REQUIRES:
     - bedtools 2.25+
     - numpy, scipy
@@ -66,12 +65,12 @@ parser.add_argument('--bam', '-b',
 computed.
                    ''')
 
-parser.add_argument('--genome', '-g',
-                   required= True,
-                   help='''A genome file giving the length of the chromosomes.
-A tab separated file with columns <chrom> <chrom lenght>.
-NB: It can be created from the header of the bam file (see tip above).
-                   ''')
+#parser.add_argument('--genome', '-g',
+#                   required= True,
+#                   help='''A genome file giving the length of the chromosomes.
+#A tab separated file with columns <chrom> <chrom lenght>.
+#NB: It can be created from the header of the bam file (see tip above).
+#                   ''')
 
 parser.add_argument('--slop', '-S',
                    default= '5.0',
@@ -105,10 +104,45 @@ parser.add_argument('--verbose', '-V',
                    help='''Print to stderr the commands that are executed. 
                    ''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.2')
+parser.add_argument('--version', action='version', version='%(prog)s 0.3')
 
 args= parser.parse_args()
 # ------------------------------------------------------------------------------
+
+def prepareGenomeFile(inbam, outgenome, verbose= False):
+    """
+    Extract genome file from bam header. See also
+    https://github.com/dariober/bioinformatics-cafe/blob/master/genomeFileFromBam/genomeFileFromBam.sh
+    """
+
+    cmd= """samtools view -H %(inbam)s""" %{'inbam': inbam}
+
+    if verbose:
+        sys.stderr.write('\n%s\n' %(cmd))
+
+    p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE)
+    stdout, stderr= p.communicate()
+    if p.returncode != 0:
+        print(stderr)
+        print('Exit code %s' %(p.returncode))
+        sys.exit(1)
+
+    genomeFile= open(outgenome, 'w')
+    header= stdout.split('\n')
+    for line in header:
+        if line.strip().startswith('@SQ'):
+            entries= line.split('\t')
+            for x in entries:
+                if x.strip().startswith('SN:'):
+                    name= x[3:]
+                elif x.strip().startswith('LN:'):
+                    size= x[3:]
+                    int(size) # Trivial check you got an int
+                else:
+                    pass
+            genomeFile.write(name + '\t' + size + '\n')
+    genomeFile.close()
+    return(True)
 
 def prepareTargetBed(inbed, outbed, verbose= False):
     """Create a bed file where the fourth column is a unique identifier and the
@@ -232,7 +266,7 @@ def sortBedAsBam(beds, bam, outbed, verbose= False):
         sys.exit(1)
 
 
-def countReadsInInterval(inbam, bed, countTable, tmpdir, verbose= False):
+def countReadsInInterval(inbam, bed, genome, countTable, tmpdir, verbose= False):
     """Count reads overalapping intervals in bed file and group by target id
     (4th columns) and region type (5th column).
     inbam:
@@ -240,6 +274,8 @@ def countReadsInInterval(inbam, bed, countTable, tmpdir, verbose= False):
     bed:
         bed file to use for counting. Must be sorted by pos with chroms in the same
         order as in the bam file. Use sortBedAsBam() for sorting 
+    genome:
+        genome file to pass to coverageBed
     countTable:
         Name of output file where counts will be stored.
     """
@@ -247,27 +283,16 @@ def countReadsInInterval(inbam, bed, countTable, tmpdir, verbose= False):
 
     cmd= """
 samtools view -u -F 128 %(bam)s \\
-| coverageBed -sorted -counts -b - -a %(bed)s \\
+| coverageBed -g %(genome)s -sorted -counts -b - -a %(bed)s \\
 | awk 'BEGIN{OFS="\\t"}{print $0, $3-$2}' \\
 | sort -s -k4,4n -k5,5 \\
 | groupBy -g 4,5 -c 6,7 -o sum,sum -prec 12 > %(countTable)s
-""" %{'bam': inbam, 'bed': bed, 'countTable':countTable}
+""" %{'genome': genome, 'bam': inbam, 'bed': bed, 'countTable':countTable}
 
     if verbose:
         sys.stderr.write(cmd)
 
     subprocess.check_call(cmd, shell= True)
-
-#    p= subprocess.Popen(cmd, shell= True, stdout= subprocess.PIPE, stderr= subprocess.PIPE, stdin= subprocess.PIPE)
-#    if inbam == '-':
-#        for line in sys.stdin:
-#            p.stdin.write(line)
-#
-#    stdout, stderr= p.communicate()
-#    if p.returncode != 0:
-#        print(stderr)
-#        print('Exit code %s' %(p.returncode))
-#        sys.exit(1)
 
     return(True)
 
@@ -345,17 +370,20 @@ if not args.keeptmp:
 if args.verbose:
     sys.stderr.write('\nWorking tmp dir: "%s"\n' %(tmpdir))
 
+outgenome= os.path.join(tmpdir, 'genome.txt')
+prepareGenomeFile(inbam= args.bam, outgenome= outgenome, verbose= args.verbose)
+
 targetBed= os.path.join(tmpdir, 'target.bed')
 prepareTargetBed(args.target, targetBed, verbose= args.verbose)
 
 flankingBed= os.path.join(tmpdir, 'flanking.bed')
-prepareFlankingRegions(targetBed= targetBed, slop= args.slop, genome= args.genome,
+prepareFlankingRegions(targetBed= targetBed, slop= args.slop, genome= outgenome,
     blacklistBed= args.blacklist, flankingBed= flankingBed, verbose= args.verbose)
 
 countTable= os.path.join(tmpdir, 'countTable.txt')
 sortBedAsBam(beds= [targetBed, flankingBed], bam= args.bam, outbed= os.path.join(tmpdir, 'targetChromSorted.bed'),
         verbose= args.verbose)
-countReadsInInterval(inbam= args.bam, bed= os.path.join(tmpdir, 'targetChromSorted.bed'),
+countReadsInInterval(inbam= args.bam, bed= os.path.join(tmpdir, 'targetChromSorted.bed'), genome= outgenome,
     countTable= countTable, tmpdir= tmpdir, verbose= args.verbose)
 
 header= 'chrom, start, end, targetID, flank_cnt, target_cnt, flank_len, target_len, log10_pval, log2fc'.replace(', ', '\t')
