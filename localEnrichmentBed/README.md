@@ -23,3 +23,8 @@ chmod a+x localEnrichmentBed.py
 
 
 See also on Biostars https://www.biostars.org/p/195689/
+
+TODO
+====
+
+* Filter reads by passing these options from command line to samtools: `-q`, `-f`, `-F`
