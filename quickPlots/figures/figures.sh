@@ -10,6 +10,6 @@
 ./plot boxplot -i test_data/data.txt -x strain -y height -ywin 2 -o figures/boxplot-ywin.png -w 12 -h 10
 ./plot boxplot -i test_data/data.txt -x strain -y height -ywin 2 -bty violin -o figures/violin-ywin.png -w 12 -h 10
 
-./plot xyplot test_data/cloud.txt -i test_data/cloud.txt -x height -y weight -p 4 -d ',' -o figures/xyplot-1.png -w 12 -h 12
-./plot xyplot test_data/cloud.txt -i test_data/cloud.txt -x height -y weight -p 4 -a 0.4 -d ',' -o figures/xyplot-2.png -w 12 -h 12
-./plot xyplot test_data/cloud.txt -i test_data/cloud.txt -x height -y weight -t smooth -d ',' -o figures/smooth.png -w 12 -h 12
+./plot xyplot -i test_data/cloud.txt -x height -y weight -p 4 -d ',' -o figures/xyplot-1.png -w 12 -h 12
+./plot xyplot -i test_data/cloud.txt -x height -y weight -p 4 -a 0.4 -d ',' -o figures/xyplot-2.png -w 12 -h 12
+./plot xyplot -i test_data/cloud.txt -x height -y weight -t smooth -d ',' -o figures/smooth.png -w 12 -h 12

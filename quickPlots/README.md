@@ -1,3 +1,15 @@
+<!-- MarkdownTOC -->
+
+- [A command line utility for quick data exploration](#a-command-line-utility-for-quick-data-exploration)
+    - [Examples and use cases](#examples-and-use-cases)
+    - [Installation and requirements](#installation-and-requirements)
+    - [Input and output](#input-and-output)
+    - [Handling skewed data](#handling-skewed-data)
+    - [Handling large dataset and performance](#handling-large-dataset-and-performance)
+- [TODO](#todo)
+
+<!-- /MarkdownTOC -->
+
 ## A command line utility for quick data exploration
 
 Pourpose: Produce various types of plots directly from command line in order to get a quick overview of the input data. There should be minimal need to tweak input data and plot parameters.
@@ -9,15 +21,6 @@ Plot types
 * **xyplot** Scatter plot of numeric x and y values
 * **boxplot** Box or violin plot of numeric y values in x categories
 * **barplot** Barplot of numeric y values in x categories
-
-## TOC
-
-* [Examples and use cases](#examples-and-use-cases)
-* [Installation and requirements](#installation-and-requirements)
-* [Input and output](#input-and-output)
-* [Handling skewed data](#handling-skewed-data)
-* [Handling large dataset and performance](#handling-large-dataset-and-performance)
-* [TODO](#todo)
 
 
 ### Examples and use cases
@@ -58,7 +61,7 @@ plot boxplot -i data.txt -x strain -y height -bty violin
 Download and make `plot` executable, optionally move to dir on PATH:
 
 ```
-wget https://raw.githubusercontent.com/dariober/bioinformatics-cafe/master/quickPlots/plot
+wget 'https://raw.githubusercontent.com/dariober/bioinformatics-cafe/master/quickPlots/plot?raw=true' -O plot
 chmod a+x plot
 mv plot ~/bin/
 ```

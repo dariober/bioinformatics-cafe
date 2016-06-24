@@ -333,12 +333,18 @@ if(subcmd == 'xyplot'){
         gg<- gg + geom_line(size= xargs$s, alpha= xargs$a)
     }
     if(xargs$t == 'smooth'){
-        ## From http://stackoverflow.com/questions/13094827/how-to-reproduce-smoothscatters-outlier-plotting-in-ggplot
-        gg<- gg + stat_density2d(geom="tile", aes(fill=(..density..)^0.5, alpha=1), contour=FALSE) + 
-        geom_point(size= 0.5) +
-        stat_density2d(geom="tile", aes(fill=(..density..)^0.5, alpha= ifelse((..density..)^0.5 < 0.1, 0, 1)), contour=FALSE) + 
-        scale_fill_gradientn(colours = colorRampPalette(c("white", blues9, "red", "yellow"))(256)) +
-        theme(legend.position = "none")
+        ## From http://wresch.github.io/2012/11/06/ggplot2-smoothscatter.html
+        xdens<- dat$x
+        if(xargs$log == "x" || xargs$log == "xy"){
+            xdens<- log10(xdens)
+        }        
+        ydens<- dat$y
+        if(xargs$log == "y" || xargs$log == "xy"){
+            ydens<- log10(ydens)
+        }
+        d<- densCols(xdens, ydens, colramp = colorRampPalette(rev(rainbow(10, end = 4/6))))
+        gg<- gg + geom_point(aes(x, y, col = d), size = 0.1) +
+             scale_color_identity()
     }
     if(xargs$log == "x" || xargs$log == "xy"){
         gg<- gg + scale_x_log10()
@@ -347,7 +353,7 @@ if(subcmd == 'xyplot'){
         gg<- gg + scale_y_log10()
     }
     if(xargs$S != 'F'){
-        gg<- gg + geom_smooth()
+        gg<- gg + geom_smooth(method= 'loess')
     }
 }
 
