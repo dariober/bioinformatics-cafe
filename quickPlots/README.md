@@ -131,7 +131,7 @@ If data points are clustered, you might choose to add some transparency or plot 
 
 ||||
 :-------------------------:|:-------------------------:|:----|
-<img src="figures/xyplot-1.png" width="350">  | <img src="figures/xyplot-2.png" width="350">| <img src="figures/smooth.png" width="350">
+<img src="figures/xyplot-1.png" width="350">  | <img src="figures/xyplot-2.png" width="350">| <img src="figures/smoothX.png" width="350">
 
 These three plots have been produced with (see also `figures/figures.sh`):
 
