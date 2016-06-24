@@ -149,5 +149,3 @@ plot xyplot -i cloud.txt -x height -y weight -t smooth -d ',' -o smooth.png -w 1
   
   In fact column separtor should optionally take a regex?
 
-
-<img src="figures/smooth.png" width="350">
