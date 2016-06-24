@@ -143,7 +143,7 @@ reader<- function(con, select, sep){
     dat<- strsplit(dat, sep, perl= TRUE, useBytes= TRUE)
     ## If first elements are always empty, drop the first column
     xfirst<- sapply(dat, function (x) x[1])
-    if(unique(xfirst == "") == TRUE){
+    if(length(unique(xfirst)) == 1 && unique(xfirst) == ""){
         dat<- lapply(dat, function (x) x[2:length(x)]) 
     }
     hdrSel<- columnSelector(dat, select)
@@ -353,7 +353,7 @@ if(subcmd == 'xyplot'){
         gg<- gg + scale_y_log10()
     }
     if(xargs$S != 'F'){
-        gg<- gg + geom_smooth(method= 'loess')
+        gg<- gg + geom_smooth()
     }
 }
 
