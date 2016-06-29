@@ -6,7 +6,6 @@
     - [Input and output](#input-and-output)
     - [Handling skewed data](#handling-skewed-data)
     - [Handling large dataset and performance](#handling-large-dataset-and-performance)
-- [TODO](#todo)
 
 <!-- /MarkdownTOC -->
 
@@ -73,7 +72,7 @@ Requirements:
 
 ### Input and output
 
-`plot` reads directly from file or from from stdin. For example, to ignore lines containing `#` you could do:
+`plot` reads directly from file or stdin. For example, to ignore lines containing `#` you could do:
 
 ```
 grep -v '#' dat.txt | plot xyplot -i - -x 1 -y 2 ...
@@ -140,12 +139,4 @@ plot xyplot -i cloud.txt -x height -y weight -p 4 -d ',' -o xyplot-1.png -w 12 -
 plot xyplot -i cloud.txt -x height -y weight -p 4 -a 0.4 -d ',' -o xyplot-2.png -w 12 -h 12
 plot xyplot -i cloud.txt -x height -y weight -t smooth -d ',' -o smooth.png -w 12 -h 12
 ```
-
-## TODO
-
-* Allow the column separator to be repeated and be terated as a single one. 
-
-  Just like awk: `echo '  col1   col2' | awk '{print $1, $2}'`
-  
-  In fact column separtor should optionally take a regex?
 
