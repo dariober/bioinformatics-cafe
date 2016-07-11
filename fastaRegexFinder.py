@@ -10,6 +10,13 @@ VERSION='0.1.0'
 
 parser = argparse.ArgumentParser(description="""
 
+***
+DEPRECATED: Use instead fastaRegexFinder.py in
+
+https://github.com/dariober/bioinformatics-cafe/blob/master/fastaRegexFinder/
+
+***
+
 DESCRIPTION
     
     Search a fasta file for matches to a regex and return a bed file with the
