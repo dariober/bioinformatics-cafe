@@ -62,6 +62,9 @@ less /tmp/mychr.fa | fastaRegexFinder.py -f - -r 'A\w\wGn'
     mychr   10  15  mychr_10_15_for 5   +   ACTGn
 ```
 
+See also this [Help simulating RRBS reads](https://www.biostars.org/p/143845/) to 
+extract RRBS fragments.
+
 Command line options
 ====================
 
