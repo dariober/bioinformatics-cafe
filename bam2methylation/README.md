@@ -80,9 +80,12 @@ chr10   102013  102014  50.00   1       2       +
 bam2methylation.py -i aln.bam -r ref.fa -l targets.bed -s ' -q 15 -F 256' -mq 15
 ```
 
-If you want to get only the Cs in a certain context (e.g. CpGs) you need to pass
-a bed file where these positions are. For example, first extract all the CpGs in the genome with
-[fastaRegexFinder.py](https://raw.githubusercontent.com/dariober/bioinformatics-cafe/master/fastaRegexFinder.py):
+* Get only the Cs in a certain context (e.g. CpGs)
+
+You need to pass a bed file where these positions are. For example, first
+extract all the CpGs in the genome with
+[fastaRegexFinder.py](https://raw.githubusercontent.com/dariober
+/bioinformatics-cafe/master/fastaRegexFinder.py):
 
 ```
 fastaRegexFinder.py -f mmu.fa -r CG --noreverse > mm9.allcpg.bed
