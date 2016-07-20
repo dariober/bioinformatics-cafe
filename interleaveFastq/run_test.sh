@@ -41,7 +41,6 @@ then
     exit 1
 fi
 
-## Reading from stdin
 bash interleaveFastq.sh test_data/fq1.fq.bz2 test_data/fq2.fq.bz2 > test_data/obs.fq
 xdiff=`diff test_data/expected.fq test_data/obs.fq`
 if [[ "$xdiff" != "" ]]
