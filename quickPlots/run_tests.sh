@@ -13,7 +13,7 @@ rm test_out/test*
 # =============
  echo -e "\n---- HISTOGRAM ----\n"
  ./plot histogram -h
- ./plot histogram -i test_data/aln.sam -x 9 
+ ./plot histogram -i test_data/aln.sam -x 9 -xangle 45
  ./plot histogram -i test_data/aln.sam -x 9 -xwin 1
  ./plot histogram -i test_data/aln.sam -x 9 -b 10
  ./plot histogram -i test_data/aln.sam -x 9 -w 20 -h 10

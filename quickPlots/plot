@@ -240,6 +240,7 @@ opts<- list(
         s= list(arg= 1, help= 'Size of the point or line', subcommand= 'xyplot', type= 'numeric'),
         a= list(arg= 1, help= 'Alpha transparency [0, 1] (NB: Not always supported)', subcommand= 'xyplot', type= 'numeric'),
         S= list(arg= 'T', help= 'F: to suppress smooth trendline', subcommand= 'xyplot', type= 'string'),
+        xangle= list(arg= 0, help= 'Angle to rotate tick labels on x-axis', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         title= list(arg= '', help= 'Plot title', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         xlab= list(arg= '', help= 'Label for x-axis', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         ylab= list(arg= '', help= 'Label for y-axis', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
@@ -274,7 +275,15 @@ xargs<- parseOptions(opts, cmdArgs)
 
 ## Plot data
 ## =========
-axisTextX<- theme(axis.text.x= element_text(angle= 90, hjust= 1, vjust= 0.5))
+hjust<- 0.5
+if(as.numeric(xargs$xangle) != 0){ ## Some sensible defaults for v/hjust
+    hjust<- 1
+} 
+vjust<- 1
+if(as.numeric(xargs$xangle) == 90){
+    vjust<- 0.5
+} 
+axisTextX<- theme(axis.text.x= element_text(angle= as.numeric(xargs$xangle), hjust= hjust, vjust= vjust))
 
 if(subcmd == 'histogram'){
 
@@ -288,8 +297,9 @@ if(subcmd == 'histogram'){
         xdat<- winsor2(xdat, xargs$xwin)
     }
     gg<- ggplot(data= NULL, aes(x= xdat)) +
-        geom_histogram(binwidth = (range(xdat)[2] - range(xdat)[1]) / xargs$b, colour= 'white') +
-       getTitle(length(xdat), xargs$title)
+         geom_histogram(binwidth = (range(xdat)[2] - range(xdat)[1]) / xargs$b, colour= 'white') +
+         getTitle(length(xdat), xargs$title) +
+         axisTextX
     
     # X and Y labs
     if(xargs$xlab == '') {gg<- gg + xlab(xargs$x)} else {gg<- gg + xlab(xargs$xlab)}
@@ -320,7 +330,8 @@ if(subcmd == 'xyplot'){
         dat$y<- winsor2(dat$y, xargs$ywin)
     }
     gg<- ggplot(data= dat, aes(x= x, y= y)) + 
-          getTitle(sum(cmp), xargs$title)
+          getTitle(sum(cmp), xargs$title) +
+          axisTextX
     
     # X and Y labs
     if(xargs$xlab == '') {gg<- gg + xlab(xargs$x)} else {gg<- gg + xlab(xargs$xlab)}
