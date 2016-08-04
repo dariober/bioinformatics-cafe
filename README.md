@@ -1,12 +1,6 @@
-# bioinformatics-cafe
-Unsorted scripts for bioinformatics.
+# Unsorted scripts for bioinformatics
+
+Miscellanea of scripts for bioinformatics. Many of these scripts do something very specific and they don't deserve their own repository. The quality of these programs can vary a lot, some are reasonably well designed and tested others are just stubs that started and I haven't finished.
 
 Formerly was on google.code as [bioinformatics-misc](https://bioinformatics-misc.googlecode.com/)
 
-Test 
-
-# TODO
-`bam2methylation.py` 
-* Replace individual options passed to `mpileup` (`-A, -l` etc) with an option that takes a string of args passed to `mpileup` as is. E.g. `--margs "-A -l regions.bed -d 100000"`.
-* Remove option `--minq`. `mpileup` has `-Q` to do that same thing!
-* Remove `--samargs` and calls to `samtools view`. As per `samtools v1.1`, `mpileup` options should replace the call top `view` completely.  For example, to include/exclude reads, instead of `samtools view -F/-f` use `samtools mpileup --ff/--rf`. 
