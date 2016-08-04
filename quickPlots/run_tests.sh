@@ -5,6 +5,8 @@
 mkdir -p test_out/
 rm test_out/test*
 
+chmod a+x plot
+
 # echo -e "\n---- MAIN HELP ----\n"
 ./plot -h
 ./plot boxplot -h
@@ -17,6 +19,8 @@ rm test_out/test*
  ./plot histogram -i test_data/aln.sam -x 9 -xwin 1
  ./plot histogram -i test_data/aln.sam -x 9 -b 10
  ./plot histogram -i test_data/aln.sam -x 9 -w 20 -h 10
+ # Handle input with no variation
+ echo -e "0\n0\n0\n0\n0" | ./plot histogram -i - -x 1 -xangle 45 -b
 
  echo -e "\n---- BOXPLOT ----\n"
  ./plot boxplot -h

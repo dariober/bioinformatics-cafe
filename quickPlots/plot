@@ -55,7 +55,7 @@ parseOptions<- function(opts, cmdArgs= NULL){
         }
         if(x$type == 'pos_num'){
             n<- suppressWarnings(as.numeric(xarg))
-            if(is.na(n) || n <= 0){
+            if(is.null(xarg) == FALSE && (is.na(n) || n <= 0)){
                 cat('Invalid argument: ', xarg, ' to option -', opt, '\n', sep= '')
                 quit()
             } else {
@@ -224,7 +224,7 @@ opts<- list(
         d= list(arg= '\\s+', help= 'Column delimiter interpreted as regex. Default splits at one or more tab or space: \\s+', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         x= list(arg= 1, help= 'Column name or index for x values to plot. Default 1', subcommand= c('histogram', 'xyplot', 'boxplot', 'barplot'), type= 'string'),
         y= list(arg= 2, help= 'Column name or index for y values to plot. Default 2', subcommand= c('xyplot', 'boxplot', 'barplot'), type= 'string'),
-        b= list(arg= 30, help= 'Number of bins', subcommand= 'histogram', type= 'pos_num'),
+        b= list(arg= NULL, help= 'Number of bins', subcommand= 'histogram', type= 'pos_num'),
         log= list(arg= 'na', help= 'Set axes in log10 scale. Options: "x", "y", "xy"', subcommand= c('xyplot', 'boxplot', 'barplot', 'histogram'), type= 'string'),
         flip= list(arg= 'F', help= 'T: Flip coordinates', subcommand= c('boxplot', 'barplot'), type= 'string'),
         t= list(arg= 'p', help= 'Type of geom to plot. "p": point (default), "l": line,
@@ -296,8 +296,18 @@ if(subcmd == 'histogram'){
     if(xargs$xwin > 0){
         xdat<- winsor2(xdat, xargs$xwin)
     }
+
+    binwidth<- NULL 
+    if( length(xargs$b) > 0 ){ 
+        ## MEMO: xargs$b is transformed from NULL to numeric(0) by parseOptions
+        binwidth<- (range(xdat)[2] - range(xdat)[1]) / xargs$b
+        if(length(unique(range(xdat))) == 1){
+            binwidth<- NULL # No variation in the data, reset to NULL
+        }
+    }
+
     gg<- ggplot(data= NULL, aes(x= xdat)) +
-         geom_histogram(binwidth = (range(xdat)[2] - range(xdat)[1]) / xargs$b, colour= 'white') +
+         geom_histogram(binwidth = binwidth, colour= 'white') +
          getTitle(length(xdat), xargs$title) +
          axisTextX
     
