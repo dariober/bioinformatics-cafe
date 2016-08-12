@@ -141,9 +141,7 @@ if args.outR1 == '-':
 else:
     fout1= open(args.outR1, 'w')
 
-if args.outR2 == args.outR1:
-    fout2= fout1
-elif args.outR2 == '-':
+if args.outR2 == '-':
     fout2= sys.stdout
 else:
     fout2= open(args.outR2, 'w')
