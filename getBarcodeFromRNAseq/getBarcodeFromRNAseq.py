@@ -152,6 +152,7 @@ if args.len <= 0:
     sys.stderr.write("Lenght of barcode must be >0. Got: %s \n" %(args.len))
     sys.exit(1)
 
+minlen= args.minlen
 if args.minlen < 0:
     minlen= args.len
 
