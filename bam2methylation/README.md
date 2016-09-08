@@ -137,7 +137,7 @@ mv bam2methylation.py /dir/on/path/bin/
 Requirments:
 
 * Python 2.7 (python 2.6 or 3.x should also work)
-* [samtools](http://www.htslib.org/) on `PATH`
+* [samtools](http://www.htslib.org/) version 1.1+ on `PATH`
 * Unix `sort` and `awk`
 
 Required input is a bam file sorted and indexed and the corresponding reference sequence in fasta format.
