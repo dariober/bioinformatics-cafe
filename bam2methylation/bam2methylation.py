@@ -11,7 +11,7 @@ import atexit
 parser = argparse.ArgumentParser(description= """
 DESCRIPTION
     Extract methylation calls from BAM file.
-    
+
 OUTPUT:
    bedGraph with columns:
     <chrom>  <pos-1>  <pos>  <pct meth'd>  <cnt methylated>  <tot count>  <strand> [cnt mismatch]
@@ -88,7 +88,7 @@ parser.add_argument('--quiet',
                     help='''Do not print log messages
                     ''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.5.1')
+parser.add_argument('--version', action='version', version='%(prog)s 0.5.2')
 
 # ------------------------------------------------------------------------------
 
@@ -180,7 +180,7 @@ def bam2methylation(bam, ref, bed, tmpdir, args_A, args_region, args_minq, args_
       if not quiet:
           sys.stderr.write('Methylation file: ' + outname + '\n')
       ## Prepare and execute mpileup with appropriate -F flag
-      cmd_r= 'samtools view -u %(samargs)s %(F)s %(bam)s %(region)s | samtools mpileup -d100000000 -Q0 -B %(L)s -f %(ref)s %(A)s - | sort -k1,1 -s' %{
+      cmd_r= 'samtools view -u %(samargs)s %(F)s %(bam)s %(region)s | samtools mpileup --excl-flags 0 -d100000000 -Q0 -B %(L)s -f %(ref)s %(A)s - | sort -k1,1 -s' %{
             'samargs':args_samargs, 'F': F, 'bam':bam, 'region': args_region, 'L':L, 'ref': ref, 'A': A}
       if not quiet:
           sys.stderr.write(cmd_r + '\n')
