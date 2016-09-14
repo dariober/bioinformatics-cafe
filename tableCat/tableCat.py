@@ -62,7 +62,7 @@ parser.add_argument('--firsthdr', '-H',
 ''')
 
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.1.0')
+parser.add_argument('--version', action='version', version='%(prog)s 0.1.1')
 
 # -----------------------------------------------------------------------------
 
@@ -158,6 +158,12 @@ def parseID(filename, keepdir= False, regex= None):
     return(id)
 
 if __name__ == '__main__':
+
+    # Prevent BrokenPipe error when tableCat is piped to e.g. head. 
+    # see http://stackoverflow.com/questions/14207708/ioerror-errno-32-broken-pipe-python
+    from signal import signal, SIGPIPE, SIG_DFL
+    signal(SIGPIPE,SIG_DFL) 
+
     args= parser.parse_args()
     files= globToList(args.input)
     if files == []:
