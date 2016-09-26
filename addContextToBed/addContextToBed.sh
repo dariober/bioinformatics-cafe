@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-VERSION='0.2.0'
+VERSION='0.3.0'
 
 bdg=$1
 ref=$2
@@ -49,11 +49,29 @@ else
     cmd="cat $bdg"
 fi
 
+if hash fastaFromBed.py 2>/dev/null; then
+    fastaFromBed=fastaFromBed.py
+elif hash fastaFromBed 2>/dev/null; then
+    fastaFromBed=fastaFromBed
+else
+    echo ""
+    echo "*** fastaFromBed.py or fastaFromBed not found ***"
+    exit 1
+fi
+
+if hash slopBed 2>/dev/null; then
+    true
+else
+    echo ""
+    echo "*** slopBed not found ***"
+    exit 1
+fi
+
 $cmd \
 | awk -v strandCol=$strand 'BEGIN{OFS="\t"} {print $1, $2, $3, ".", ".", $strandCol}' \
 | awk '{if ($6 != "+" && $6 != "-") {print "Strand information must be coded as + and -" > "/dev/stderr"; exit 1} else {print $0}}' \
 | slopBed -l $l -r $r -s -i - -g ${ref}.fai \
-| fastaFromBed.py -bed - -fi $ref -fo - -tab -s 2> /dev/null \
+| $fastaFromBed -bed - -fi $ref -fo - -tab -s 2> /dev/null \
 | cut -f 2 \
 | paste <($cmd) -
 
