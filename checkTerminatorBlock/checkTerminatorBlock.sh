@@ -32,12 +32,29 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
-picard=`which picard.jar`
-if [[ $? != 0 ]]
+path=`echo $PATH | sed 's/:/ /g'`
+
+for d in $path
+do
+    picard=`find $d -name 'picard.jar' 2> /dev/null`
+    if [[ $picard != '' ]]
+    then
+        break
+    fi
+done
+
+if [[ $picard == '' ]]
 then
-    echo -e "\npicard.jar not found on PATH or non-executable\n"
+    echo -e "\npicard.jar not found on PATH\n"
     exit 1
 fi
+
+#picard=`which picard.jar`
+#if [[ $? != 0 ]]
+#then
+#    echo -e "\npicard.jar not found on PATH or non-executable\n"
+#    exit 1
+#fi
 
 for bam in $bams
 do
