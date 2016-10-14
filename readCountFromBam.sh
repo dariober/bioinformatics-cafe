@@ -32,7 +32,7 @@ locations or with split alignments will inflate this percentage. This\n
 column is not #reads aligned/#reads sequenced although is often a good\n
 proxy.\n\n
 
-Version 0.2.0'
+Version 0.3.0'
 
 bams="$*"
 
@@ -48,8 +48,8 @@ for bam in ${bams}
 do
 if [[ ! -f ${bam}.bai && ! -f ${bam%.bam}.bai ]]
 then
-    echo "Index file ${bam}.bai or ${bam%.bam}.bai not found"
-    exit 1
+    echo "Index file ${bam}.bai or ${bam%.bam}.bai not found" 1>&2
+    continue
 fi
 
 s=$(type -P samtools)
