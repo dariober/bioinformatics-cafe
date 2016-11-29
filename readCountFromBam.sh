@@ -32,7 +32,7 @@ locations or with split alignments will inflate this percentage. This\n
 column is not #reads aligned/#reads sequenced although is often a good\n
 proxy.\n\n
 
-Version 0.3.0'
+Version 0.4.0'
 
 bams="$*"
 
@@ -68,7 +68,8 @@ samtools idxstats ${bam} \
         mateun+=$4
         refsize+=$2
     }
-}END{print bam, mapped, mateun, unmapped, refsize, 100 * mapped / (mapped + mateun + unmapped)}'  
+}END{if((mapped + mateun + unmapped) == 0){pct_aln="NA"}else{pct_aln=100 * mapped / (mapped + mateun + unmapped)}; 
+    print bam, mapped, mateun, unmapped, refsize, pct_aln}'
 done
 
 exit 0
