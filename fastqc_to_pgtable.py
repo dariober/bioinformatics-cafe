@@ -53,7 +53,7 @@ parser.add_argument('--infile', '-i',
 
 parser.add_argument('--djangobase',
                    required= False,
-                   default= '$mac_office:$django_sblab',
+                   default= 'sblab-srv001:/nas/sblab_data1/group_folders/berald01/django/sblabsite',
                    help='''Hostname (ip address) and directory hosting sblab.
 Defualt is $mac_office:$django_sblab
 The Fastqc directory will be scp'd to this address, and put in the subdir given in
