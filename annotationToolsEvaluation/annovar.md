@@ -29,12 +29,8 @@ annotate_variation.pl --buildver hg19 --downdb seq humandb/hg19_seq
 retrieve_seq_from_fasta.pl humandb/hg19_refGene.txt -seqdir humandb/hg19_seq -format refGene -outfile humandb/hg19_refGeneMrna.fa
 
 annotate_variation.pl -buildver hg19 -downdb wgEncodeGencodeBasicV19 humandb
+annotate_variation.pl --buildver hg19 --downdb seq humandb/hg19_seq
 retrieve_seq_from_fasta.pl humandb/hg19_wgEncodeGencodeBasicV19.txt -seqdir humandb/hg19_seq -format refGene -outfile humandb/hg19_wgEncodeGencodeBasicV19Mrna.fa
-
-## V7 is not the latest but it should be the one used by 1000 genomes (see vcf header).
-annotate_variation.pl -buildver hg19 -downdb wgEncodeGencodeBasicV7 humandb
-retrieve_seq_from_fasta.pl humandb/hg19_wgEncodeGencodeBasicV7.txt -seqdir humandb/hg19_seq -format refGene -outfile humandb/hg19_wgEncodeGencodeBasicV7Mrna.fa
-
 
 ## See what annovar databases are available:
 annotate_variation.pl -webfrom annovar -downdb avdblist -buildver hg38 .
@@ -54,23 +50,7 @@ annotate_variation.pl -buildver hg38 -downdb -webfrom annovar avsnp147 humandb/
 Do the actual annotation
 
 ```
-sbatch --mem=4000 --wrap "table_annovar.pl ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.vcf.gz \
-    humandb/ \
-    -buildver hg19 \
-    -out codingAnno \
-    -remove \
-    -protocol refGene,wgEncodeGencodeBasicV7 \
-    -operation g,g \
-    -nastring . \
-    -vcfinput"
-
-## Time & Memory used
-sacct --format="CPUTime,MaxRSS" -j 15301
-   CPUTime     MaxRSS 
----------- ---------- 
-  01:06:56            
-  00:04:11   2308644K 
-
+cd /scratch/dberaldi/projects/20170303_annotationToolsEvaluation/annovar/
 
 ## Only gencode
 sbatch --mem=4000 --wrap "table_annovar.pl ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.vcf.gz \
@@ -78,7 +58,7 @@ sbatch --mem=4000 --wrap "table_annovar.pl ../data/ALL.wgs.integrated_phase1_rel
     -buildver hg19 \
     -out codingAnno \
     -remove \
-    -protocol wgEncodeGencodeBasicV7 \
+    -protocol wgEncodeGencodeBasicV19 \
     -operation g \
     -nastring . \
     -vcfinput"
@@ -88,6 +68,26 @@ sacct --format="CPUTime,MaxRSS" -j 15303
 ---------- ---------- 
   00:38:56            
   00:02:26   1889972K 
+
+
+sbatch --mem=12000 --wrap "table_annovar.pl ../data/ALL.wgs.integrated_phase1_release_v3_noncoding_annotation_20120330.20101123.snps_indels_sv.sites.vcf.gz \
+    humandb/ \
+    -buildver hg19 \
+    -out noncodingAnno \
+    -remove \
+    -protocol wgEncodeGencodeBasicV19 \
+    -operation g \
+    -nastring . \
+    -vcfinput"
+
+sacct --format="CPUTime,MaxRSS" -j 15388
+   CPUTime     MaxRSS 
+---------- ---------- 
+  05:30:24            
+  00:20:39   6275364K 
+
+bgzip noncodingAnno.hg19_multianno.vcf && tabix -p vcf noncodingAnno.hg19_multianno.vcf.gz
+bgzip codingAnno.hg19_multianno.vcf && tabix -p vcf codingAnno.hg19_multianno.vcf.gz
 ```
 
 Output

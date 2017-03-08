@@ -11,11 +11,28 @@ TOC
 VEP
 ===
 
+Install appropriate annotation files (see [vep_cache](http://www.ensembl.org/info/docs/tools/vep/script/vep_cache.html)).
+
+```
+cd /scratch/dberaldi/projects/20170303_annotationToolsEvaluation/vep/vep_cache
+
+rel=75
+wget ftp://ftp.ensembl.org/pub/release-${rel}/variation/VEP/homo_sapiens_vep_${rel}.tar.gz
+## wget ftp://ftp.ensembl.org/pub/release-87/variation/VEP/homo_sapiens_vep_87_GRCh37.tar.gz
+
+tar xfz homo_sapiens_vep_${rel}.tar.gz
+```
+    
+
 ```
 cd /scratch/dberaldi/projects/20170303_annotationToolsEvaluation/vep/
 
-export PATH=$HOME/applications/vep/ensembl-tools-release-87/scripts/variant_effect_predictor:$PATH
+export PATH=$HOME/applications/vep/ensembl-tools-release-${rel}/scripts/variant_effect_predictor:$PATH
 
+chroms=`zcat ../data/ALL.wgs.integrated_phase1_release_v3_noncoding_annotation_20120330.20101123.snps_indels_sv.sites.vcf.gz | grep -v '^#' | cut -f 1 | uniq`
+
+for x in $chroms
+do
 sbatch --mem=4000 --wrap "variant_effect_predictor.pl \
     --force \
     --dir ./vep_cache \
@@ -23,16 +40,58 @@ sbatch --mem=4000 --wrap "variant_effect_predictor.pl \
     --species homo_sapiens \
     --assembly GRCh37 \
     --cache \
-    -cache_version 87 \
+    -cache_version ${rel} \
     --vcf \
-    -i ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.vcf.gz \
-    -o codingVep.vcf"
+    -i ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.${x}.vcf.gz \
+    -o codingVep.${x}.vcf"
+done
 
-sacct --format="CPUTime,MaxRSS" -j 15307
+for x in $chroms
+do
+sbatch --mem=4000 --wrap "variant_effect_predictor.pl \
+    --force \
+    --dir ./vep_cache \
+    --offline \
+    --species homo_sapiens \
+    --assembly GRCh37 \
+    --cache \
+    -cache_version ${rel} \
+    --vcf \
+    -i ../data/ALL.wgs.integrated_phase1_release_v3_noncoding_annotation_20120330.20101123.snps_indels_sv.sites.${x}.vcf.gz \
+    -o noncodingVep.${x}.vcf"
+done
+
+sacct --format="CPUTime,MaxRSS" -j 15413 ## chr2 non-coding
+   CPUTime     MaxRSS 
+---------- ---------- 
+  04:38:24            
+  00:17:24   1258528K 
+
+sacct --format="CPUTime,MaxRSS" -j 15307 ## All coding
    CPUTime     MaxRSS 
 ---------- ---------- 
   10:53:36            
   00:40:51    545480K 
+```
+
+Concatenate chroms
+
+```
+for vcf in *.vcf
+do
+    echo $vcf
+    bgzip $vcf && tabix ${vcf}.gz
+done
+
+bcftools concat codingVep.*.vcf.gz | bgzip -f > codingVep.vcf.gz && tabix -f codingVep.vcf.gz
+zcat codingVep.vcf.gz | grep -v '^#' | wc -l ## 514239
+zcat ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.vcf.gz | grep -v '^#' | wc -l ## 514239
+rm codingVep.*.vcf.gz*
+
+bcftools concat noncodingVep.*.vcf.gz | bgzip -f > noncodingVep.vcf.gz && tabix -f noncodingVep.vcf.gz
+zcat noncodingVep.vcf.gz | grep -v '^#' | wc -l ## 9450275
+zcat ../data/ALL.wgs.integrated_phase1_release_v3_noncoding_annotation_20120330.20101123.snps_indels_sv.sites.vcf.gz | grep -v '^#' | wc -l ## 9450275
+rm noncodingVep.*.vcf.gz*
 ```
 
 NB: Connection to DB fails due to missing perl module `BDB::mysql` perl 
