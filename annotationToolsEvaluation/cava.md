@@ -24,9 +24,21 @@ cd /scratch/dberaldi/projects/20170303_annotationToolsEvaluation/cava
 * Run
 
 ```
-sbatch --mem=4000 --wrap "~/applications/CAVA-1.2.0/cava.py -t 16 -c config.txt \
+cd /scratch/dberaldi/projects/20170303_annotationToolsEvaluation/cava
+
+sbatch -J cava --mem=4000 --wrap "~/applications/CAVA-1.2.0/cava.py -t 16 -c config.txt \
     -i ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.vcf.gz \
     -o codingCava"
+
+bgzip -f codingCava.vcf && tabix -f codingCava.vcf.gz
+zcat codingCava.vcf.gz | wc -l ## 514288 vs 514239
+
+sacct --format="CPUTime,Elapsed,MaxRSS,jobname" -j 15472 ## All coding
+#   CPUTime    Elapsed     MaxRSS    JobName 
+#---------- ---------- ---------- ---------- 
+#  04:39:28   00:17:28                  cava 
+#  00:17:28   00:17:28    593800K      batch 
+
 
 
 chroms=`zcat ../data/ALL.wgs.integrated_phase1_release_v3_noncoding_annotation_20120330.20101123.snps_indels_sv.sites.vcf.gz | grep -v '^#' | cut -f 1 | uniq`
@@ -44,14 +56,6 @@ sacct --format="CPUTime,elapsed,MaxRSS" -j 15438 ## chr2 non-coding
 #  00:58:08   00:03:38            
 #  00:03:38   00:03:38    683532K 
 
-sacct --format="CPUTime,MaxRSS" -j 15435 ## All coding
-#   CPUTime     MaxRSS 
-#---------- ---------- 
-#  04:39:28            
-#  00:17:28    593520K 
-
-bgzip codingCava.vcf && tabix codingCava.vcf.gz
-zcat codingCava.vcf.gz | wc -l ## 514288 vs 514239
 
 ## concat vcf
 for vcf in noncoding*.vcf

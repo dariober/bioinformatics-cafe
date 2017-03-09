@@ -29,11 +29,7 @@ cd /scratch/dberaldi/projects/20170303_annotationToolsEvaluation/vep/
 
 export PATH=$HOME/applications/vep/ensembl-tools-release-${rel}/scripts/variant_effect_predictor:$PATH
 
-chroms=`zcat ../data/ALL.wgs.integrated_phase1_release_v3_noncoding_annotation_20120330.20101123.snps_indels_sv.sites.vcf.gz | grep -v '^#' | cut -f 1 | uniq`
-
-for x in $chroms
-do
-sbatch --mem=4000 --wrap "variant_effect_predictor.pl \
+sbatch -J vep --mem=4000 --wrap "variant_effect_predictor.pl \
     --force \
     --dir ./vep_cache \
     --offline \
@@ -42,9 +38,12 @@ sbatch --mem=4000 --wrap "variant_effect_predictor.pl \
     --cache \
     -cache_version ${rel} \
     --vcf \
-    -i ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.${x}.vcf.gz \
-    -o codingVep.${x}.vcf"
-done
+    -i ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.vcf.gz \
+    -o codingVep.vcf"
+
+sacct --format="CPUTime,Elapsed,MaxRSS" -j 15474 ## All coding
+
+chroms=`zcat ../data/ALL.wgs.integrated_phase1_release_v3_noncoding_annotation_20120330.20101123.snps_indels_sv.sites.vcf.gz | grep -v '^#' | cut -f 1 | uniq`
 
 for x in $chroms
 do
@@ -66,12 +65,6 @@ sacct --format="CPUTime,MaxRSS" -j 15413 ## chr2 non-coding
 ---------- ---------- 
   04:38:24            
   00:17:24   1258528K 
-
-sacct --format="CPUTime,MaxRSS" -j 15307 ## All coding
-   CPUTime     MaxRSS 
----------- ---------- 
-  10:53:36            
-  00:40:51    545480K 
 ```
 
 Concatenate chroms

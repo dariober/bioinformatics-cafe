@@ -4,7 +4,6 @@ TOC
 <!-- MarkdownTOC -->
 
 - [Annovar](#annovar)
-    - [Output](#output)
     - [Comparing output from annovar with the one from 1kg](#comparing-output-from-annovar-with-the-one-from-1kg)
 
 <!-- /MarkdownTOC -->
@@ -53,7 +52,7 @@ Do the actual annotation
 cd /scratch/dberaldi/projects/20170303_annotationToolsEvaluation/annovar/
 
 ## Only gencode
-sbatch --mem=4000 --wrap "table_annovar.pl ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.vcf.gz \
+sbatch -J annovar --mem=4000 --wrap "table_annovar.pl ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.vcf.gz \
     humandb/ \
     -buildver hg19 \
     -out codingAnno \
@@ -63,11 +62,11 @@ sbatch --mem=4000 --wrap "table_annovar.pl ../data/ALL.wgs.integrated_phase1_rel
     -nastring . \
     -vcfinput"
 
-sacct --format="CPUTime,MaxRSS" -j 15303
-   CPUTime     MaxRSS 
----------- ---------- 
-  00:38:56            
-  00:02:26   1889972K 
+sacct --format="CPUTime,Elapsed,MaxRSS,JobName" -j 15471
+#   CPUTime    Elapsed     MaxRSS    JobName 
+#---------- ---------- ---------- ---------- 
+#  00:37:20   00:02:20               annovar 
+#  00:02:20   00:02:20   1869252K      batch 
 
 
 sbatch --mem=12000 --wrap "table_annovar.pl ../data/ALL.wgs.integrated_phase1_release_v3_noncoding_annotation_20120330.20101123.snps_indels_sv.sites.vcf.gz \
@@ -80,44 +79,14 @@ sbatch --mem=12000 --wrap "table_annovar.pl ../data/ALL.wgs.integrated_phase1_re
     -nastring . \
     -vcfinput"
 
-sacct --format="CPUTime,MaxRSS" -j 15388
-   CPUTime     MaxRSS 
----------- ---------- 
-  05:30:24            
-  00:20:39   6275364K 
-
+sacct --format="CPUTime,MaxRSS,elapsed" -j 15388
+   CPUTime     MaxRSS    Elapsed 
+---------- ---------- ---------- 
+  05:30:24              00:20:39 
+  00:20:39   6275364K   00:20:39 
+  
 bgzip noncodingAnno.hg19_multianno.vcf && tabix -p vcf noncodingAnno.hg19_multianno.vcf.gz
-bgzip codingAnno.hg19_multianno.vcf && tabix -p vcf codingAnno.hg19_multianno.vcf.gz
-```
-
-Output
-------
-
-There is a vcf file which is pretty handy since in thos way we can deal with a standard format. 
-
-```
-sed 's/.*;Func.wgEncodeGencodeBasicV7=//' codingAnno.hg19_multianno.vcf | sed 's/;.*//' | grep -v '#' | sort | uniq -c
- 510859 exonic
-    421 exonic\x3bsplicing        <- '\x3b' is ansi code for ';' (semicolon)
-     40 intergenic
-     61 intronic
-     13 ncRNA_exonic\x3bsplicing
-   2826 splicing
-      3 upstream
-      7 UTR3
-      9 UTR5
-
-sed 's/.*;ExonicFunc.wgEncodeGencodeBasicV7=//' codingAnno.hg19_multianno.vcf | sed 's/;.*//' | grep -v '#' | sort | uniq -c
-   2959 .
-    655 frameshift_deletion
-    439 frameshift_insertion
-    560 nonframeshift_deletion
-    187 nonframeshift_insertion
- 299119 nonsynonymous_SNV
-   5991 stopgain
-    407 stoploss
- 203597 synonymous_SNV
-    325 unknown
+bgzip -f codingAnno.hg19_multianno.vcf && tabix -f codingAnno.hg19_multianno.vcf.gz
 ```
 
 Comparing output from annovar with the one from 1kg

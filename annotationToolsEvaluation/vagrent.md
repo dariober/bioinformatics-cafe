@@ -46,12 +46,6 @@ sbatch --mem=4000 --wrap "Admin_EnsemblReferenceFileGenerator.pl \
     -ccds cache/CCDS2Sequence.${rel}.txt \
     -ftp ftp://ftp.ensembl.org/pub/release-${rel}/fasta/homo_sapiens/cdna/ \
     -output cache/"
-
-sacct --format="CPUTime,MaxRSS" -j 15307
-   CPUTime     MaxRSS 
----------- ---------- 
-  10:53:36            
-  00:40:51    545480K 
 ```
 
 * Annotate coding and non-coding
@@ -69,13 +63,6 @@ sbatch --mem=4000 --wrap "AnnotateVcf.pl -i ../data/ALL.wgs.integrated_phase1_re
     -sp homo_sapiens \
     -as GRCh37 \
     -tabix"
-
-sbatch --mem=4000 --wrap "AnnotateVcf.pl -i ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.${x}.vcf.gz \
-    -o codingVagrent.$x.vcf \
-    -cache cache/Homo_sapiens.GRCh37.${rel}.vagrent.cache.gz \
-    -sp homo_sapiens \
-    -as GRCh37 \
-    -tabix"
 done
 
 sacct --format="CPUTime,MaxRSS" -j 15339 ## This is for chr2 non-coding (~800k variants)
@@ -83,6 +70,18 @@ sacct --format="CPUTime,MaxRSS" -j 15339 ## This is for chr2 non-coding (~800k v
 ---------- ---------- 
   18:24:00            
   01:09:00     52716K 
+
+
+sbatch -J vagrent --mem=4000 --wrap "AnnotateVcf.pl -i ../data/ALL.wgs.integrated_phase1_release_v3_coding_annotation.20101123.snps_indels.sites.vcf.gz \
+    -o codingVagrent.vcf \
+    -cache cache/Homo_sapiens.GRCh37.${rel}.vagrent.cache.gz \
+    -sp homo_sapiens \
+    -as GRCh37 \
+    -tabix"
+
+sacct --format="CPUTime,Elapsed,MaxRSS" -j 15473 ## All coding
+
+
 ```
 
 Once done concat files
