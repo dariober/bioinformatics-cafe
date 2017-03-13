@@ -1,0 +1,49 @@
+
+---- ANNOVAR ----
+ANNOVAR_DATE=2016-02-01
+Func.wgEncodeGencodeBasicV19=exonic
+Gene.wgEncodeGencodeBasicV19=TVP23C
+GeneDetail.wgEncodeGencodeBasicV19=.
+ExonicFunc.wgEncodeGencodeBasicV19=frameshift_insertion
+AAChange.wgEncodeGencodeBasicV19=TVP23C : ENST00000225576.3 : exon6 : c.466_467insAG : p.R156fs
+                                 TVP23C : ENST00000519970.1 : exon6 : c.337_338insAG : p.R113fs
+ALLELE_END
+
+---- CAVA ------ 
+TYPE=Insertion
+TRANSCRIPT=ENST00000225576 : ENST00000519970 : ENST00000522212
+GENE=TVP23C : TVP23C : TVP23C-CDRT4
+GENEID=ENSG00000175106 : ENSG00000175106 : ENSG00000259024
+TRINFO=-/61.3kb/6/1.5kb/276 : -/125.7kb/7/1.0kb/185 : -/127.5kb/7/2.8kb/164
+LOC=Ex6 : Ex6 : In5/6
+CSN=c.466_467insAG : c.337_338insAG : c.462+42556_462+42557insAG
+PROTPOS=156 : 113 : .
+PROTREF=R : R : .
+PROTALT=. : . : .
+CLASS=FS : FS : INT
+SO=frameshift_variant : frameshift_variant : intron_variant
+IMPACT=1 : 1 : 3
+ALTANN=. : . : .
+ALTCLASS=. : . : .
+ALTSO=. : . : .
+
+---- VAGReNT ------ 
+VT=Ins
+VD=TVP23C|CCDS11170|r.562_563insag|c.466_467insAG|p.R156fs*11|protein_coding:CDS:exon:insertion:frameshift_variant|SO:0000010:SO:0000316:SO:0000147:SO:0000667:SO:0001589
+VC=frameshift
+VW=TVP23C|CCDS11170|r.562_563insag|c.466_467insAG|p.R156fs*11|protein_coding:CDS:exon:insertion:frameshift_variant|SO:0000010:SO:0000316:SO:0000147:SO:0000667:SO:0001589
+
+---- VEP ------ 
+Allele    Consequence                                   IMPACT      SYMBOL          Gene               Feature_type    Feature            BIOTYPE                    EXON    INTRON    HGVSc                                             HGVSp                                   cDNA_position    CDS_position    Protein_position    Amino_acids    Codons       Existing_variation    DISTANCE    STRAND    SYMBOL_SOURCE            HGNC_ID
+CT        intron_variant                                MODIFIER    TVP23C-CDRT4    ENSG00000259024    Transcript      ENST00000522212    protein_coding                     5/6       ENST00000522212.2:c.462+42556_462+42557insAG                                                                                                                                                                 -1        HGNC                               
+CT        3_prime_UTR_variant&NMD_transcript_variant    MODIFIER    TVP23C-CDRT4    ENSG00000259024    Transcript      ENST00000557349    nonsense_mediated_decay    6/7               ENST00000557349.1:c.*336_*337insAG                                                        561-562                                                                                                            -1        HGNC                               
+CT        frameshift_variant                            HIGH        TVP23C          ENSG00000175106    Transcript      ENST00000225576    protein_coding             6/6               ENST00000225576.3:c.466_467insAG                  ENSP00000225576.3:p.Arg156GlnfsTer11    562-563          466-467         156                 R/QX           cgg/cAGgg                                      -1        HGNC                               
+CT        frameshift_variant                            HIGH        TVP23C          ENSG00000175106    Transcript      ENST00000519970    protein_coding             6/7               ENST00000519970.1:c.337_338insAG                  ENSP00000428961.1:p.Arg113GlnfsTer11    561-562          337-338         113                 R/QX           cgg/cAGgg                                      -1        HGNC                               
+CT        upstream_gene_variant                         MODIFIER    AC005517.3      ENSG00000223878    Transcript      ENST00000452091    processed_pseudogene                                                                                                                                                                                                                          3637        1         Clone_based_vega_gene              
+CT        intron_variant&NMD_transcript_variant         MODIFIER    TVP23C-CDRT4    ENSG00000259024    Transcript      ENST00000481756    nonsense_mediated_decay            4/5       ENST00000481756.3:c.*203+42556_*203+42557insAG                                                                                                                                                               -1        HGNC                               
+CT        downstream_gene_variant                       MODIFIER    TVP23C          ENSG00000175106    Transcript      ENST00000581273    nonsense_mediated_decay                                                                                                                                                                                                                       3643        -1        HGNC                               
+CT        5_prime_UTR_variant                           MODIFIER    CDRT4           ENSG00000239704    Transcript      ENST00000524205    protein_coding             1/3               ENST00000524205.2:c.-179_-178insAG                                                        380-381                                                                                                            -1        HGNC                               
+CT        intron_variant&NMD_transcript_variant         MODIFIER    TVP23C-CDRT4    ENSG00000259024    Transcript      ENST00000518506    nonsense_mediated_decay            5/6       ENST00000518506.2:c.*220+42556_*220+42557insAG                                                                                                                                                               -1        HGNC                               
+
+---- LOCUS ------------------
+17 15406542 . C CCT 358 PASS

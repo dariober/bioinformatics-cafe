@@ -1,0 +1,41 @@
+
+---- ANNOVAR ----
+ANNOVAR_DATE=2016-02-01
+Func.wgEncodeGencodeBasicV19=splicing
+Gene.wgEncodeGencodeBasicV19=ESCO1
+GeneDetail.wgEncodeGencodeBasicV19=ENST00000269214.5 : exon10 : c.2187+1G>A
+ExonicFunc.wgEncodeGencodeBasicV19=.
+AAChange.wgEncodeGencodeBasicV19=.
+ALLELE_END
+
+---- CAVA ------ 
+TYPE=Substitution
+TRANSCRIPT=ENST00000269214
+GENE=ESCO1
+GENEID=ENSG00000141446
+TRINFO=-/71.5kb/12/4.5kb/840
+LOC=In10/11
+CSN=c.2187+1G>A
+PROTPOS=.
+PROTREF=.
+PROTALT=.
+CLASS=ESS
+SO=splice_donor_variant
+IMPACT=1
+ALTANN=.
+ALTCLASS=.
+ALTSO=.
+
+---- VAGReNT ------ 
+VT=Sub
+VD=ESCO1|CCDS32800|r.3125+1g>a|c.2187+1G>A|p.?|protein_coding:CDS:extended_cis_splice_site:substitution:splice_site_variant:transcript_variant|SO:0000010:SO:0000316:SO:0001993:SO:1000002:SO:0001629:SO:0001576
+VC=ess_splice
+VW=ESCO1|CCDS32800|r.3125+1g>a|c.2187+1G>A|p.?|protein_coding:CDS:extended_cis_splice_site:substitution:splice_site_variant:transcript_variant|SO:0000010:SO:0000316:SO:0001993:SO:1000002:SO:0001629:SO:0001576
+
+---- VEP ------ 
+Allele    Consequence                                    IMPACT    SYMBOL    Gene               Feature_type    Feature            BIOTYPE                    EXON    INTRON    HGVSc                            HGVSp    cDNA_position    CDS_position    Protein_position    Amino_acids    Codons    Existing_variation    DISTANCE    STRAND    SYMBOL_SOURCE    HGNC_ID
+T         splice_donor_variant                           HIGH      ESCO1     ENSG00000141446    Transcript      ENST00000269214    protein_coding                     10/11     ENST00000269214.5:c.2187+1G>A                                                                                                                             -1        HGNC                       
+T         splice_donor_variant&NMD_transcript_variant    HIGH      ESCO1     ENSG00000141446    Transcript      ENST00000383276    nonsense_mediated_decay            11/12     ENST00000383276.1:c.*205+1G>A                                                                                                                             -1        HGNC                       
+
+---- LOCUS ------------------
+18 19116002 . C T 100 PASS

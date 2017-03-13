@@ -1,0 +1,54 @@
+
+---- ANNOVAR ----
+ANNOVAR_DATE=2016-02-01
+Func.wgEncodeGencodeBasicV19=exonic
+Gene.wgEncodeGencodeBasicV19=WRAP53
+GeneDetail.wgEncodeGencodeBasicV19=.
+ExonicFunc.wgEncodeGencodeBasicV19=synonymous_SNV
+AAChange.wgEncodeGencodeBasicV19=WRAP53 : ENST00000534050.1 : exon4 : c.C708T : p.R236R
+                                 WRAP53 : ENST00000316024.5 : exon5 : c.C807T : p.R269R
+                                 WRAP53 : ENST00000396463.2 : exon6 : c.C807T : p.R269R
+                                 WRAP53 : ENST00000431639.2 : exon6 : c.C807T : p.R269R
+                                 WRAP53 : ENST00000457584.2 : exon6 : c.C807T : p.R269R
+ALLELE_END
+
+---- CAVA ------ 
+TYPE=Substitution
+TRANSCRIPT=ENST00000316024 : ENST00000396463 : ENST00000431639 : ENST00000457584 : ENST00000534050
+GENE=WRAP53 : WRAP53 : WRAP53 : WRAP53 : WRAP53
+GENEID=ENSG00000141499 : ENSG00000141499 : ENSG00000141499 : ENSG00000141499 : ENSG00000141499
+TRINFO=+/17.2kb/10/4.0kb/548 : +/15.2kb/11/1.9kb/548 : +/17.4kb/11/1.8kb/548 : +/16.1kb/11/1.8kb/548 : +/15.0kb/9/1.7kb/515
+LOC=Ex5 : Ex6 : Ex6 : Ex6 : Ex4
+CSN=c.807C>T_p.= : c.807C>T_p.= : c.807C>T_p.= : c.807C>T_p.= : c.708C>T_p.=
+PROTPOS=269 : 269 : 269 : 269 : 236
+PROTREF=R : R : R : R : R
+PROTALT=R : R : R : R : R
+CLASS=SY : SY : SY : SY : SY
+SO=synonymous_variant : synonymous_variant : synonymous_variant : synonymous_variant : synonymous_variant
+IMPACT=3 : 3 : 3 : 3 : 3
+ALTANN=. : . : . : . : .
+ALTCLASS=. : . : . : . : .
+ALTSO=. : . : . : . : .
+
+---- VAGReNT ------ 
+VT=Sub
+VD=WRAP53|CCDS11119|r.3155c>u|c.807C>T|p.R269R|protein_coding:CDS:exon:substitution:codon_variant:synonymous_codon|SO:0000010:SO:0000316:SO:0000147:SO:1000002:SO:0001581:SO:0001588
+VC=silent
+VW=WRAP53|CCDS11119|r.3155c>u|c.807C>T|p.R269R|protein_coding:CDS:exon:substitution:codon_variant:synonymous_codon|SO:0000010:SO:0000316:SO:0000147:SO:1000002:SO:0001581:SO:0001588
+
+---- VEP ------ 
+Allele    Consequence                                                         IMPACT      SYMBOL    Gene               Feature_type    Feature            BIOTYPE                    EXON    INTRON    HGVSc                         HGVSp                                cDNA_position    CDS_position    Protein_position    Amino_acids    Codons     Existing_variation    DISTANCE    STRAND    SYMBOL_SOURCE    HGNC_ID
+T         synonymous_variant                                                  LOW         WRAP53    ENSG00000141499    Transcript      ENST00000431639    protein_coding             6/11              ENST00000431639.2:c.807C>T    ENST00000431639.2:c.807C>T(p.%3D)    962              807             269                 R              cgC/cgT                                      1         HGNC                       
+T         synonymous_variant                                                  LOW         WRAP53    ENSG00000141499    Transcript      ENST00000316024    protein_coding             5/10              ENST00000316024.5:c.807C>T    ENST00000316024.5:c.807C>T(p.%3D)    3155             807             269                 R              cgC/cgT                                      1         HGNC                       
+T         synonymous_variant                                                  LOW         WRAP53    ENSG00000141499    Transcript      ENST00000534050    protein_coding             4/9               ENST00000534050.1:c.708C>T    ENST00000534050.1:c.708C>T(p.%3D)    880              708             236                 R              cgC/cgT                                      1         HGNC                       
+T         synonymous_variant                                                  LOW         WRAP53    ENSG00000141499    Transcript      ENST00000396463    protein_coding             6/11              ENST00000396463.2:c.807C>T    ENST00000396463.2:c.807C>T(p.%3D)    1049             807             269                 R              cgC/cgT                                      1         HGNC                       
+T         upstream_gene_variant                                               MODIFIER    EFNB3     ENSG00000108947    Transcript      ENST00000226091    protein_coding                                                                                                                                                                                                       3668        1         HGNC                       
+T         upstream_gene_variant                                               MODIFIER    WRAP53    ENSG00000141499    Transcript      ENST00000498114    retained_intron                                                                                                                                                                                                      1347        1         HGNC                       
+T         upstream_gene_variant                                               MODIFIER    WRAP53    ENSG00000141499    Transcript      ENST00000471973    retained_intron                                                                                                                                                                                                      584         1         HGNC                       
+T         synonymous_variant                                                  LOW         WRAP53    ENSG00000141499    Transcript      ENST00000457584    protein_coding             6/11              ENST00000457584.2:c.807C>T    ENST00000457584.2:c.807C>T(p.%3D)    972              807             269                 R              cgC/cgT                                      1         HGNC                       
+T         non_coding_transcript_exon_variant&non_coding_transcript_variant    MODIFIER    WRAP53    ENSG00000141499    Transcript      ENST00000467699    retained_intron            6/9               ENST00000467699.1:n.925C>T                                         925                                                                                                              1         HGNC                       
+T         upstream_gene_variant                                               MODIFIER    WRAP53    ENSG00000141499    Transcript      ENST00000463804    nonsense_mediated_decay                                                                                                                                                                                              123         1         HGNC                       
+T         missense_variant&NMD_transcript_variant                             MODERATE    WRAP53    ENSG00000141499    Transcript      ENST00000498311    nonsense_mediated_decay    6/11              ENST00000498311.1:c.839C>T    ENSP00000432991.1:p.Ala280Val        1802             839             280                 A/V            gCg/gTg                                      1         HGNC                       
+
+---- LOCUS ------------------
+17 7604852 rs35307405 C T 100 PASS

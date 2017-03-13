@@ -1,0 +1,64 @@
+
+---- ANNOVAR ----
+ANNOVAR_DATE=2016-02-01
+Func.wgEncodeGencodeBasicV19=exonic
+Gene.wgEncodeGencodeBasicV19=BGLAP
+                                 PMF1
+                                 PMF1-BGLAP
+GeneDetail.wgEncodeGencodeBasicV19=.
+ExonicFunc.wgEncodeGencodeBasicV19=stoploss
+AAChange.wgEncodeGencodeBasicV19=PMF1-BGLAP : ENST00000490491.1 : exon6 : c.T634C : p.X212Q
+ALLELE_END
+
+---- CAVA ------ 
+TYPE=Substitution
+TRANSCRIPT=ENST00000320139 : ENST00000368272 : ENST00000368276 : ENST00000490491 : ENST00000565805 : ENST00000567140
+GENE=PMF1-BGLAP : BGLAP : PMF1-BGLAP : PMF1-BGLAP : PMF1 : PMF1
+GENEID=ENSG00000260238 : ENSG00000242252 : ENSG00000260238 : ENSG00000260238 : ENSG00000160783 : ENSG00000160783
+TRINFO=+/30.3kb/6/0.8kb/175 : +/1.4kb/4/0.7kb/100 : +/30.3kb/7/0.9kb/220 : +/30.4kb/7/1.0kb/211 : +/30.1kb/6/0.5kb/175 : +/30.1kb/7/0.7kb/220
+LOC=Ex5 : Ex3 : Ex6 : Ex6 : Ex5 : Ex6
+CSN=c.438T>C_p.= : c.134T>C_p.Val45Ala : c.573T>C_p.= : c.634T>C_p.X212GlnextX1 : c.438T>C_p.= : c.573T>C_p.=
+PROTPOS=146 : 45 : 191 : 212 : 146 : 191
+PROTREF=G : V : G : X : G : G
+PROTALT=G : A : G : Q : G : G
+CLASS=SY : NSY : SY : SL : SY : SY
+SO=synonymous_variant : missense_variant : synonymous_variant : stop_lost : synonymous_variant : synonymous_variant
+IMPACT=3 : 2 : 3 : 2 : 3 : 3
+ALTANN=. : . : . : . : . : .
+ALTCLASS=. : . : . : . : . : .
+ALTSO=. : . : . : . : . : .
+
+---- VAGReNT ------ 
+VT=Sub
+VD=PMF1-BGLAP|CCDS55650|r.582u>c|c.573T>C|p.G191G|protein_coding:CDS:exon:substitution:codon_variant:synonymous_codon|SO:0000010:SO:0000316:SO:0000147:SO:1000002:SO:0001581:SO:0001588
+VC=silent
+VW=PMF1-BGLAP|CCDS60299|r.668u>c|c.634T>C|p.*212Q|protein_coding:CDS:exon:substitution:codon_variant:stop_lost|SO:0000010:SO:0000316:SO:0000147:SO:1000002:SO:0001581:SO:0001578
+
+---- VEP ------ 
+Allele    Consequence                                                         IMPACT      SYMBOL        Gene               Feature_type    Feature            BIOTYPE                    EXON    INTRON    HGVSc                         HGVSp                                   cDNA_position    CDS_position    Protein_position    Amino_acids    Codons     Existing_variation    DISTANCE    STRAND    SYMBOL_SOURCE    HGNC_ID
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000492619    processed_transcript                                                                                                                                                                                                    623         -1        HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000470198    processed_transcript                                                                                                                                                                                                    2362        -1        HGNC                       
+C         stop_lost                                                           HIGH        PMF1-BGLAP    ENSG00000260238    Transcript      ENST00000490491    protein_coding             6/7               ENST00000490491.1:c.634T>C    ENSP00000475561.1:p.Ter212GlnextTer1    668              634             212                 */Q            Tag/Cag                                      1         HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PMF1          ENSG00000160783    Transcript      ENST00000368279    protein_coding                                                                                                                                                                                                          2752        1         HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000540423    protein_coding                                                                                                                                                                                                          1120        -1        HGNC                       
+C         synonymous_variant                                                  LOW         PMF1          ENSG00000160783    Transcript      ENST00000567140    protein_coding             6/7               ENST00000567140.1:c.573T>C    ENST00000567140.1:c.573T>C(p.%3D)       582              573             191                 G              ggT/ggC                                      1         HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PMF1          ENSG00000160783    Transcript      ENST00000497069    nonsense_mediated_decay                                                                                                                                                                                                 3074        1         HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000480773    processed_transcript                                                                                                                                                                                                    1982        -1        HGNC                       
+C         missense_variant                                                    MODERATE    BGLAP         ENSG00000242252    Transcript      ENST00000368272    protein_coding             3/4               ENST00000368272.4:c.134T>C    ENSP00000357255.4:p.Val45Ala            404              134             45                  V/A            gTa/gCa                                      1         HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PMF1          ENSG00000160783    Transcript      ENST00000368273    protein_coding                                                                                                                                                                                                          2941        1         HGNC                       
+C         non_coding_transcript_exon_variant&non_coding_transcript_variant    MODIFIER    BGLAP         ENSG00000242252    Transcript      ENST00000471413    retained_intron            2/2               ENST00000471413.1:n.434T>C                                            434                                                                                                              1         HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000356983    protein_coding                                                                                                                                                                                                          624         -1        HGNC                       
+C         synonymous_variant                                                  LOW         PMF1-BGLAP    ENSG00000260238    Transcript      ENST00000320139    protein_coding             5/6               ENST00000320139.5:c.438T>C    ENST00000320139.5:c.438T>C(p.%3D)       445              438             146                 G              ggT/ggC                                      1         HGNC                       
+C         synonymous_variant                                                  LOW         PMF1-BGLAP    ENSG00000260238    Transcript      ENST00000368276    protein_coding             6/7               ENST00000368276.4:c.573T>C    ENST00000368276.4:c.573T>C(p.%3D)       582              573             191                 G              ggT/ggC                                      1         HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000475507    processed_transcript                                                                                                                                                                                                    2425        -1        HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PMF1          ENSG00000160783    Transcript      ENST00000368277    protein_coding                                                                                                                                                                                                          2750        1         HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000340183    protein_coding                                                                                                                                                                                                          630         -1        HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000491107    processed_transcript                                                                                                                                                                                                    630         -1        HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000335852    protein_coding                                                                                                                                                                                                          624         -1        HGNC                       
+C         synonymous_variant                                                  LOW         PMF1          ENSG00000160783    Transcript      ENST00000565805    protein_coding             5/6               ENST00000565805.1:c.438T>C    ENST00000565805.1:c.438T>C(p.%3D)       447              438             146                 G              ggT/ggC                                      1         HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000368270    protein_coding                                                                                                                                                                                                          631         -1        HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000468632    processed_transcript                                                                                                                                                                                                    631         -1        HGNC                       
+C         downstream_gene_variant                                             MODIFIER    PAQR6         ENSG00000160781    Transcript      ENST00000292291    protein_coding                                                                                                                                                                                                          623         -1        HGNC                       
+
+---- LOCUS ------------------
+1 156212583 . T C 100 PASS

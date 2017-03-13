@@ -1,0 +1,50 @@
+
+---- ANNOVAR ----
+ANNOVAR_DATE=2016-02-01
+Func.wgEncodeGencodeBasicV19=exonic
+Gene.wgEncodeGencodeBasicV19=MYCBP
+GeneDetail.wgEncodeGencodeBasicV19=.
+ExonicFunc.wgEncodeGencodeBasicV19=frameshift_substitution
+AAChange.wgEncodeGencodeBasicV19=MYCBP : ENST00000397572.2 : exon5 : c.311_311delinsTGC
+ALLELE_END
+
+---- CAVA ------ 
+TYPE=Complex
+TRANSCRIPT=ENST00000397572 : ENST00000454994
+GENE=MYCBP : GJA9
+GENEID=ENSG00000214114 : ENSG00000131233
+TRINFO=-/11.1kb/5/2.8kb/103 : -/17.1kb/7/2.4kb/514
+LOC=Ex5 : 3UTR
+CSN=c.311delinsTGC : c.+387delinsTGC
+PROTPOS=104 : .
+PROTREF=X : .
+PROTALT=. : .
+CLASS=FS : 3PU
+SO=frameshift_variant : 3_prime_UTR_variant
+IMPACT=1 : 3
+ALTANN=. : .
+ALTCLASS=. : .
+ALTSO=. : .
+
+---- VAGReNT ------ 
+VT=Complex
+VD=MYCBP|CCDS431|r.1110_1111delUAinsuugc|c.310_311delTAinsTTGC|p.*104fs*18|protein_coding:CDS:exon:indel:frameshift_variant|SO:0000010:SO:0000316:SO:0000147:SO:1000032:SO:0001589
+VC=frameshift
+VW=MYCBP|CCDS431|r.1110_1111delUAinsuugc|c.310_311delTAinsTTGC|p.*104fs*18|protein_coding:CDS:exon:indel:frameshift_variant|SO:0000010:SO:0000316:SO:0000147:SO:1000032:SO:0001589
+
+---- VEP ------ 
+Allele    Consequence                                                         IMPACT      SYMBOL          Gene               Feature_type    Feature            BIOTYPE                 EXON    INTRON    HGVSc                                                HGVSp                                   cDNA_position    CDS_position    Protein_position    Amino_acids    Codons       Existing_variation    DISTANCE    STRAND    SYMBOL_SOURCE            HGNC_ID
+GCAA      non_coding_transcript_exon_variant&non_coding_transcript_variant    MODIFIER    MYCBP           ENSG00000214114    Transcript      ENST00000494695    processed_transcript    4/4               ENST00000494695.1:n.314_315delTAinsTTGC                                                      314-315                                                                                                            -1        HGNC                               
+GCAA      non_coding_transcript_exon_variant&non_coding_transcript_variant    MODIFIER    MYCBP           ENSG00000214114    Transcript      ENST00000465771    processed_transcript    4/4               ENST00000465771.1:n.255_256delTAinsTTGC                                                      255-256                                                                                                            -1        HGNC                               
+GCAA      3_prime_UTR_variant                                                 MODIFIER    GJA9            ENSG00000131233    Transcript      ENST00000454994    protein_coding          7/7               ENST00000454994.2:c.*386_*387delTAinsTTGC                                                    2208-2209                                                                                                          -1        HGNC                               
+GCAA      non_coding_transcript_exon_variant&non_coding_transcript_variant    MODIFIER    MYCBP           ENSG00000214114    Transcript      ENST00000495043    processed_transcript    4/4               ENST00000495043.1:n.483_484delTAinsTTGC                                                      483-484                                                                                                            -1        HGNC                               
+GCAA      non_coding_transcript_exon_variant&non_coding_transcript_variant    MODIFIER    MYCBP           ENSG00000214114    Transcript      ENST00000489575    processed_transcript    7/7               ENST00000489575.1:n.2212_2213delTAinsTTGC                                                    2212-2213                                                                                                          -1        HGNC                               
+GCAA      upstream_gene_variant                                               MODIFIER    RRAGC           ENSG00000116954    Transcript      ENST00000373001    protein_coding                                                                                                                                                                                                                                4848        -1        HGNC                               
+GCAA      intron_variant&non_coding_transcript_variant                        MODIFIER    RP5-864K19.4    ENSG00000228436    Transcript      ENST00000433671    antisense                       1/3       ENST00000433671.2:n.240+4432_240+4433delTAinsGCAA                                                                                                                                                               1         Clone_based_vega_gene              
+GCAA      downstream_gene_variant                                             MODIFIER    MYCBP           ENSG00000214114    Transcript      ENST00000462027    processed_transcript                                                                                                                                                                                                                          2292        -1        HGNC                               
+GCAA      non_coding_transcript_exon_variant&non_coding_transcript_variant    MODIFIER    MYCBP           ENSG00000214114    Transcript      ENST00000489803    processed_transcript    6/6               ENST00000489803.1:n.3060_3061delTAinsTTGC                                                    3060-3061                                                                                                          -1        HGNC                               
+GCAA      intron_variant&non_coding_transcript_variant                        MODIFIER    RP5-864K19.4    ENSG00000228436    Transcript      ENST00000456813    antisense                       1/1       ENST00000456813.1:n.157+4432_157+4433delTAinsGCAA                                                                                                                                                               1         Clone_based_vega_gene              
+GCAA      frameshift_variant                                                  HIGH        MYCBP           ENSG00000214114    Transcript      ENST00000397572    protein_coding          5/5               ENST00000397572.2:c.310_311delTAinsTTGC              ENSP00000380702.2:p.Ter104LeufsTer18    1110-1111        310-311         104                 */LX           TAg/TTGCg                                      -1        HGNC                               
+
+---- LOCUS ------------------
+1 39339358 . CA GCAA 100 PASS

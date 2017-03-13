@@ -1,0 +1,51 @@
+
+---- ANNOVAR ----
+ANNOVAR_DATE=2016-02-01
+Func.wgEncodeGencodeBasicV19=exonic
+Gene.wgEncodeGencodeBasicV19=PHOSPHO1
+GeneDetail.wgEncodeGencodeBasicV19=.
+ExonicFunc.wgEncodeGencodeBasicV19=nonframeshift_deletion
+AAChange.wgEncodeGencodeBasicV19=PHOSPHO1 : ENST00000514112.1 : exon2 : c.95_97del : p.32_33del
+                                 PHOSPHO1 : ENST00000413580.1 : exon3 : c.95_97del : p.32_33del
+ALLELE_END
+
+---- CAVA ------ 
+TYPE=Deletion
+TRANSCRIPT=ENST00000310544 : ENST00000413580 : ENST00000514112
+GENE=PHOSPHO1 : PHOSPHO1 : PHOSPHO1
+GENEID=ENSG00000173868 : ENSG00000173868 : ENSG00000173868
+TRINFO=-/7.2kb/3/1.8kb/267 : -/7.4kb/3/2.2kb/292 : -/3.1kb/2/1.6kb/292
+LOC=In2/3 : Ex3 : Ex2
+CSN=c.46-26_46-24delCCT : c.95_97delCCT_p.Ser32del : c.95_97delCCT_p.Ser32del
+PROTPOS=. : 32 : 32
+PROTREF=. : S : S
+PROTALT=. : - : -
+CLASS=INT : IF : IF
+SO=intron_variant : inframe_deletion : inframe_deletion
+IMPACT=3 : 2 : 2
+ALTANN=c.46-41_46-39delCCT : c.80_82delCCT_p.Ser32del : c.80_82delCCT_p.Ser32del
+ALTCLASS=. : . : .
+ALTSO=. : . : .
+
+---- VAGReNT ------ 
+VT=Del
+VD=PHOSPHO1|CCDS45726|r.513_515delCCU|c.95_97delCCT|p.S32delS|protein_coding:CDS:exon:deletion:inframe_variant:inframe_codon_loss|SO:0000010:SO:0000316:SO:0000147:SO:0000159:SO:0001650:SO:0001652
+VC=inframe
+VW=PHOSPHO1|CCDS45726|r.513_515delCCU|c.95_97delCCT|p.S32delS|protein_coding:CDS:exon:deletion:inframe_variant:inframe_codon_loss|SO:0000010:SO:0000316:SO:0000147:SO:0000159:SO:0001650:SO:0001652
+
+---- VEP ------ 
+Allele    Consequence                IMPACT      SYMBOL      Gene               Feature_type    Feature            BIOTYPE           EXON    INTRON    HGVSc                                    HGVSp                           cDNA_position    CDS_position    Protein_position    Amino_acids    Codons        Existing_variation    DISTANCE    STRAND    SYMBOL_SOURCE    HGNC_ID
+-         inframe_deletion           MODERATE    PHOSPHO1    ENSG00000173868    Transcript      ENST00000413580    protein_coding    3/3               ENST00000413580.1:c.95_97delCCT          ENSP00000406909.1:p.Ser32del    513-515          95-97           32-33               SC/C           tCCTgc/tgc                                      -1        HGNC                       
+-         downstream_gene_variant    MODIFIER    ABI3        ENSG00000108798    Transcript      ENST00000571035    protein_coding                                                                                                                                                                                                       2021        1         HGNC                       
+-         downstream_gene_variant    MODIFIER    ABI3        ENSG00000108798    Transcript      ENST00000419580    protein_coding                                                                                                                                                                                                       1992        1         HGNC                       
+-         inframe_deletion           MODERATE    PHOSPHO1    ENSG00000173868    Transcript      ENST00000514112    protein_coding    2/2               ENST00000514112.1:c.95_97delCCT          ENSP00000427694.1:p.Ser32del    217-219          95-97           32-33               SC/C           tCCTgc/tgc                                      -1        HGNC                       
+-         inframe_deletion           MODERATE    PHOSPHO1    ENSG00000173868    Transcript      ENST00000512250    protein_coding    3/3               ENST00000512250.1:c.95_97delCCT          ENSP00000427397.1:p.Ser32del    494-496          95-97           32-33               SC/C           tCCTgc/tgc                                      -1        HGNC                       
+-         intron_variant             MODIFIER    PHOSPHO1    ENSG00000173868    Transcript      ENST00000574638    protein_coding            2/2       ENST00000574638.1:c.46-26_46-24delCCT                                                                                                                                                        -1        HGNC                       
+-         inframe_deletion           MODERATE    PHOSPHO1    ENSG00000173868    Transcript      ENST00000503902    protein_coding    4/4               ENST00000503902.1:c.269_271delCCT        ENSP00000424406.1:p.Ser90del    607-609          269-271         90-91               SC/C           tCCTgc/tgc                                      -1        HGNC                       
+-         intron_variant             MODIFIER    PHOSPHO1    ENSG00000173868    Transcript      ENST00000310544    protein_coding            2/2       ENST00000310544.4:c.46-26_46-24delCCT                                                                                                                                                        -1        HGNC                       
+-         downstream_gene_variant    MODIFIER    ABI3        ENSG00000108798    Transcript      ENST00000573347    protein_coding                                                                                                                                                                                                       2466        1         HGNC                       
+-         downstream_gene_variant    MODIFIER    ABI3        ENSG00000108798    Transcript      ENST00000225941    protein_coding                                                                                                                                                                                                       1803        1         HGNC                       
+-         intron_variant             MODIFIER    PHOSPHO1    ENSG00000173868    Transcript      ENST00000511066    protein_coding            2/2       ENST00000511066.1:c.46-26_46-24delCCT                                                                                                                                                        -1        HGNC                       
+
+---- LOCUS ------------------
+17 47302389 . CAGG C 91 PASS

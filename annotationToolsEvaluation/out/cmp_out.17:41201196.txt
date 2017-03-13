@@ -1,0 +1,64 @@
+
+---- ANNOVAR ----
+ANNOVAR_DATE=2016-02-01
+Func.wgEncodeGencodeBasicV19=exonic
+Gene.wgEncodeGencodeBasicV19=BRCA1
+GeneDetail.wgEncodeGencodeBasicV19=.
+ExonicFunc.wgEncodeGencodeBasicV19=nonsynonymous_SNV
+AAChange.wgEncodeGencodeBasicV19=BRCA1 : ENST00000591849.1 : exon3 : c.T47C : p.M16T
+                                 BRCA1 : ENST00000586385.1 : exon6 : c.T278C : p.M93T
+                                 BRCA1 : ENST00000591534.1 : exon9 : c.T821C : p.M274T
+                                 BRCA1 : ENST00000354071.3 : exon16 : c.T4553C : p.M1518T
+                                 BRCA1 : ENST00000346315.3 : exon17 : c.T4631C : p.M1544T
+                                 BRCA1 : ENST00000351666.3 : exon17 : c.T1799C : p.M600T
+                                 BRCA1 : ENST00000309486.4 : exon20 : c.T4460C : p.M1487T
+                                 BRCA1 : ENST00000352993.3 : exon20 : c.T1922C : p.M641T
+                                 BRCA1 : ENST00000493795.1 : exon20 : c.T5207C : p.M1736T
+                                 BRCA1 : ENST00000357654.3 : exon21 : c.T5348C : p.M1783T
+                                 BRCA1 : ENST00000491747.2 : exon21 : c.T2036C : p.M679T
+                                 BRCA1 : ENST00000471181.2 : exon22 : c.T5411C : p.M1804T
+ALLELE_END
+
+---- CAVA ------ 
+TYPE=Substitution
+TRANSCRIPT=ENST00000309486 : ENST00000346315 : ENST00000351666 : ENST00000352993 : ENST00000354071 : ENST00000357654 : ENST00000468300 : ENST00000471181 : ENST00000491747 : ENST00000493795 : ENST00000586385 : ENST00000591534 : ENST00000591849
+GENE=BRCA1 : BRCA1 : BRCA1 : BRCA1 : BRCA1 : BRCA1 : BRCA1 : BRCA1 : BRCA1 : BRCA1 : BRCA1 : BRCA1 : BRCA1
+GENEID=ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048 : ENSG00000012048
+TRINFO=-/81.2kb/22/7.1kb/1567 : -/81.2kb/19/6.5kb/1624 : -/79.8kb/19/3.4kb/680 : -/81.2kb/22/3.8kb/721 : -/81.2kb/18/6.4kb/1598 : -/81.1kb/23/7.1kb/1863 : -/80.6kb/22/3.3kb/699 : -/79.9kb/24/5.9kb/1884 : -/79.7kb/23/2.4kb/759 : -/79.8kb/22/5.7kb/1816 : -/79.8kb/8/0.8kb/173 : -/79.8kb/11/1.3kb/354 : -/79.8kb/5/0.6kb/96
+LOC=Ex20 : Ex17 : Ex17 : Ex20 : Ex16 : Ex21 : In20/21 : Ex22 : Ex21 : Ex20 : Ex6 : Ex9 : Ex3
+CSN=c.4460T>C_p.Met1487Thr : c.4631T>C_p.Met1544Thr : c.1799T>C_p.Met600Thr : c.1922T>C_p.Met641Thr : c.4553T>C_p.Met1518Thr : c.5348T>C_p.Met1783Thr : c.2021-1476T>C : c.5411T>C_p.Met1804Thr : c.2036T>C_p.Met679Thr : c.5207T>C_p.Met1736Thr : c.278T>C_p.Met93Thr : c.821T>C_p.Met274Thr : c.47T>C_p.Met16Thr
+PROTPOS=1487 : 1544 : 600 : 641 : 1518 : 1783 : . : 1804 : 679 : 1736 : 93 : 274 : 16
+PROTREF=M : M : M : M : M : M : . : M : M : M : M : M : M
+PROTALT=T : T : T : T : T : T : . : T : T : T : T : T : T
+CLASS=NSY : NSY : NSY : NSY : NSY : NSY : INT : NSY : NSY : NSY : NSY : NSY : NSY
+SO=missense_variant : missense_variant : missense_variant : missense_variant : missense_variant : missense_variant : intron_variant : missense_variant : missense_variant : missense_variant : missense_variant : missense_variant : missense_variant
+IMPACT=2 : 2 : 2 : 2 : 2 : 2 : 3 : 2 : 2 : 2 : 2 : 2 : 2
+ALTANN=. : . : . : . : . : . : . : . : . : . : . : . : .
+ALTCLASS=. : . : . : . : . : . : . : . : . : . : . : . : .
+ALTSO=. : . : . : . : . : . : . : . : . : . : . : . : .
+
+---- VAGReNT ------ 
+VT=Sub
+VD=BRCA1|CCDS11456|r.5643u>c|c.5411T>C|p.M1804T|protein_coding:CDS:exon:substitution:codon_variant:non_synonymous_codon|SO:0000010:SO:0000316:SO:0000147:SO:1000002:SO:0001581:SO:0001583
+VC=missense
+VW=BRCA1|CCDS11456|r.5643u>c|c.5411T>C|p.M1804T|protein_coding:CDS:exon:substitution:codon_variant:non_synonymous_codon|SO:0000010:SO:0000316:SO:0000147:SO:1000002:SO:0001581:SO:0001583
+
+---- VEP ------ 
+Allele    Consequence                                   IMPACT      SYMBOL    Gene               Feature_type    Feature            BIOTYPE                    EXON     INTRON    HGVSc                               HGVSp                             cDNA_position    CDS_position    Protein_position    Amino_acids    Codons     Existing_variation    DISTANCE    STRAND    SYMBOL_SOURCE    HGNC_ID
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000591534    protein_coding             9/11               ENST00000591534.1:c.821T>C          ENSP00000467329.1:p.Met274Thr     923              821             274                 M/T            aTg/aCg                                      -1        HGNC                       
+G         intron_variant                                MODIFIER    BRCA1     ENSG00000012048    Transcript      ENST00000468300    protein_coding                      20/21     ENST00000468300.1:c.2021-1476T>C                                                                                                                                                       -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000309486    protein_coding             20/22              ENST00000309486.4:c.4460T>C         ENSP00000310938.4:p.Met1487Thr    5488             4460            1487                M/T            aTg/aCg                                      -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000357654    protein_coding             21/23              ENST00000357654.3:c.5348T>C         ENSP00000350283.3:p.Met1783Thr    5467             5348            1783                M/T            aTg/aCg                                      -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000352993    protein_coding             20/22              ENST00000352993.3:c.1922T>C         ENSP00000312236.5:p.Met641Thr     2154             1922            641                 M/T            aTg/aCg                                      -1        HGNC                       
+G         3_prime_UTR_variant&NMD_transcript_variant    MODIFIER    BRCA1     ENSG00000012048    Transcript      ENST00000461221    nonsense_mediated_decay    21/23              ENST00000461221.1:c.*5131T>C                                          5449                                                                                                             -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000493795    protein_coding             20/22              ENST00000493795.1:c.5207T>C         ENSP00000418775.1:p.Met1736Thr    5439             5207            1736                M/T            aTg/aCg                                      -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000471181    protein_coding             22/24              ENST00000471181.2:c.5411T>C         ENSP00000418960.2:p.Met1804Thr    5643             5411            1804                M/T            aTg/aCg                                      -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000346315    protein_coding             17/19              ENST00000346315.3:c.4631T>C         ENSP00000246907.4:p.Met1544Thr    4825             4631            1544                M/T            aTg/aCg                                      -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000491747    protein_coding             21/23              ENST00000491747.2:c.2036T>C         ENSP00000420705.2:p.Met679Thr     2135             2036            679                 M/T            aTg/aCg                                      -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000586385    protein_coding             6/8                ENST00000586385.1:c.278T>C          ENSP00000465818.1:p.Met93Thr      422              278             93                  M/T            aTg/aCg                                      -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000591849    protein_coding             3/5                ENST00000591849.1:c.47T>C           ENSP00000465347.1:p.Met16Thr      204              47              16                  M/T            aTg/aCg                                      -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000351666    protein_coding             17/19              ENST00000351666.3:c.1799T>C         ENSP00000338007.3:p.Met600Thr     1818             1799            600                 M/T            aTg/aCg                                      -1        HGNC                       
+G         missense_variant                              MODERATE    BRCA1     ENSG00000012048    Transcript      ENST00000354071    protein_coding             16/18              ENST00000354071.3:c.4553T>C         ENSP00000326002.6:p.Met1518Thr    4785             4553            1518                M/T            aTg/aCg                                      -1        HGNC                       
+
+---- LOCUS ------------------
+17 41201196 . A G 100 PASS

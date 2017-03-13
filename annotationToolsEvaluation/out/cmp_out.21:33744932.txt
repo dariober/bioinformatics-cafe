@@ -1,0 +1,41 @@
+
+---- ANNOVAR ----
+ANNOVAR_DATE=2016-02-01
+Func.wgEncodeGencodeBasicV19=exonic
+Gene.wgEncodeGencodeBasicV19=URB1
+GeneDetail.wgEncodeGencodeBasicV19=.
+ExonicFunc.wgEncodeGencodeBasicV19=nonframeshift_deletion
+AAChange.wgEncodeGencodeBasicV19=URB1 : ENST00000382751.3 : exon8 : c.882_884del : p.294_295del
+ALLELE_END
+
+---- CAVA ------ 
+TYPE=Deletion
+TRANSCRIPT=ENST00000382751
+GENE=URB1
+GENEID=ENSG00000142207
+TRINFO=-/82.0kb/39/10.8kb/2271
+LOC=Ex8
+CSN=c.882_884delTGC_p.Ala295del
+PROTPOS=295
+PROTREF=A
+PROTALT=-
+CLASS=IF
+SO=inframe_deletion
+IMPACT=2
+ALTANN=c.881_883delCTG_p.Ala295del
+ALTCLASS=.
+ALTSO=.
+
+---- VAGReNT ------ 
+VT=Del
+VD=URB1|CCDS46645|r.998_1000delUGC|c.882_884delTGC|p.A295delA|protein_coding:CDS:exon:deletion:inframe_variant:inframe_codon_loss|SO:0000010:SO:0000316:SO:0000147:SO:0000159:SO:0001650:SO:0001652
+VC=inframe
+VW=URB1|CCDS46645|r.998_1000delUGC|c.882_884delTGC|p.A295delA|protein_coding:CDS:exon:deletion:inframe_variant:inframe_codon_loss|SO:0000010:SO:0000316:SO:0000147:SO:0000159:SO:0001650:SO:0001652
+
+---- VEP ------ 
+Allele    Consequence                IMPACT      SYMBOL     Gene               Feature_type    Feature            BIOTYPE           EXON    INTRON    HGVSc                                HGVSp                            cDNA_position    CDS_position    Protein_position    Amino_acids    Codons        Existing_variation    DISTANCE    STRAND    SYMBOL_SOURCE    HGNC_ID
+-         inframe_deletion           MODERATE    URB1       ENSG00000142207    Transcript      ENST00000382751    protein_coding    8/39              ENST00000382751.3:c.882_884delTGC    ENSP00000372199.3:p.Ala295del    998-1000         882-884         294-295             SA/S           tcTGCc/tcc                                      -1        HGNC                       
+-         downstream_gene_variant    MODIFIER    SNORA80    ENSG00000200792    Transcript      ENST00000363922    snoRNA                                                                                                                                                                                                            4561        -1        HGNC                       
+
+---- LOCUS ------------------
+21 33744932 . GGCA G 196 PASS
