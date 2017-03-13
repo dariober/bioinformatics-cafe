@@ -125,7 +125,7 @@ vagrent | 0          | 0
 
 Extracted from slurm with `sacct --format="CPUTime,Elapsed,MaxRSS,JobName" -j <ids>`
 
-Tools    |    Elapsed (h:m:s) | Memory | Notes
+Tools    |    Elapsed (h-m-s) | Memory | Notes
 -------- | -------------- | -------- | --------
 annovar | 00:02:20 | 1,869,252K | 
 cava    | 00:17:28 |  593,800K | Run on 16 threads
