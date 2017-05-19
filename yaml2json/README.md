@@ -13,11 +13,7 @@ yaml2json.py [stdin|file] > out.json
 Requirments
 -----------
 
-* python 3 
-
-Or 
-
-* python 2 with package [PyYAML](http://pyyaml.org/wiki/PyYAML) installed
+* python 2 or 3 with package [PyYAML](http://pyyaml.org/wiki/PyYAML) installed
 
 Credits
 -------
