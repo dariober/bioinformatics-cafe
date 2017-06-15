@@ -1,0 +1,64 @@
+import glob
+
+"""
+DESCRIPTION
+...
+"""
+
+inCram= sorted(glob.glob(config['cram']))
+
+keys= [re.sub('\.cram$', '', x) for x in inCram]
+
+print(inCram)
+
+rule all:
+    input:
+        expand('{key}.htseq', key= keys),
+        expand('{key}.bam', key= keys),
+        expand('{key}.bam.bai', key= keys),
+        expand('{key}.htseq', key= keys)
+
+rule cramToFastq:
+    input:  
+        '{key}.cram'
+    output:
+        R1= '{key}.R1.fastq',
+        R2= '{key}.R2.fastq',
+    shell:
+        """
+        java -jar SamToFastq I={input} F={output.R1} F2={output.R2}
+        """
+
+rule align:
+    input:
+        ref= config['REF'],
+        genes= config['GFF'],
+        fastq= ['{key}.R1.fastq', '{key}.R1.fastq']
+    output:
+        bam= '{key}.bam',
+    shell:    
+        """
+        hisat -r {input.ref} -gff {input.genes} {input.fastq} \
+        | samtools sort > {output.bam}
+        """
+
+rule indexBam:
+    input:
+        '{key}.bam'
+    output:
+        bai= '{key}.bam.bai',
+    shell:
+        """
+        samtools index {input}
+        """
+
+rule  htseqCount:
+    input:
+        bam= '{key}.bam',
+        genes= config['GFF']
+    output:
+        '{key}.htseq'
+    shell:
+        """
+        htseq-count -g {input.genes} {input.bam} > {output}
+        """
