@@ -2,9 +2,9 @@ Example snakemake pipeline
 ==========================
 
 ```
-snakemak --printshellcmds --dryrun -s scripts/cramToCounts.snake \
-    --config cram=data/cram/*.cram 
-             REF=data/static/genome.fa 
+snakemake --printshellcmds --dryrun -s scripts/cramToCounts.snake \
+    --config cram=data/cram/*.cram \
+             REF=data/static/genome.fa \
              GFF=data/static/genes.gff 
 ```
 
