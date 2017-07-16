@@ -1,4 +1,6 @@
 import glob
+import sys
+import re
 
 """
 DESCRIPTION
@@ -9,14 +11,11 @@ inCram= sorted(glob.glob(config['cram']))
 
 keys= [re.sub('\.cram$', '', x) for x in inCram]
 
-print(inCram)
-
 rule all:
     input:
         expand('{key}.htseq', key= keys),
         expand('{key}.bam', key= keys),
-        expand('{key}.bam.bai', key= keys),
-        expand('{key}.htseq', key= keys)
+        expand('{key}.bam.bai', key= keys)
 
 rule cramToFastq:
     input:  
