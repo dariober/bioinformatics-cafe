@@ -32,7 +32,7 @@ rule align:
     input:
         ref= config['REF'],
         genes= config['GFF'],
-        fastq= ['{key}.R1.fastq', '{key}.R1.fastq']
+        fastq= ['{key}.R1.fastq', '{key}.R2.fastq']
     output:
         bam= '{key}.bam',
     shell:    
