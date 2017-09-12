@@ -34,7 +34,16 @@ def normalizeMem(x):
     if x.strip() == '':
         return '';  
     x= x.strip('n')
-    return round(int(x.replace("K", "000").replace("M", "000000").replace("G", "000000000"))/1e6)
+    mem= -1
+    if x.endswith('K'):
+        mem= float(x.strip('K')) * 1000
+    elif x.endswith('M'):
+        mem= float(x.strip('M')) * 1000000
+    elif x.endswith('G'):
+        mem= float(x.strip('G')) * 1000000000
+    else:
+        mem= float(x)
+    return round(mem/1e6)
 
 def maxNameLen(sacct):
     xread= csv.DictReader(sacct.decode().split('\n'), delimiter='|')
