@@ -15,10 +15,18 @@ Values in MaxRSS and ReqMem are in MB units.
 OPTIONS
 
 -tsv       
-    Print output as tab separated values (better for further processing)
+    Print output separated by '|'values (better for further processing)
 
 sacct-args 
     Further args to sacct, e.g. `-S 2017-09-10`. Do not include `--format`
+
+EXAMPLES
+
+sacct_easy.py               
+sacct_easy.py -S 2016-12-01  # Show jobs starting from YYYY-MM-DD
+
+# Sort by memory usage
+sacct_easy.py -tsv | tail -n+2 | sort -t'   ' -k4,4n
 """
 
 if '-h' in sys.argv or '--help' in sys.argv:
@@ -60,39 +68,43 @@ def fillInJob(jobid, batchid):
 def tabulate(line, maxlen, asTsv):
     if asTsv:
         return '\t'.join([str(x) for x in line])
-    row_fmt= "{:<8}{:<%s}{:<12}{:<8}{:<8}{:<10}{:<10}{:<30}" % (maxlen + 2)
+    row_fmt= "{:<8}{:<%s}{:<16}{:<8}{:<8}{:<10}{:<10}{:<30}" % (maxlen + 2)
     return row_fmt.format(*line)
 
-sacct= subprocess.check_output(['sacct', '--parsable2', '--format=JobID,JobName%50,Partition,MaxRSS,ReqMem,AllocCPUS,Elapsed,State'] + sys.argv[1:])
+sacct= subprocess.check_output(['sacct', '--parsable2', '--format=JobID,JobName%50,NodeList,MaxRSS,ReqMem,AllocCPUS,Elapsed,State'] + sys.argv[1:])
 
 reader = csv.DictReader(sacct.decode().split('\n'), delimiter='|')
 
 maxlen= maxNameLen(sacct)
 print(tabulate(reader.fieldnames, maxlen, asTsv))
 
-idjob= None
-for line in reader:
-    line['MaxRSS']= normalizeMem(line['MaxRSS'])
-    line['ReqMem']= normalizeMem(line['ReqMem'])
-    if '.batch' not in line['JobID']:
-            if idjob is not None:
-                # This line is not a batch job, so the previous line
-                # can be printed as it doesn't have an associated batch job.
-                lst= list(idjob.values())
-                print(tabulate(lst, maxlen, asTsv))
-            idjob= line
-    else:
-        # This is a batch job. So associate to it the job ID line    
-        if idjob['JobID'] == line['JobID'].replace('.batch', ''):
-            lst= list(fillInJob(idjob, line).values())
-            print(tabulate(lst, maxlen, asTsv))
+try:
+    idjob= None
+    for line in reader:
+        line['MaxRSS']= normalizeMem(line['MaxRSS'])
+        line['ReqMem']= normalizeMem(line['ReqMem'])
+        if '.batch' not in line['JobID']:
+                if idjob is not None:
+                    # This line is not a batch job, so the previous line
+                    # can be printed as it doesn't have an associated batch job.
+                    lst= list(idjob.values())
+                    print(tabulate(lst, maxlen, asTsv))
+                idjob= line
         else:
-            print(idjob)
-            print(line)
-            raise Exception("Cannot find job id")
-        idjob= None
+            # This is a batch job. So associate to it the job ID line    
+            if idjob['JobID'] == line['JobID'].replace('.batch', ''):
+                lst= list(fillInJob(idjob, line).values())
+                print(tabulate(lst, maxlen, asTsv))
+            else:
+                print(idjob)
+                print(line)
+                raise Exception("Cannot find job id")
+            idjob= None
 
-if idjob is not None:
-    lst= list(idjob.values())
-    print(tabulate(lst, maxlen, asTsv))
-
+    if idjob is not None:
+        lst= list(idjob.values())
+        print(tabulate(lst, maxlen, asTsv))
+except (BrokenPipeError, IOError):
+    # This is to avoid stack trace in e.g. `sacct_easy.py | head`
+    # See also https://stackoverflow.com/questions/26692284/brokenpipeerror-in-python
+    pass
