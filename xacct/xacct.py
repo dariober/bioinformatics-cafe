@@ -22,11 +22,11 @@ sacct-args
 
 EXAMPLES
 
-sacct_easy.py               
-sacct_easy.py -S 2016-12-01  # Show jobs starting from YYYY-MM-DD
+xacct.py               
+xacct.py -S 2016-12-01  # Show jobs starting from YYYY-MM-DD
 
 # Sort by memory usage
-sacct_easy.py -tsv | tail -n+2 | sort -t'   ' -k4,4n
+xacct.py -tsv | tail -n+2 | sort -t'   ' -k4,4n
 """
 
 if '-h' in sys.argv or '--help' in sys.argv:
@@ -39,6 +39,7 @@ if '-tsv' in sys.argv:
     sys.argv.remove('-tsv')
 
 def normalizeMem(x):
+    """TODO: Check the multiplier is 1000 or 1024"""
     if x.strip() == '':
         return '';  
     x= x.strip('n')
