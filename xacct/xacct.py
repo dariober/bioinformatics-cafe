@@ -15,7 +15,7 @@ Values in MaxRSS and ReqMem are in MB units.
 OPTIONS
 
 -tsv       
-    Print output separated by '|'values (better for further processing)
+    Print tab separated columns (better for further processing)
 
 sacct-args 
     Further args to sacct, e.g. `-S 2017-09-10`. Do not include `--format`
@@ -39,20 +39,26 @@ if '-tsv' in sys.argv:
     sys.argv.remove('-tsv')
 
 def normalizeMem(x):
-    """TODO: Check the multiplier is 1000 or 1024"""
+    """We use binary multiplier instead of decimal to convert kilo and giga to
+    mega. I.e.  1024K = 1M. Compare to help for --noconvert option: `Don't
+    convert units from their original type (e.g. 2048M won't be converted to
+    2G).`. 
+
+    normalizeMem('2G') -> 2048
+    """
     if x.strip() == '':
         return '';  
-    x= x.strip('n')
+    x= x.strip('n').strip('c') # ReqMem appends 'n' or 'c', see `man sacct` 
     mem= -1
     if x.endswith('K'):
-        mem= float(x.strip('K')) * 1000
+        mem= float(x.strip('K')) * 2**10
     elif x.endswith('M'):
-        mem= float(x.strip('M')) * 1000000
+        mem= float(x.strip('M')) * 2**20
     elif x.endswith('G'):
-        mem= float(x.strip('G')) * 1000000000
+        mem= float(x.strip('G')) * 2**30
     else:
         mem= float(x)
-    return round(mem/1e6)
+    return round(mem/(2**20))
 
 def maxNameLen(sacct):
     xread= csv.DictReader(sacct.decode().split('\n'), delimiter='|')
@@ -69,7 +75,7 @@ def fillInJob(jobid, batchid):
 def tabulate(line, maxlen, asTsv):
     if asTsv:
         return '\t'.join([str(x) for x in line])
-    row_fmt= "{:<8}{:<%s}{:<16}{:<8}{:<8}{:<10}{:<10}{:<30}" % (maxlen + 2)
+    row_fmt= "{:<8}{:<%s}{:<16}{:<8}{:<8}{:<10}{:<12}{:<30}" % (maxlen + 2)
     return row_fmt.format(*line)
 
 sacct= subprocess.check_output(['sacct', '--parsable2', '--format=JobID,JobName%50,NodeList,MaxRSS,ReqMem,AllocCPUS,Elapsed,State'] + sys.argv[1:])
@@ -105,7 +111,10 @@ try:
     if idjob is not None:
         lst= list(idjob.values())
         print(tabulate(lst, maxlen, asTsv))
+    print(tabulate(reader.fieldnames, maxlen, asTsv))
+
 except (BrokenPipeError, IOError):
     # This is to avoid stack trace in e.g. `sacct_easy.py | head`
     # See also https://stackoverflow.com/questions/26692284/brokenpipeerror-in-python
     pass
+
