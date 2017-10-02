@@ -114,3 +114,12 @@ chmod a+x fastaRegexFinder.py
 
 There is no installation needed, but for convenience you can copy ` fastaRegexFinder.py`
 to a directory on your PATH, *e.g.* `/usr/local/bin/` or `~/bin/`.
+
+
+TODO
+====
+
+* Use [https://github.com/mdshw5/pyfaidx](pyfaidx) to retrieve sequences
+
+
+
