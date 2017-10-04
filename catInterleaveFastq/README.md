@@ -6,8 +6,8 @@ It's useful when several pairs of fastq files from the same library needs to be 
 an aligner or an adapter trimmer that accepts interleaved input from `stdin`:
 
 ```
-catInterleaveFastq.sh sampleA_R1.L001.fq.gz,sampleA_R1.L002.fq.gz \
-                      sampleA_R2.L001.fq.gz,sampleA_R2.L002.fq.gz \
+catInterleaveFastq.sh -1 sampleA_R1.L001.fq.gz sampleA_R1.L002.fq.gz \
+                      -2 sampleA_R2.L001.fq.gz sampleA_R2.L002.fq.gz \
 | bwa mem -p genome.fa - \
 | ...
 ```
