@@ -30,7 +30,7 @@ parser.add_argument('sacct_args',
                    help='''Further args to sacct, e.g. `-S 2017-09-10`. Do not include `--format`.
 Use `--` to add slurm args.''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.1.0')
+parser.add_argument('--version', '-v', action='version', version='%(prog)s 0.1.0')
 
 args= parser.parse_args()
 
