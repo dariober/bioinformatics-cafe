@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
+import sys
 import subprocess
 import csv
 import collections
 from io import StringIO
 import argparse
 import os
+import datetime
 
 parser = argparse.ArgumentParser(description= """
 Execute slurm sacct and return a friendly tabular output. 
@@ -15,15 +17,25 @@ EXAMPLES
 
 xacct.py
 xacct.py -- -S 2016-12-01  # Show jobs starting from YYYY-MM-DD
+xacct.py -d 1              # Jobs from yesterday onwards
 
 # Sort by memory usage
 xacct.py -tsv | tail -n+2 | sort -t'   ' -k4,4n
 """, formatter_class= argparse.RawTextHelpFormatter, prog= os.path.basename(__file__))
 
+parser.add_argument('--days', '-d',
+                   type= float,
+                   default= 0,
+                   help='''Show jobs from this many days ago. Deafult %(default)s''')
+
 parser.add_argument('--tsv', '-tsv',
                    action= "store_true",
                    help='''Print columns separated by TAB (better for further processing) 
 instead of tabulating them using spaces (better for eyeballing)''')
+
+parser.add_argument('--verbose', '-V',
+                   action= "store_true",
+                   help='''Verbose for debugging. Print to stderr the sacct command.''')
 
 parser.add_argument('sacct_args',
                    nargs= "*",
@@ -33,6 +45,8 @@ Use `--` to add slurm args.''')
 parser.add_argument('--version', '-v', action='version', version='%(prog)s 0.1.0')
 
 args= parser.parse_args()
+
+# -----------------------------------------------------------------------------
 
 def normalizeMem(x):
     """We use binary multiplier instead of decimal to convert kilo and giga to
@@ -74,7 +88,16 @@ def tabulate(line, maxlen, asTsv):
     row_fmt= "{:<8}{:<%s}{:<16}{:<8}{:<8}{:<10}{:<12}{:<30}" % (maxlen + 2)
     return row_fmt.format(*line)
 
-sacct= subprocess.check_output(['sacct', '--parsable2', '--format=JobID,JobName%50,NodeList,MaxRSS,ReqMem,AllocCPUS,Elapsed,State'] + args.sacct_args)
+# -----------------------------------------------------------------------------
+starttime= []
+if args.days > 0:
+    d= datetime.datetime.today() - datetime.timedelta(days= args.days)
+    starttime= ['--starttime', d.date().isoformat()]
+
+cmd= ['sacct', '--parsable2', '--format=JobID,JobName%50,NodeList,MaxRSS,ReqMem,AllocCPUS,Elapsed,State'] + starttime + args.sacct_args
+if args.verbose:
+    sys.stderr.write(' '.join(cmd) + '\n')
+sacct= subprocess.check_output(cmd)
 
 reader = csv.DictReader(sacct.decode().split('\n'), delimiter='|')
 
