@@ -28,10 +28,23 @@ parser.add_argument('--days', '-d',
                    default= 0,
                    help='''Show jobs from this many days ago. Deafult %(default)s''')
 
+parser.add_argument('--fromId', '-id',
+                   type= int,
+                   default= None,
+                   help='''Show jobs whose ID is equal or greater than this. Deafult %(default)s''')
+
 parser.add_argument('--tsv', '-tsv',
                    action= "store_true",
                    help='''Print columns separated by TAB (better for further processing) 
-instead of tabulating them using spaces (better for eyeballing)''')
+instead of tabulating them using spaces (better for eyeballing). This option automatically sets also
+--no-color''')
+
+parser.add_argument('--no-color', '-nc',
+                   action= "store_true",
+                   dest= 'no_color',
+                   help='''Do not add color to the output strings. Use this option if you need
+to parse the output and the color codes strings get on your way.
+                   ''')
 
 parser.add_argument('--verbose', '-V',
                    action= "store_true",
@@ -82,13 +95,31 @@ def fillInJob(jobid, batchid):
     jobid['MaxRSS']= batchid['MaxRSS']
     return jobid    
 
-def tabulate(line, maxlen, asTsv):
+def tabulate(line, maxlen, asTsv, no_color):
     if asTsv:
         return '\t'.join([str(x) for x in line])
+    if not no_color:
+        line= colorize(line)
     row_fmt= "{:<8}{:<%s}{:<16}{:<8}{:<8}{:<10}{:<12}{:<30}" % (maxlen + 2)
     return row_fmt.format(*line)
 
+def colorize(lst):
+    """Add color codes to the printable list
+    For codes see https://misc.flogisoft.com/bash/tip_colors_and_formatting
+    """
+    xcol= []
+    for x in lst:
+        if x == 'FAILED':
+            x= '\033[31mFAILED\033[0m'
+        elif x == 'COMPLETED':
+            x= '\033[32mCOMPLETED\033[0m'
+        elif x == 'RUNNING':
+            x= '\033[94mRUNNING\033[0m'
+        xcol.append(x)
+    return xcol
+
 # -----------------------------------------------------------------------------
+
 starttime= []
 if args.days > 0:
     d= datetime.datetime.today() - datetime.timedelta(days= args.days)
@@ -102,11 +133,18 @@ sacct= subprocess.check_output(cmd)
 reader = csv.DictReader(sacct.decode().split('\n'), delimiter='|')
 
 maxlen= maxNameLen(sacct)
-print(tabulate(reader.fieldnames, maxlen, args.tsv))
+if args.tsv:
+    no_color= True
+else:
+    no_color= args.no_color
+
+print(tabulate(reader.fieldnames, maxlen, args.tsv, no_color))
 
 try:
     idjob= None
     for line in reader:
+        if args.fromId is not None and args.fromId >= int(line['JobID'].replace('.batch', '')):
+            continue
         line['MaxRSS']= normalizeMem(line['MaxRSS'])
         line['ReqMem']= normalizeMem(line['ReqMem'])
         if '.batch' not in line['JobID']:
@@ -114,23 +152,22 @@ try:
                     # This line is not a batch job, so the previous line
                     # can be printed as it doesn't have an associated batch job.
                     lst= list(idjob.values())
-                    print(tabulate(lst, maxlen, args.tsv))
+                    print(tabulate(lst, maxlen, args.tsv, no_color))
                 idjob= line
         else:
             # This is a batch job. So associate to it the job ID line    
             if idjob['JobID'] == line['JobID'].replace('.batch', ''):
                 lst= list(fillInJob(idjob, line).values())
-                print(tabulate(lst, maxlen, args.tsv))
+                print(tabulate(lst, maxlen, args.tsv, no_color))
             else:
                 print(idjob)
                 print(line)
                 raise Exception("Cannot find job id")
             idjob= None
-
-    if idjob is not None:
+    if idjob is not None: # and args.fromId > 0 and args.fromId >= int(line['JobID']):
         lst= list(idjob.values())
-        print(tabulate(lst, maxlen, args.tsv))
-    print(tabulate(reader.fieldnames, maxlen, args.tsv))
+        print(tabulate(lst, maxlen, args.tsv, no_color))
+    print(tabulate(reader.fieldnames, maxlen, args.tsv, no_color))
 
 except (BrokenPipeError, IOError):
     # This is to avoid stack trace in e.g. `sacct_easy.py | head`
