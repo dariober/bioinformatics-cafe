@@ -53,4 +53,12 @@ def test_runScript():
     assert p.returncode == 0
     assert 'hdr1\thdr2\thdr3\ta.txt' == out[0]
     assert 'a\t1\t10\ta.txt' == out[1]
-    
+
+def test_runScriptReadFromStdin():
+    cmd= 'ls test/a.txt test/b.txt | ./tableCat.py -i -'
+    p= sp.Popen(cmd, shell= True, stdout=sp.PIPE, stderr=sp.PIPE)
+    out= p.stdout.read().split('\n')
+    p.communicate()
+    assert p.returncode == 0
+    assert 'hdr1\thdr2\thdr3\ta.txt' == out[0]
+    assert 'a\t1\t10\ta.txt' == out[1]

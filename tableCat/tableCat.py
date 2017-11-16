@@ -15,7 +15,7 @@ DESCRIPTION
     
     Typical use case: You have a pipeline that generates file in tabular format,
     one file per input, all files the same format. You want to concatenate these
-    tables while keeping the identity of the files and optionally add une header
+    tables while keeping the identity of the files and optionally add a header
     for the cat'd files.
 
 EXAMPLE
@@ -26,7 +26,7 @@ EXAMPLE
 parser.add_argument('--input', '-i',
     required= True,
     nargs= '+',
-    help='''Input files to concatenate
+    help='''Input files to concatenate. Use - to read the list of files from stdin.
 ''')
 
 parser.add_argument('--sep', '-s',
@@ -62,7 +62,7 @@ parser.add_argument('--firsthdr', '-H',
 ''')
 
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.1.1')
+parser.add_argument('--version', action='version', version='%(prog)s 0.2.0')
 
 # -----------------------------------------------------------------------------
 
@@ -117,7 +117,7 @@ def openGzip(x):
     python gzip module. Return None if file is not gzip
     """
     if not isGzip(x):
-        print "Not gzip"
+        print("Not gzip")
         return None
 
     if which('gunzip') is None:
@@ -165,7 +165,13 @@ if __name__ == '__main__':
     signal(SIGPIPE,SIG_DFL) 
 
     args= parser.parse_args()
-    files= globToList(args.input)
+    if args.input == ['-']:
+        files= []
+        for x in sys.stdin:
+            files.append(x.strip())
+    else:
+       files= globToList(args.input)
+
     if files == []:
         sys.exit('No file found to concatenate!')
     is_first_file= True
@@ -183,17 +189,17 @@ if __name__ == '__main__':
                 continue
             if args.firsthdr:
                 if is_first_file and is_first_line:
-                    print line.rstrip('\n') + args.sep + args.idColName
+                    print(line.rstrip('\n') + args.sep + args.idColName)
                     n+=1
                 else:
                     if is_first_line:
                         pass
                     else:
-                        print line2
+                        print(line2)
                         n+=1
                 is_first_line= False
             else:
-                print line2
+                print(line2)
                 n+=1
         is_first_file= False
         # sys.stderr.write(' %s lines printed\n' %(n))
