@@ -8,6 +8,7 @@ from io import StringIO
 import argparse
 import os
 import datetime
+import re
 
 parser = argparse.ArgumentParser(description= """
 Execute slurm sacct and return a friendly tabular output. 
@@ -36,7 +37,7 @@ parser.add_argument('--fromId', '-id',
 parser.add_argument('--tsv', '-tsv',
                    action= "store_true",
                    help='''Print columns separated by TAB (better for further processing) 
-instead of tabulating them using spaces (better for eyeballing). This option automatically sets also
+instead of tabulating them (better for eyeballing). This option automatically sets also
 --no-color''')
 
 parser.add_argument('--no-color', '-nc',
@@ -55,7 +56,7 @@ parser.add_argument('sacct_args',
                    help='''Further args to sacct, e.g. `-S 2017-09-10`. Do not include `--format`.
 Use `--` to add slurm args.''')
 
-parser.add_argument('--version', '-v', action='version', version='%(prog)s 0.1.0')
+parser.add_argument('--version', '-v', action='version', version='%(prog)s 0.2.0')
 
 args= parser.parse_args()
 
@@ -83,24 +84,39 @@ def normalizeMem(x):
         mem= float(x)
     return round(mem/(2**20))
 
-def maxNameLen(sacct):
-    xread= csv.DictReader(sacct.decode().split('\n'), delimiter='|')
-    mlen= 10
-    for line in xread:
-        if len(line['JobName']) > mlen:
-            mlen= len(line['JobName'])
-    return mlen
+def getColumnWidths(sacct_out, header, space):
+    """Analyse the table sacct_out (a list of dictionaries) and return 
+    a list of column widths. header is a list of header names since also
+    these must be considered to get the column widths.
+    """
+    hdr= collections.OrderedDict()
+    for x in header:
+        hdr[x]= x
+    data= [hdr]
+    for x in sacct_out:
+        data.append(x)
+    widths= []
+    for line in data:
+        if len(widths) == 0:
+            widths= [0] * len(line)
+        assert len(widths) == len(line)
+        for i in range(len(line)):
+            values= list(line.values())
+            if widths[i] < len(values[i]):
+                widths[i]= len(values[i])
+    widths= [x + space for x in widths]
+    return widths
 
 def fillInJob(jobid, batchid):
     jobid['MaxRSS']= batchid['MaxRSS']
     return jobid    
 
-def tabulate(line, maxlen, asTsv, no_color):
+def tabulate(line, col_widths, asTsv, no_color):
     if asTsv:
         return '\t'.join([str(x) for x in line])
     if not no_color:
         line= colorize(line)
-    row_fmt= "{:<8}{:<%s}{:<16}{:<8}{:<8}{:<10}{:<12}{:<30}" % (maxlen + 2)
+    row_fmt= "{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}" % tuple(col_widths)
     return row_fmt.format(*line)
 
 def colorize(lst):
@@ -118,6 +134,38 @@ def colorize(lst):
         xcol.append(x)
     return xcol
 
+def simplify_datetime(data, colname):
+    """Simplify the datetime string in column _colname_ by removing
+    uninformative part(s)
+    data:
+        List of dictionaries representing the tabular data
+    colname:
+        Name of column to scan. I.e., key in the dictionaries
+    """
+    # Are all the jobs from today?
+    dt= [datetime.datetime.strptime(x[colname], '%Y-%m-%dT%H:%M:%S').date() for x in data]
+    same_year= True
+    same_month= True
+    same_day= True
+    for x in dt:
+        if same_year and x.year != datetime.date.today().year:
+            same_year= False
+        if same_month and x.month != datetime.date.today().month:
+            same_month= False
+        if same_day and x.day != datetime.date.today().day:
+            same_day= False
+    simple= []
+    for line in data:
+        if same_year and same_month and same_day:
+            line[colname]= re.sub('.*T', '', line[colname])
+        elif same_year and same_month:
+            line[colname]= re.sub('\d\d\d\d-\d\d-', '', line[colname])
+            line[colname]= x.strftime('%a') + ' ' + re.sub('T', ' ', line[colname])
+        else:
+            line[colname]= re.sub('T', ' ', line[colname])
+        simple.append(line)
+    return simple
+
 # -----------------------------------------------------------------------------
 
 starttime= []
@@ -125,24 +173,31 @@ if args.days > 0:
     d= datetime.datetime.today() - datetime.timedelta(days= args.days)
     starttime= ['--starttime', d.date().isoformat()]
 
-cmd= ['sacct', '--parsable2', '--format=JobID,JobName%50,NodeList,MaxRSS,ReqMem,AllocCPUS,Elapsed,State'] + starttime + args.sacct_args
+cmd= ['sacct', '--parsable2', '--format=JobID,JobName%50,NodeList,MaxRSS,ReqMem,AllocCPUS,Submit,Elapsed,State'] + starttime + args.sacct_args
 if args.verbose:
     sys.stderr.write(' '.join(cmd) + '\n')
 sacct= subprocess.check_output(cmd)
+sacct= re.sub('\|None assigned\|', '|None|', sacct.decode())
+sacct= re.sub('\|AllocCPUS\|', '|CPUs|', sacct)
 
-reader = csv.DictReader(sacct.decode().split('\n'), delimiter='|')
+reader = csv.DictReader(sacct.split('\n'), delimiter='|')
+sacct_out= []
+for line in reader:
+    sacct_out.append(line)
 
-maxlen= maxNameLen(sacct)
 if args.tsv:
     no_color= True
 else:
+    sacct_out= simplify_datetime(sacct_out, 'Submit')
     no_color= args.no_color
 
-print(tabulate(reader.fieldnames, maxlen, args.tsv, no_color))
+col_widths= getColumnWidths(sacct_out, reader.fieldnames, 2)
 
+print(tabulate(reader.fieldnames, col_widths, args.tsv, no_color))
+
+idjob= None
 try:
-    idjob= None
-    for line in reader:
+    for line in sacct_out:
         if args.fromId is not None and args.fromId >= int(line['JobID'].replace('.batch', '')):
             continue
         line['MaxRSS']= normalizeMem(line['MaxRSS'])
@@ -152,13 +207,13 @@ try:
                     # This line is not a batch job, so the previous line
                     # can be printed as it doesn't have an associated batch job.
                     lst= list(idjob.values())
-                    print(tabulate(lst, maxlen, args.tsv, no_color))
+                    print(tabulate(lst, col_widths, args.tsv, no_color))
                 idjob= line
         else:
             # This is a batch job. So associate to it the job ID line    
             if idjob['JobID'] == line['JobID'].replace('.batch', ''):
                 lst= list(fillInJob(idjob, line).values())
-                print(tabulate(lst, maxlen, args.tsv, no_color))
+                print(tabulate(lst, col_widths, args.tsv, no_color))
             else:
                 print(idjob)
                 print(line)
@@ -166,11 +221,9 @@ try:
             idjob= None
     if idjob is not None: # and args.fromId > 0 and args.fromId >= int(line['JobID']):
         lst= list(idjob.values())
-        print(tabulate(lst, maxlen, args.tsv, no_color))
-    print(tabulate(reader.fieldnames, maxlen, args.tsv, no_color))
-
+        print(tabulate(lst, col_widths, args.tsv, no_color))
+    print(tabulate(reader.fieldnames, col_widths, args.tsv, no_color))
 except (BrokenPipeError, IOError):
-    # This is to avoid stack trace in e.g. `sacct_easy.py | head`
+    # This is to avoid stack trace when piping in e.g. `xacct.py | head`
     # See also https://stackoverflow.com/questions/26692284/brokenpipeerror-in-python
     pass
-
