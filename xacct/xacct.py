@@ -27,36 +27,51 @@ xacct.py -tsv | tail -n+2 | sort -t'   ' -k4,4n
 parser.add_argument('--days', '-d',
                    type= float,
                    default= 0,
-                   help='''Show jobs from this many days ago. Deafult %(default)s''')
+                   help='''Show jobs from this many days ago. Deafult %(default)s
+                   ''')
 
 parser.add_argument('--fromId', '-id',
                    type= int,
                    default= None,
-                   help='''Show jobs whose ID is equal or greater than this. Deafult %(default)s''')
+                   help='''Show jobs whose ID is equal or greater than this. Deafult %(default)s
+                   ''')
+
+xdef= ['JobID', 'JobName%50', 'NodeList', 'MaxRSS', 'ReqMem', 'AllocCPUS', 'Submit', 'Elapsed', 'State']
+parser.add_argument('--format', '-f',
+                   type= str,
+                   nargs= '+',
+                   default= xdef,
+                   help="""Space separated list of columns to print, case insensitive. See 
+options --format and --helpformat in `sacct` for details. Use the marker "FMT" 
+as a shortcut for the default columns which are:
+%s
+    """ % ' '.join(xdef).replace('%', '%%'))
 
 parser.add_argument('--tsv', '-tsv',
                    action= "store_true",
                    help='''Print columns separated by TAB (better for further processing) 
 instead of tabulating them (better for eyeballing). This option automatically sets also
---no-color''')
+--no-color
+    ''')
 
 parser.add_argument('--no-color', '-nc',
                    action= "store_true",
                    dest= 'no_color',
                    help='''Do not add color to the output strings. Use this option if you need
 to parse the output and the color codes strings get on your way.
-                   ''')
+    ''')
 
 parser.add_argument('--verbose', '-V',
                    action= "store_true",
-                   help='''Verbose for debugging. Print to stderr the sacct command.''')
+                   help='''Verbose for debugging. Print to stderr the sacct command.
+                   ''')
 
 parser.add_argument('sacct_args',
                    nargs= "*",
-                   help='''Further args to sacct, e.g. `-S 2017-09-10`. Do not include `--format`.
-Use `--` to add slurm args.''')
+                   help='''Further args to sacct. Sperate them from the other arguments with `--`.
+                   ''')
 
-parser.add_argument('--version', '-v', action='version', version='%(prog)s 0.2.0')
+parser.add_argument('--version', '-v', action='version', version='%(prog)s 0.3.0')
 
 args= parser.parse_args()
 
@@ -84,7 +99,7 @@ def normalizeMem(x):
         mem= float(x)
     return round(mem/(2**20))
 
-def getColumnWidths(sacct_out, header, space):
+def getColumnWidths(sacct_out, header, space, no_color):
     """Analyse the table sacct_out (a list of dictionaries) and return 
     a list of column widths. header is a list of header names since also
     these must be considered to get the column widths.
@@ -100,15 +115,20 @@ def getColumnWidths(sacct_out, header, space):
         if len(widths) == 0:
             widths= [0] * len(line)
         assert len(widths) == len(line)
+        values= list(line.values())
+        if not no_color:
+            values= colorize(values)
         for i in range(len(line)):
-            values= list(line.values())
-            if widths[i] < len(values[i]):
-                widths[i]= len(values[i])
+            # Remove ansi colour.
+            v= re.sub('\\033\\[[;\\d]*m', '', str(values[i]))
+            if widths[i] < len(v):
+                widths[i]= len(v)
     widths= [x + space for x in widths]
     return widths
 
 def fillInJob(jobid, batchid):
-    jobid['MaxRSS']= batchid['MaxRSS']
+    if 'MaxRSS' in jobid:
+        jobid['MaxRSS']= batchid['MaxRSS']
     return jobid    
 
 def tabulate(line, col_widths, asTsv, no_color):
@@ -116,7 +136,12 @@ def tabulate(line, col_widths, asTsv, no_color):
         return '\t'.join([str(x) for x in line])
     if not no_color:
         line= colorize(line)
-    row_fmt= "{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}{:<%s}" % tuple(col_widths)
+    exp_widths= []
+    for i in range(len(col_widths)):
+        offset= len(str(line[i])) - len(re.sub('\\033\\[[;\\d]*m', '', str(line[i])))
+        exp_widths.append(col_widths[i] + offset)
+    row_fmt= '{:<%s}' * len(exp_widths)
+    row_fmt= row_fmt % tuple(exp_widths)
     return row_fmt.format(*line)
 
 def colorize(lst):
@@ -134,35 +159,49 @@ def colorize(lst):
         xcol.append(x)
     return xcol
 
-def simplify_datetime(data, colname):
-    """Simplify the datetime string in column _colname_ by removing
+def simplify_datetime(data, datetime_column):
+    """Simplify the datetime string in column _datetime_column_ by removing
     uninformative part(s)
     data:
         List of dictionaries representing the tabular data
-    colname:
+    datetime_column:
         Name of column to scan. I.e., key in the dictionaries
     """
-    # Are all the jobs from today?
-    dt= [datetime.datetime.strptime(x[colname], '%Y-%m-%dT%H:%M:%S').date() for x in data]
+    dt= []
+    is_date= []
+    for x in data:
+        try:
+            xdt= datetime.datetime.strptime(x[datetime_column], '%Y-%m-%dT%H:%M:%S').date()
+            is_date.append(True)
+        except:
+            xdt= x[datetime_column]
+            is_date.append(False)
+        dt.append(xdt)
+    # dt= [datetime.datetime.strptime(x[datetime_column], '%Y-%m-%dT%H:%M:%S').date() for x in data]
     same_year= True
     same_month= True
     same_day= True
-    for x in dt:
-        if same_year and x.year != datetime.date.today().year:
-            same_year= False
-        if same_month and x.month != datetime.date.today().month:
-            same_month= False
-        if same_day and x.day != datetime.date.today().day:
-            same_day= False
+    for i in range(len(dt)):
+        x= dt[i]
+        if is_date[i]:
+            if same_year and x.year != datetime.date.today().year:
+                same_year= False
+            if same_month and x.month != datetime.date.today().month:
+                same_month= False
+            if same_day and x.day != datetime.date.today().day:
+                same_day= False
     simple= []
-    for line in data:
-        if same_year and same_month and same_day:
-            line[colname]= re.sub('.*T', '', line[colname])
-        elif same_year and same_month:
-            line[colname]= re.sub('\d\d\d\d-\d\d-', '', line[colname])
-            line[colname]= x.strftime('%a') + ' ' + re.sub('T', ' ', line[colname])
-        else:
-            line[colname]= re.sub('T', ' ', line[colname])
+    for i in range(len(data)):
+        line= data[i]
+        if is_date[i]:
+            if same_year and same_month and same_day:
+                line[datetime_column]= re.sub('.*T', '', line[datetime_column])
+            elif same_year and same_month:
+                weekday_name= datetime.datetime.strptime(line[datetime_column], '%Y-%m-%dT%H:%M:%S').strftime('%a')
+                line[datetime_column]= re.sub('\d\d\d\d-\d\d-', '', line[datetime_column])
+                line[datetime_column]= weekday_name + ' ' + re.sub('T', ' ', line[datetime_column])
+            else:
+                line[datetime_column]= re.sub('T', ' ', line[datetime_column])
         simple.append(line)
     return simple
 
@@ -173,10 +212,24 @@ if args.days > 0:
     d= datetime.datetime.today() - datetime.timedelta(days= args.days)
     starttime= ['--starttime', d.date().isoformat()]
 
-cmd= ['sacct', '--parsable2', '--format=JobID,JobName%50,NodeList,MaxRSS,ReqMem,AllocCPUS,Submit,Elapsed,State'] + starttime + args.sacct_args
+sacctfmt= args.format
+if 'jobid' not in [x.lower() for x in sacctfmt]:
+    sacctfmt.append('JobID')
+if 'FMT' in sacctfmt:
+    sacctfmt= sacctfmt[0:sacctfmt.index('FMT')] + xdef + sacctfmt[sacctfmt.index('FMT')+1:]
+while 'FMT' in sacctfmt:
+    sacctfmt.remove('FMT')
+
+cmd= ['sacct', '--parsable2', '--format=%s' % ','.join(sacctfmt)] + starttime + args.sacct_args
 if args.verbose:
     sys.stderr.write(' '.join(cmd) + '\n')
-sacct= subprocess.check_output(cmd)
+try:
+    sacct= subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+except subprocess.CalledProcessError as exc:
+    print(exc.output.decode().strip())
+    print('Exit code %s' % exc.returncode)
+    sys.exit(1)
+
 sacct= re.sub('\|None assigned\|', '|None|', sacct.decode())
 sacct= re.sub('\|AllocCPUS\|', '|CPUs|', sacct)
 
@@ -188,10 +241,21 @@ for line in reader:
 if args.tsv:
     no_color= True
 else:
-    sacct_out= simplify_datetime(sacct_out, 'Submit')
+    try:
+        sacct_out= simplify_datetime(sacct_out, 'Submit')
+    except KeyError:
+        pass
+    try:
+        sacct_out= simplify_datetime(sacct_out, 'Start')
+    except KeyError:
+        pass
+    try:
+        sacct_out= simplify_datetime(sacct_out, 'End')
+    except KeyError:
+        pass
     no_color= args.no_color
 
-col_widths= getColumnWidths(sacct_out, reader.fieldnames, 2)
+col_widths= getColumnWidths(sacct_out, reader.fieldnames, 2, no_color)
 
 print(tabulate(reader.fieldnames, col_widths, args.tsv, no_color))
 
@@ -200,8 +264,10 @@ try:
     for line in sacct_out:
         if args.fromId is not None and args.fromId >= int(line['JobID'].replace('.batch', '')):
             continue
-        line['MaxRSS']= normalizeMem(line['MaxRSS'])
-        line['ReqMem']= normalizeMem(line['ReqMem'])
+        if 'MaxRSS' in line:
+            line['MaxRSS']= normalizeMem(line['MaxRSS'])
+        if 'ReqMem' in line:
+            line['ReqMem']= normalizeMem(line['ReqMem'])
         if '.batch' not in line['JobID']:
                 if idjob is not None:
                     # This line is not a batch job, so the previous line
