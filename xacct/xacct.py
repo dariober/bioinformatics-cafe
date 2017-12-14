@@ -27,7 +27,15 @@ xacct.py -tsv | tail -n+2 | sort -t'   ' -k4,4n
 parser.add_argument('--days', '-d',
                    type= float,
                    default= 0,
-                   help='''Show jobs from this many days ago. Deafult %(default)s
+                   help='''Show jobs from this many days ago. Default %(default)s
+                   ''')
+
+parser.add_argument('--sort', '-s',
+                   nargs= '*',
+                   type= str,
+                   default= ['StateSince'],
+                   help='''Sort by these fields. Add suffix '-' to a field name to sort in reverse order.
+Without arguments skip sorting altoghether. Default %(default)s.
                    ''')
 
 parser.add_argument('--fromId', '-id',
@@ -36,7 +44,7 @@ parser.add_argument('--fromId', '-id',
                    help='''Show jobs whose ID is equal or greater than this. Deafult %(default)s
                    ''')
 
-xdef= ['JobID', 'JobName%50', 'NodeList', 'MaxRSS', 'ReqMem', 'AllocCPUS', 'Submit', 'Elapsed', 'State']
+xdef= ['JobID', 'JobName%50', 'NodeList', 'MaxRSS', 'ReqMem', 'AllocCPUS', 'State', 'StateSince', 'Elapsed']
 parser.add_argument('--format', '-f',
                    type= str,
                    nargs= '+',
@@ -44,7 +52,11 @@ parser.add_argument('--format', '-f',
                    help="""Space separated list of columns to print, case insensitive. See 
 options --format and --helpformat in `sacct` for details. Use the marker "FMT" 
 as a shortcut for the default columns which are:
+
 %s
+
+StateSince is computed within xacct and reports the time since the job has been
+in the given state.
     """ % ' '.join(xdef).replace('%', '%%'))
 
 parser.add_argument('--tsv', '-tsv',
@@ -59,6 +71,13 @@ parser.add_argument('--no-color', '-nc',
                    dest= 'no_color',
                    help='''Do not add color to the output strings. Use this option if you need
 to parse the output and the color codes strings get on your way.
+    ''')
+
+parser.add_argument('--iso-date', '-dt',
+                   action= "store_true",
+                   dest= 'iso_date',
+                   help='''Leave date-time strings in ISO format as produced by sacct.
+By default, date-times are simplified and made more human readable.
     ''')
 
 parser.add_argument('--verbose', '-V',
@@ -121,6 +140,8 @@ def getColumnWidths(sacct_out, header, space, no_color):
         for i in range(len(line)):
             # Remove ansi colour.
             v= re.sub('\\033\\[[;\\d]*m', '', str(values[i]))
+            if header[i].lower() == 'jobid':
+                v= re.sub('\.batch$', '', v)
             if widths[i] < len(v):
                 widths[i]= len(v)
     widths= [x + space for x in widths]
@@ -177,7 +198,6 @@ def simplify_datetime(data, datetime_column):
             xdt= x[datetime_column]
             is_date.append(False)
         dt.append(xdt)
-    # dt= [datetime.datetime.strptime(x[datetime_column], '%Y-%m-%dT%H:%M:%S').date() for x in data]
     same_year= True
     same_month= True
     same_day= True
@@ -202,8 +222,27 @@ def simplify_datetime(data, datetime_column):
                 line[datetime_column]= weekday_name + ' ' + re.sub('T', ' ', line[datetime_column])
             else:
                 line[datetime_column]= re.sub('T', ' ', line[datetime_column])
+        else:
+            line[datetime_column]= re.sub('Unknown', '', line[datetime_column])
         simple.append(line)
     return simple
+
+
+def get_state_time(timepoints):
+    """Get the latest of timepoint in the timepoints list. Values in timepoints
+    that are not convertible to datetime are skipped
+    """
+    dt= []
+    for x in timepoints:
+        try:
+            datetime.datetime.strptime(x, '%Y-%m-%dT%H:%M:%S')
+            dt.append(x)
+        except:
+            pass
+    if len(dt) == 0:
+        return '' 
+    else:
+        return max(dt)
 
 # -----------------------------------------------------------------------------
 
@@ -212,13 +251,31 @@ if args.days > 0:
     d= datetime.datetime.today() - datetime.timedelta(days= args.days)
     starttime= ['--starttime', d.date().isoformat()]
 
-sacctfmt= args.format
-if 'jobid' not in [x.lower() for x in sacctfmt]:
-    sacctfmt.append('JobID')
-if 'FMT' in sacctfmt:
-    sacctfmt= sacctfmt[0:sacctfmt.index('FMT')] + xdef + sacctfmt[sacctfmt.index('FMT')+1:]
-while 'FMT' in sacctfmt:
-    sacctfmt.remove('FMT')
+sacctfmt= [x for x in args.format]
+
+if 'FMT' in args.format:
+    args.format= args.format[0:sacctfmt.index('FMT')] + xdef + sacctfmt[sacctfmt.index('FMT')+1:]
+while 'FMT' in args.format:
+    args.format.remove('FMT')
+if 'jobid' not in [x.lower() for x in args.format]:
+    args.format.append('JobID')
+
+sacctfmt= [x for x in args.format]
+
+printablefmt= [re.sub('%.*', '', x) for x in args.format]
+
+remove= []
+if 'statesince' in [x.lower() for x in sacctfmt]:
+    sacctfmt.remove('StateSince') # Make case insesitive!
+    if 'start' not in [x.lower() for x in sacctfmt]:
+        sacctfmt.append('Start')
+        remove.append('Start')
+    if 'end' not in [x.lower() for x in sacctfmt]:
+        sacctfmt.append('End')
+        remove.append('End')
+    if 'Submit' not in [x.lower() for x in sacctfmt]:
+        sacctfmt.append('Submit')
+        remove.append('Submit')
 
 cmd= ['sacct', '--parsable2', '--format=%s' % ','.join(sacctfmt)] + starttime + args.sacct_args
 if args.verbose:
@@ -230,65 +287,93 @@ except subprocess.CalledProcessError as exc:
     print('Exit code %s' % exc.returncode)
     sys.exit(1)
 
-sacct= re.sub('\|None assigned\|', '|None|', sacct.decode())
-sacct= re.sub('\|AllocCPUS\|', '|CPUs|', sacct)
+sacct= re.sub('\|None assigned\|', '||', sacct.decode())
 
 reader = csv.DictReader(sacct.split('\n'), delimiter='|')
 sacct_out= []
 for line in reader:
-    sacct_out.append(line)
+    if 'MaxRSS' in line:
+        line['MaxRSS']= normalizeMem(line['MaxRSS'])
+    if 'ReqMem' in line:
+        line['ReqMem']= normalizeMem(line['ReqMem'])
+    if 'StateSince' in printablefmt:
+        line['StateSince']= get_state_time([line['Submit'], line['Start'], line['End']])
+    outline= collections.OrderedDict()
+    for key in printablefmt:
+        outline[key]= '.' if str(line[key]).strip() == '' else line[key]
+    sacct_out.append(outline)
+
+# Merge lines with .batch to respective job line
+idjob= None
+sacct_mrg= []
+for line in sacct_out:
+    if args.fromId is not None and args.fromId >= int(line['JobID'].replace('.batch', '')):
+        continue
+    if '.batch' not in line['JobID']:
+            if idjob is not None:
+                # This line is not a batch job, so the previous line
+                # can be printed as it doesn't have an associated batch job.
+                ### lst= list(idjob.values())
+                ### print(tabulate(lst, col_widths, args.tsv, no_color))
+                sacct_mrg.append(idjob)
+            idjob= line
+    else:
+        # This is a batch job. So associate to it the job ID line    
+        if idjob['JobID'] == line['JobID'].replace('.batch', ''):
+            ## lst= list(fillInJob(idjob, line).values())
+            ## print(tabulate(lst, col_widths, args.tsv, no_color))
+            sacct_mrg.append(fillInJob(idjob, line))
+        else:
+            print(idjob)
+            print(line)
+            raise Exception("Cannot find job id")
+        idjob= None
+if idjob is not None:
+    sacct_mrg.append(idjob)
+
+args.sort.reverse()
+for s in args.sort:
+    rev= False
+    if s.endswith('-'):
+        rev= True
+        s= re.sub('-$', '', s)
+    try:
+        sacct_mrg= sorted(sacct_mrg, key=lambda k: k[s], reverse= rev)
+    except KeyError:
+        sys.stderr.write('\nSort key %s not found\n\n' % s)
 
 if args.tsv:
     no_color= True
 else:
-    try:
-        sacct_out= simplify_datetime(sacct_out, 'Submit')
-    except KeyError:
-        pass
-    try:
-        sacct_out= simplify_datetime(sacct_out, 'Start')
-    except KeyError:
-        pass
-    try:
-        sacct_out= simplify_datetime(sacct_out, 'End')
-    except KeyError:
-        pass
+    if not args.iso_date:
+        try:
+            sacct_mrg= simplify_datetime(sacct_mrg, 'StateSince')
+        except KeyError:
+            pass
+        try:
+            sacct_mrg= simplify_datetime(sacct_mrg, 'Submit')
+        except KeyError:
+            pass
+        try:
+            sacct_mrg= simplify_datetime(sacct_mrg, 'Start')
+        except KeyError:
+            pass
+        try:
+            sacct_mrg= simplify_datetime(sacct_mrg, 'End')
+        except KeyError:
+            pass
     no_color= args.no_color
 
-col_widths= getColumnWidths(sacct_out, reader.fieldnames, 2, no_color)
+col_widths= getColumnWidths(sacct_mrg, printablefmt, 2, no_color)
 
-print(tabulate(reader.fieldnames, col_widths, args.tsv, no_color))
+print(tabulate(printablefmt, col_widths, args.tsv, no_color))
 
 idjob= None
 try:
-    for line in sacct_out:
-        if args.fromId is not None and args.fromId >= int(line['JobID'].replace('.batch', '')):
-            continue
-        if 'MaxRSS' in line:
-            line['MaxRSS']= normalizeMem(line['MaxRSS'])
-        if 'ReqMem' in line:
-            line['ReqMem']= normalizeMem(line['ReqMem'])
-        if '.batch' not in line['JobID']:
-                if idjob is not None:
-                    # This line is not a batch job, so the previous line
-                    # can be printed as it doesn't have an associated batch job.
-                    lst= list(idjob.values())
-                    print(tabulate(lst, col_widths, args.tsv, no_color))
-                idjob= line
-        else:
-            # This is a batch job. So associate to it the job ID line    
-            if idjob['JobID'] == line['JobID'].replace('.batch', ''):
-                lst= list(fillInJob(idjob, line).values())
-                print(tabulate(lst, col_widths, args.tsv, no_color))
-            else:
-                print(idjob)
-                print(line)
-                raise Exception("Cannot find job id")
-            idjob= None
-    if idjob is not None: # and args.fromId > 0 and args.fromId >= int(line['JobID']):
-        lst= list(idjob.values())
+    for line in sacct_mrg:
+        lst= list(line.values())
         print(tabulate(lst, col_widths, args.tsv, no_color))
-    print(tabulate(reader.fieldnames, col_widths, args.tsv, no_color))
+    print(tabulate(printablefmt, col_widths, args.tsv, no_color))
 except (BrokenPipeError, IOError):
     # This is to avoid stack trace when piping in e.g. `xacct.py | head`
     # See also https://stackoverflow.com/questions/26692284/brokenpipeerror-in-python
