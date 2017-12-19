@@ -38,5 +38,5 @@ xacct.py -d 1    # Show jobs from yesterday onwards
 
 Example output
 
-<img src="./example_out.png" width="600">
+<img src="./example_out.png" width="800">
 
