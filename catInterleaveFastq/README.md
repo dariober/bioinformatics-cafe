@@ -18,7 +18,7 @@ Download and run
 To download only this script:
 
 ```
-curl -O https://raw.githubusercontent.com/dariober/bioinformatics-cafe/master/catInterleaveFastq.sh
+curl -O https://raw.githubusercontent.com/dariober/bioinformatics-cafe/master/catInterleaveFastq/catInterleaveFastq.sh
 chmod 755 catInterleaveFastq.sh
 ./catInterleaveFastq.sh -h # Show help
 ```
