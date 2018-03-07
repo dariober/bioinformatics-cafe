@@ -2,7 +2,7 @@
 Fails with gatk 4.0.1.0:
 
 ```
-gatk FilterMutectCalls --variant in.vcf --output out.vcf.gz
+gatk FilterMutectCalls --variant test_data/in.vcf --output out.vcf.gz
 rm out.vcf.gz out.vcf.gz.tbi
 ```
 
