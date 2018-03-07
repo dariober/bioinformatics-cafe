@@ -4,7 +4,7 @@ import pysam
 import sys
 
 docstring= """ 
-FilterMutectCalls from GATK 4.2.0.1 or earlier has a bug with the MFRL tag.
+FilterMutectCalls from GATK 4.0.1.0 or earlier has a bug with the MFRL tag.
 It expects an INT, which is usually the case, but it fails if MFRL is float.
 See https://github.com/broadinstitute/gatk/issues/4363
 
