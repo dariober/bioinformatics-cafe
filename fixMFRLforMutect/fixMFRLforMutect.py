@@ -8,15 +8,15 @@ FilterMutectCalls from GATK 4.0.1.0 or earlier has a bug with the MFRL tag.
 It expects an INT, which is usually the case, but it fails if MFRL is float.
 See https://github.com/broadinstitute/gatk/issues/4363
 
-While we wait for GATK to fix it, this script converts MFRL floats to INT so
-that the output can be passed to FilterMutectCalls.  
+This script converts MFRL floats to INT so that the output can be passed to
+FilterMutectCalls.  
 
 Output goes to stdout in uncompressed format.
 
 USAGE
 fixMFRLforMutect <in.vcf> 
 
-VERSION 0.1.0
+VERSION 0.2.0
 """
 
 if len(sys.argv) > 1 and sys.argv[1] in ['-h', '--help']:
@@ -29,7 +29,10 @@ else:
     vcf= pysam.VariantFile(sys.argv[1])
 
 try:
-    print(str(vcf.header).strip())
+    header= str(vcf.header).strip()
+    assert '##FORMAT=<ID=MFRL,Number=R,Type=Float' in header
+    header= header.replace('##FORMAT=<ID=MFRL,Number=R,Type=Float', '##FORMAT=<ID=MFRL,Number=R,Type=Integer')
+    print(str(header))
 
     for line in vcf:
         xline= str(line).strip().split('\t')

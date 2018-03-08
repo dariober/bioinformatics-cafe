@@ -12,6 +12,7 @@ Fix it
 ./fixMFRLforMutect.py test_data/in.vcf > fix.vcf
 
 grep '123400000,471' fix.vcf
+grep '##FORMAT=<ID=MFRL,Number=R,Type=Integer' fix.vcf
 ```
 
 Success
