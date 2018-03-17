@@ -1,3 +1,5 @@
+[![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/dariober/bioinformatics-cafe)
+
 # Unsorted scripts for bioinformatics
 
 Miscellanea of scripts for bioinformatics. Many of these scripts do something very specific and they don't deserve their own repository. The quality of these programs can vary a lot, some are reasonably well designed and tested others are just stubs that I started and I haven't finished.
