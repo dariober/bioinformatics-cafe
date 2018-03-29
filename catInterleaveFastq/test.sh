@@ -67,4 +67,12 @@ then
     exit 1
 fi
 
+# Print version & exit
+version=`./catInterleaveFastq.sh -v`
+if [[ $? != 0 || -z $version ]]
+then
+    echo "WRONG at line $LINENO"
+    exit 1
+fi
+
 echo "All OK"

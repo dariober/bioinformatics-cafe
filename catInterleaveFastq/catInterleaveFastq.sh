@@ -1,22 +1,31 @@
 #!/usr/bin/env bash
 
-VERSION='0.1.0'
+VERSION='0.1.1'
 
 if [[ $1 == '-h' || $1 == '--help' || $1 == '' ]]
 then
-    echo ""
-    echo "Interleave one or more pairs of fastq files."
-    echo ""
-    echo "USAGE"
-    echo "catInterleaveFastq.sh -1 R1.L001.fq.gz R1.L002.fq.gz ... -2 R2.L001.fq.gz R2.L002.fq.gz ..."
-    echo ""
-    echo "First and second arguments are comma separated lists of first-in-pair and "
-    echo "second-in-pair fastq file(s), respectively. No spaces are allowed "
-    echo "within filenames. Files can be either ALL decompressed or ALL gzipped "
-    echo "compressed. If gzipped they must have extension '.gz'."
-    echo "There is no check whether files are correctly paired and well formed."
-    echo ""
-    echo "Version $VERSION"
+cat <<EOF
+DESCRIPTION
+Interleave one or more pairs of fastq files.
+
+USAGE
+catInterleaveFastq.sh -1 R1.L001.fq.gz R1.L002.fq.gz ... \\
+                      -2 R2.L001.fq.gz R2.L002.fq.gz ...
+
+First and second arguments are comma separated lists of first-in-pair and 
+second-in-pair fastq file(s), respectively. No spaces are allowed 
+within filenames. Files can be either ALL decompressed or ALL gzipped 
+compressed. If gzipped they must have extension '.gz'.
+There is no check whether files are correctly paired and well formed.
+
+Version $VERSION
+EOF
+exit 0
+fi
+
+if [[ $1 == '-v' || $1 == '--version' ]]
+then
+    echo $VERSION
     exit 0
 fi
 
