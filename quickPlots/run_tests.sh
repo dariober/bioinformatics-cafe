@@ -51,3 +51,6 @@ echo -e "\n---- HEADER SELECTION ----\n"
 
 echo -e "\n---- CAN HANDLE MULTIPLE SEPARATORS ----"
 awk '{print $1 "\t\t  \t\t" $2}' test_data/bar.txt | ./plot barplot -i - -x 2 -y 1 -d '\s+'
+
+echo -e "\n---- CAN READ GZIP ----"
+ ./plot histogram -i test_data/aln.sam.gz -x 9

@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-VERSION<- '0.2.0'
+VERSION<- '0.3.0'
 
 ## Load packages
 ## =============
@@ -91,14 +91,26 @@ guessEOL<- function(buf){
     return(names(eol))
 }
 
+filetype<- function(path){
+    # From https://stackoverflow.com/questions/29493302/how-to-check-if-a-file-is-compressed-in-r
+    f<- file(path)
+    ext<- summary(f)$class
+    close.connection(f)
+    return(ext)
+}
+
 readLines2<- function(con) {
-    ## Faster version of readLines from http://www.r-bloggers.com/faster-files-in-r/
-    ## Reading from stdin is much slower!
     if(con != '-'){
-        s<- file.info(con)$size
-        buf<- readChar(con, s, useBytes=TRUE)
-        eol<- guessEOL(buf)
-        dat<- strsplit(buf, eol, fixed= TRUE, useBytes= TRUE)[[1]]
+        if(filetype(con) == "gzfile"){
+            dat<- readLines(con)
+        } else {
+            # Faster version of readLines from http://www.r-bloggers.com/faster-files-in-r/
+            # Reading from stdin is much slower!
+            s<- file.info(con)$size
+            buf<- readChar(con, s, useBytes=TRUE)
+            eol<- guessEOL(buf)
+            dat<- strsplit(buf, eol, fixed= TRUE, useBytes= TRUE)[[1]]
+        }
     } else {
         fin<- file('stdin', open= 'rb')
         dat<- readLines(fin)
