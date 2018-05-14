@@ -22,3 +22,10 @@ curl -O https://raw.githubusercontent.com/dariober/bioinformatics-cafe/master/ca
 chmod 755 catInterleaveFastq.sh
 ./catInterleaveFastq.sh -h # Show help
 ```
+
+The `*.py` version (not fully tested) does the same job as the `.sh` but in addition performs some checks for files correctly paired.
+
+TODO
+====
+
+* Tests for `catInterleaveFastq.py`
