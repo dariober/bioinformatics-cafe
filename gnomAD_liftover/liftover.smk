@@ -97,6 +97,6 @@ rule catChroms:
         mem= 1000,
     shell:
         r"""
-        bcftools concat --allow-overlaps {input.vcf} > {output.vcf}
+        bcftools concat -O z --allow-overlaps {input.vcf} > {output.vcf}
         tabix {output.vcf}
         """

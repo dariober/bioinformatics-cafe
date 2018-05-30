@@ -1,7 +1,7 @@
-Liftover genomAD to hg38
+Liftover gnomAD to hg38
 ========================
 
-gnomAD files are based on hg19 with chromosome names in ENSEMBL format *i.e.*,
+[gnomAD](http://gnomad.broadinstitute.org/) files are based on hg19 with chromosome names in ENSEMBL format *i.e.*,
 without `chr` prefix.
 
 This script downloads, renames chromosomes and lifts over to hg38. In addition,
