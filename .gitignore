@@ -1,3 +1,4 @@
+.snakemake
 .cache/
 __pycache__/
 *.pyc
