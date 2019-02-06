@@ -6,7 +6,7 @@ import string
 import argparse
 import operator
 
-VERSION='0.1.1'
+VERSION='0.2.0'
 
 parser = argparse.ArgumentParser(description="""
 
@@ -101,14 +101,14 @@ parser.add_argument('--seqnames', '-s',
                    default= [None],
                    required= False,
 		   help='''List of fasta sequences in --fasta to
-search. E.g. use --seqnames chr1 chr2 chrM to search only these crhomosomes.
+search. E.g. use --seqnames chr1 chr2 chrM to search only these chromosomes.
 Default is to search all the sequences in input.
                    ''')
+
 parser.add_argument('--quiet', '-q',
                    action= 'store_true',
                    help='''Do not print progress report (i.e. sequence names as they are scanned).                                   
                    ''')
-
 
 
 parser.add_argument('--version', '-v', action='version', version='%(prog)s ' + VERSION)
@@ -197,10 +197,20 @@ def revcomp(x):
         xrc.append(compdict[n])
     xrc= ''.join(xrc)[::-1]
     return(xrc)
+
+def chrom_name(header):
+    """Return the chromosome name from the fasta header
+    """
+    if not header.startswith('>'):
+        raise Exception('FASTA header does not start with ">":\n%s' % header)
+    chr= re.sub('^>\s*', '', header)
+    chr= re.sub('\s.*', '', chr)
+    return chr
+
+
 # -----------------------------------------------------------------------------
 
 psq_re_f= re.compile(args.regex, flags= flag)
-## psq_re_r= re.compile(regexrev)
 
 if args.fasta != '-':
     ref_seq_fh= open(args.fasta)
@@ -209,7 +219,7 @@ else:
 
 ref_seq=[]
 line= (ref_seq_fh.readline()).strip()
-chr= re.sub('^>', '', line)
+chr= chrom_name(line)
 line= (ref_seq_fh.readline()).strip()
 gquad_list= []
 while True:
@@ -224,7 +234,7 @@ while True:
     if args.seqnames == [None] or chr in args.seqnames:
         for m in re.finditer(psq_re_f, ref_seq):
             matchstr= trimMatch(m.group(0), args.maxstr)
-            quad_id= str(chr) + '_' + str(m.start()) + '_' + str(m.end()) + '_for'
+            quad_id= chr + '_' + str(m.start()) + '_' + str(m.end()) + '_for'
             gquad_list.append([chr, m.start(), m.end(), quad_id, len(m.group(0)), '+', matchstr])
         if args.noreverse is False:
             ref_seq= revcomp(ref_seq)
@@ -233,22 +243,17 @@ while True:
                 matchstr= trimMatch(revcomp(m.group(0)), args.maxstr)
                 mstart= seqlen - m.end()
                 mend= seqlen - m.start()
-                quad_id= str(chr) + '_' + str(mstart) + '_' + str(mend) + '_rev'
+                quad_id= chr + '_' + str(mstart) + '_' + str(mend) + '_rev'
                 gquad_list.append([chr, mstart, mend, quad_id, len(m.group(0)), '-', matchstr])
         gquad_sorted= sort_table(gquad_list, (1,2,3))
         gquad_list= []
         for xline in gquad_sorted:
             xline= '\t'.join([str(x) for x in xline])
             print(xline)
-    chr= re.sub('^>', '', line)
+    chr= chrom_name(line)
     ref_seq= []
     line= (ref_seq_fh.readline()).strip()
     if line == '':
         break
 
-#gquad_sorted= sort_table(gquad_list, (0,1,2,3))
-#
-#for line in gquad_sorted:
-#    line= '\t'.join([str(x) for x in line])
-#    print(line)
 sys.exit()
