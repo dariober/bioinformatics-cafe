@@ -218,17 +218,19 @@ else:
     ref_seq_fh= sys.stdin    
 
 ref_seq=[]
-line= (ref_seq_fh.readline()).strip()
+line= ref_seq_fh.readline()
 chr= chrom_name(line)
-line= (ref_seq_fh.readline()).strip()
+line= ref_seq_fh.readline()
 gquad_list= []
+eof= False
 while True:
     if not args.quiet:
         sys.stderr.write('Processing %s\n' %(chr))
     while line.startswith('>') is False:
-        ref_seq.append(line)
-        line= (ref_seq_fh.readline()).strip()
+        ref_seq.append(line.strip())
+        line= ref_seq_fh.readline()
         if line == '':
+            eof= True
             break
     ref_seq= ''.join(ref_seq)
     if args.seqnames == [None] or chr in args.seqnames:
@@ -250,9 +252,11 @@ while True:
         for xline in gquad_sorted:
             xline= '\t'.join([str(x) for x in xline])
             print(xline)
+    if eof:
+        break
     chr= chrom_name(line)
     ref_seq= []
-    line= (ref_seq_fh.readline()).strip()
+    line= ref_seq_fh.readline()
     if line == '':
         break
 
