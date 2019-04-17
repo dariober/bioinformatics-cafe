@@ -21,7 +21,6 @@ chmod a+x localEnrichmentBed.py
 ./localEnrichmentBed.py -h
 ```
 
-
 See also on Biostars https://www.biostars.org/p/195689/
 
 TODO

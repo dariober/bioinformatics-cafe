@@ -23,17 +23,14 @@ DESCRIPTION
     treatment vs control.
     
 OUTPUT:
-    bed file with header and columns:
-1. chrom
-2. start
-3. end
-4. targetID
-5. flank_cnt
-6. target_cnt
-7. flank_len
-8. target_len
-9. log10_pval
-10. log2fc
+    Input file with additional columns:
+
+    * Read count in flanking region
+    * Read count in target (input) region
+    * Lenght of the flanking region
+    * Length of the target region (input column #3 - #2)
+    * -log10(pvalue) computed from chisq test of the counts above
+    * log2(fold change) of enrichment of the target region over the flanking background
 
 EXAMPLE
     localEnrichmentBed.py -b rhh047.bam -t rhh047.macs_peaks.bed -g genome.fa.fai -bl blacklist.bed > out.bed
@@ -55,23 +52,16 @@ Use - to read from stdin.
 
 parser.add_argument('--bam', '-b',
                    required= True,
-                   help='''Bam file of the library for which enrichment is to be
+                   help='''Bam file, sorted of the library for which enrichment is to be
 computed.
                    ''')
-
-#parser.add_argument('--genome', '-g',
-#                   required= True,
-#                   help='''A genome file giving the length of the chromosomes.
-#A tab separated file with columns <chrom> <chrom lenght>.
-#NB: It can be created from the header of the bam file (see tip above).
-#                   ''')
 
 parser.add_argument('--slop', '-S',
                    default= '5.0',
                    help='''Option passed to slopBed to define the flanking region (aka background).
 If `int` each target will be extended left and right this many bases.
 If `float` each target is extended left and right this many times its size.
-E.g. 5.0 (default) extends each target regions 5 times its length left and right.
+E.g. 5.0 extends each target regions 5 times its length left and right. Default %(default)s
                    ''')
 
 parser.add_argument('--blacklist', '-bl',
@@ -98,7 +88,7 @@ parser.add_argument('--verbose', '-V',
                    help='''Print to stderr the commands that are executed. 
                    ''')
 
-parser.add_argument('--version', action='version', version='%(prog)s 0.3')
+parser.add_argument('--version', '-v', action='version', version='%(prog)s 0.5.0')
 
 args= parser.parse_args()
 # ------------------------------------------------------------------------------
@@ -122,7 +112,7 @@ def prepareGenomeFile(inbam, outgenome, verbose= False):
         sys.exit(1)
 
     genomeFile= open(outgenome, 'w')
-    header= stdout.split('\n')
+    header= stdout.decode().split('\n')
     for line in header:
         if line.strip().startswith('@SQ'):
             entries= line.split('\t')
@@ -155,15 +145,18 @@ def prepareTargetBed(inbed, outbed, verbose= False):
         fin= sys.stdin
     else:
         fin= open(inbed)
-    id= 1
+    id= 0
     outtarget= open(outbed, 'w')
     for line in fin:
+        id += 1
         line= line.strip().split('\t')
         nr= str(id) + '\ttarget'
-        outtarget.write('\t'.join(line[0:3] + [nr]) + '\n')
-        id += 1
+        outtarget.write('\t'.join(line[0:3] + [nr] + line) + '\n')
     outtarget.close()
     fin.close()
+    if id == 0:
+        sys.stderr.write('No records in in input %s. Exiting\n' % inbed)
+        sys.exit(0)
     return(True)
 
 def prepareFlankingRegions(targetBed, slop, genome, blacklistBed= None, flankingBed= 'flankingBed', verbose= False):
@@ -204,13 +197,22 @@ def prepareFlankingRegions(targetBed, slop, genome, blacklistBed= None, flanking
     else:
         cmdBL= "\\"
 
+    # Get number of columns in target bed
+    with open(targetBed) as x:
+        for line in x:
+            if line.startswith('#'):
+                continue
+            ncol= len(line.split('\t'))
+            break
+    awk_cols= ', '.join(['$%s' % i for i in range(6, ncol+1)])
+
     # Flanking
-    cmd= """
-slopBed %(pct)s -l %(S)s -r %(S)s -g %(genome)s -i %(target)s \\
-| subtractBed -a - -b %(target)s \\
+    cmd= r"""
+slopBed %(pct)s -l %(S)s -r %(S)s -g %(genome)s -i %(target)s \
+| subtractBed -a - -b %(target)s \
 %(cmdBL)s
-| awk 'BEGIN{OFS="\\t"}{print $1, $2, $3, $4, "flank"}' > %(flankingBed)s
-""" %{'pct':pct, 'S':S, 'genome': genome, 'target': targetBed, 'cmdBL': cmdBL, 'flankingBed': flankingBed}
+| awk -v OFS='\t' -v FS='\t' '{print $1, $2, $3, $4, "flank", %(awk_cols)s}' > %(flankingBed)s
+""" %{'pct':pct, 'S':S, 'genome': genome, 'target': targetBed, 'cmdBL': cmdBL, 'flankingBed': flankingBed, 'awk_cols': awk_cols}
 
     if verbose:
         sys.stderr.write(cmd)
@@ -275,11 +277,11 @@ def countReadsInInterval(inbam, bed, genome, countTable, tmpdir, verbose= False)
     """
 
 
-    cmd= """
-samtools view -u -F 128 %(bam)s \\
-| coverageBed -g %(genome)s -sorted -counts -b - -a %(bed)s \\
-| awk 'BEGIN{OFS="\\t"}{print $0, $3-$2}' \\
-| sort -s -k4,4n -k5,5 \\
+    cmd= r"""
+samtools view -u -F 128 %(bam)s \
+| coverageBed -g %(genome)s -sorted -counts -b - -a %(bed)s \
+| awk -v OFS='\t' '{print $1, $2, $3, $4, $5, $NF, $3-$2}' \
+| sort -s -k4,4n -k5,5 \
 | groupBy -g 4,5 -c 6,7 -o sum,sum -prec 12 > %(countTable)s
 """ %{'genome': genome, 'bam': inbam, 'bed': bed, 'countTable':countTable}
 
@@ -313,7 +315,7 @@ def countsToDict(fin):
             break
         else:
             return(None)
-    if not countTuple[1].has_key('flank'):
+    if 'flank' not in countTuple[1]:
         # If the blacklist removes a flanking region completely you need to put
         # it back or later you will get a KeyError. This is a bit of a hack...
         countTuple[1]['flank']= {'cnt': 0, 'len': 0}
@@ -334,23 +336,16 @@ def localEnrichment(countTuple):
     cnt= [ct['flank']['cnt'], ct['target']['cnt']]
     length= [ct['flank']['len'], ct['target']['len']]
 
-    # Here and below: You should catch the exact Exception.
-    try:
-        ct['log10_pval']= -numpy.log10(scipy.stats.chi2_contingency([cnt, length])[1])
-    except:
-        sys.stderr.write('Warning: Set to NA -numpy.log10(...) for\n' + str(ct) + '\n')
+    if (cnt[0] == 0 and cnt[1] == 0) or ct['flank']['len'] == 0:
         ct['log10_pval']= 'NA'
-
-    if ct['flank']['cnt'] == 0 or ct['flank']['len'] == 0:
         ct['log2fc']= 'NA'
     else:
-        try:
-            ct['log2fc']= numpy.log2(
-                 float((ct['target']['cnt']) / float(ct['target']['len'])) /
-                (float(ct['flank']['cnt']) / float(ct['flank']['len'])))
-        except:
-            sys.stderr.write('Warning: Set to NA the in numpy.log2 for\n' + str(ct) + '\n')
-            ct['log2fc']= 'NA'
+        ct['log10_pval']= -numpy.log10(scipy.stats.chi2_contingency([cnt, length])[1] + sys.float_info.min)
+        
+        ct['log2fc']= numpy.log2(
+            ((ct['target']['cnt'] + 0.1) / (ct['target']['len'])) /
+            ((ct['flank']['cnt'] + 0.1) / (ct['flank']['len']))
+        )
 
     countTupleUp= (countTuple[0], ct)
     return(countTupleUp)
@@ -380,8 +375,8 @@ sortBedAsBam(beds= [targetBed, flankingBed], bam= args.bam, outbed= os.path.join
 countReadsInInterval(inbam= args.bam, bed= os.path.join(tmpdir, 'targetChromSorted.bed'), genome= outgenome,
     countTable= countTable, tmpdir= tmpdir, verbose= args.verbose)
 
-header= 'chrom, start, end, targetID, flank_cnt, target_cnt, flank_len, target_len, log10_pval, log2fc'.replace(', ', '\t')
-print(header)
+# header= 'chrom, start, end, targetID, flank_cnt, target_cnt, flank_len, target_len, log10_pval, log2fc'.replace(', ', '\t')
+# print(header)
 fcount= open(countTable)
 ftarget= open(targetBed)
 while True:
@@ -389,15 +384,21 @@ while True:
     if not cntDict:
         break
     id, ct= localEnrichment(cntDict)
-    outline= ftarget.readline().strip().split('\t')[0:4]
+    outline= ftarget.readline().strip().split('\t')
     if str(outline[3]) != str(id):
         sys.exit('Target file and count table not in sync! Got IDs: "%s" and "%s"' %(outline[3], id))
+    outline= outline[5:] 
     outline.append(str(ct['flank']['cnt']))
     outline.append(str(ct['target']['cnt']))
     outline.append(str(ct['flank']['len']))
     outline.append(str(ct['target']['len']))
-    outline.append(str(ct['log10_pval']))
-    outline.append(str(ct['log2fc']))
+    
+    x= 'NA' if ct['log10_pval'] == 'NA' else '%.3f' % ct['log10_pval']
+    outline.append(x)
+
+    x= 'NA' if ct['log2fc'] == 'NA' else '%.3f' % ct['log2fc']
+    outline.append(x)
+
     print('\t'.join(outline))
 
 fcount.close()
