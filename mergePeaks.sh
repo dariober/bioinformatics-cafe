@@ -15,7 +15,7 @@ OUTPUT\n
 - Merged bed to stdout \\n
 - Regions unique and shared by each file to stderr \\n
 
-Version 0.2.0
+Version 0.3.0
 "
 
 beds="$*"
@@ -28,7 +28,10 @@ fi
 
 tmp=$(mktemp tmp.XXXXXXXXXX)
 
-tableCat.py --keepdir -i $beds \
+for bed in $beds
+do
+    awk -v OFS='\t' '{print $0, FILENAME}' $bed
+done \
 | grep -v '^#' \
 | awk -v OFS="\t" '{print $1, $2, $3, $NF}' \
 | sort -k1,1 -k2,2n \
