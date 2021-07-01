@@ -52,10 +52,10 @@ then
     continue
 fi
 
-s=$(type -P samtools)
-if [[ ${s} = "" ]]
+s=$(type -P samtools) || true
+if [[ ${s} == "" ]]
 then
-    echo "samtools not found on PATH!"
+    echo "samtools not found on PATH"
     exit 1
 fi
 
